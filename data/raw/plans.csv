@@ -1,0 +1,9 @@
+plan_id,plan_name,plan_tier,billing_cycle,list_mrr,included_seats
+P1,Launch Monthly,Basic,monthly,280.0,5
+P2,Launch Annual,Basic,annual,250.0,5
+P3,Growth Monthly,Growth,monthly,950.0,20
+P4,Growth Annual,Growth,annual,830.0,20
+P5,Scale Monthly,Pro,monthly,2600.0,60
+P6,Scale Annual,Pro,annual,2250.0,60
+P7,Enterprise Flex,Enterprise,monthly,7200.0,180
+P8,Enterprise Commit,Enterprise,annual,6400.0,180

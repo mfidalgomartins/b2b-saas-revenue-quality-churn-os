@@ -1,0 +1,20 @@
+check_id,check_name,component,status,severity,details,recommended_fix,fix_applied
+1,Row Count Sanity,Raw/Processed,PASS,None,"customers=4500 | account_monthly_revenue_quality=112038, monthly_account_metrics=112038 | account-level tables rows: chf=4500, scoring=4500, risk=4500, components=4500 | scenario_mrr_trajectories=30, expected=30",None,No
+2,Null Checks,Raw/Processed,PASS,None,All key fields have 0.00% null rate.,None,No
+3,Duplicate Checks,Raw/Processed,PASS,None,No duplicate primary-key rows detected.,None,No
+4,Impossible Values,Raw/Processed,PASS,None,No impossible-value violations in checked fields.,None,No
+5,Date Logic Consistency,Raw/Features,PASS,None,Signup/subscription chronology and processed coverage are consistent.,None,No
+6,Revenue Reconciliation,Processed/Metrics,PASS,None,Account-month active_mrr reconciles to subscription contracted_mrr and latest current_mrr reconciles to scoring output.,None,No
+7,Discount Logic Consistency,Raw/Processed,PASS,None,Invoice effective-adjustment arithmetic mismatches >2c in 0.00% of rows; component sum mismatches >2c in 0.00% of rows.,None,No
+8,Retention Denominator Correctness,Metrics,PASS,None,GRR/NRR denominators are positive and reported latest values reconcile exactly to recomputation.,None,No
+9,Cohort Logic Correctness,Features/Metrics,PASS,None,Cohort month 0 starts at GRR=NRR=100% and implied cohort denominator remains stable across age buckets.,None,No
+10,Score Range Correctness,Scoring,PASS,None,"All scoring outputs are in [0,100].",None,No
+11,Risk Tier Assignment Consistency,Scoring,PASS,None,All tier labels match threshold rules.,None,No
+12,Scenario Calculation Integrity,Forecasting,PASS,None,Scenario row math and summary rollups fully reconcile.,None,No
+13,Join Inflation Risk + Dashboard Feed Integrity,Processed/Dashboard,PASS,None,Account-level table joins remain 1:1; dashboard embedded payload reconciles to processed row counts; profiling and analysis artifacts are present with required metric keys.,None,No
+14,Leakage Risk,Features/Scoring,PASS,None,"No future-date leakage detected (latest_processed_month=2026-02-01, latest_raw_month=2026-02-01); same-month churn correlation probe=0.078; temporal backtest safeguards present (evaluation_rows=88613, monotonic_violations=0).",None,No
+15,Overclaiming Risk in Written Narrative,Narrative,PASS,None,Narrative language is mostly associative and includes explicit caveats against causal overclaiming.,None,No
+16,Cross-Output Metric Consistency,Metrics,PASS,None,"Governed metrics reconcile across processed tables, analysis report, and dashboard KPI payload.",None,No
+17,Score Stability & Calibration Guardrails,Scoring,PASS,None,"nonzero_churn_tiers=3, nonzero_governance_tiers=4, churn_iqr=9.33, low_tier_share=0.942, evaluation_rows=88613, monotonic_violations=0, decile_churn_corr=0.817",None,No
+18,Financial & Decision Logic Integrity,Forecasting,PASS,None,"delta_arr_at_risk=0.00, stress_ratio=5.0000, scenario_order_ok=True",None,No
+19,Release Readiness Governance,Processed/Dashboard,PASS,None,"manifest_keys_ok=True, dashboard_checksum_exists=True, dashboard_size_bytes=12862741, dashboard_size_ok=True, checksum_rows=76",None,No

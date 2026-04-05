@@ -1,0 +1,4 @@
+scenario,top100_overlap_count,top100_overlap_rate,top100_jaccard,avg_rank_shift_within_baseline_top100
+churn_heavy,86,0.86,0.7543859649122807,11.63
+discount_heavy,88,0.88,0.7857142857142857,10.96
+exposure_heavy,84,0.84,0.7241379310344828,24.93

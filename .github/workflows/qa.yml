@@ -1,0 +1,58 @@
+name: QA Validation Gate
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: |
+          python -m ruff check src tests
+
+      - name: Build End-To-End Pipeline
+        run: |
+          python src/pipeline/run_project_pipeline.py --base-dir . --seed 42
+
+      - name: Run Data Contract Tests
+        run: |
+          python -m unittest discover -s tests -p 'test_*.py'
+
+      - name: Enforce Validation Gate
+        run: |
+          python src/validation/check_validation_gate.py \
+            --summary-path reports/formal_validation_summary.json \
+            --max-warn 0 \
+            --max-fail 0 \
+            --max-high-severity 0 \
+            --max-critical-severity 0 \
+            --min-readiness-tier "technically valid"
+
+      - name: Upload Validation Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-artifacts
+          path: |
+            reports/formal_validation_report.md
+            reports/formal_validation_findings.csv
+            reports/formal_validation_summary.json
+            reports/release_manifest.json
+            reports/release_checksums.csv

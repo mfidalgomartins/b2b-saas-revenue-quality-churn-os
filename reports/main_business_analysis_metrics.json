@@ -1,0 +1,242 @@
+{
+  "meta": {
+    "generated_at_utc": "2026-04-02T12:53:39.931414+00:00",
+    "month_start": "2023-03-01",
+    "month_end": "2026-02-01",
+    "n_months": 36
+  },
+  "section1": {
+    "mrr_start": 3749108.29,
+    "mrr_end": 9523589.88,
+    "arr_start": 44989299.48,
+    "arr_end": 114283078.56,
+    "monthly_growth_rate": 0.026994,
+    "w_realized_price_start": 0.792442,
+    "w_realized_price_end": 0.821877,
+    "w_discount_end": 0.177011,
+    "expansion_sum": 1631578.07,
+    "contraction_sum": 579430.09,
+    "top10_share": 0.040178,
+    "top50_share": 0.142807,
+    "share_discounted_mrr_latest": 0.159462,
+    "share_at_risk_mrr_latest": 0.039971
+  },
+  "section2": {
+    "logo_churn_rate": 0.008242,
+    "revenue_churn_rate": 0.005823,
+    "overall_grr": 0.991813,
+    "overall_nrr": 0.998451,
+    "latest_grr": 0.99175,
+    "latest_nrr": 0.998253,
+    "churn_segment": [
+      {
+        "segment": "SMB",
+        "active_rows": 55838,
+        "churn_events": 628,
+        "logo_churn_rate": 0.011246821161216376
+      },
+      {
+        "segment": "Mid-Market",
+        "active_rows": 29387,
+        "churn_events": 150,
+        "logo_churn_rate": 0.005104297818763399
+      },
+      {
+        "segment": "Enterprise",
+        "active_rows": 14504,
+        "churn_events": 44,
+        "logo_churn_rate": 0.003033645890788748
+      }
+    ],
+    "churn_plan": [
+      {
+        "plan_id": "P1",
+        "active_rows": 23209,
+        "churn_events": 336,
+        "logo_churn_rate": 0.014477142487827999
+      },
+      {
+        "plan_id": "P2",
+        "active_rows": 14649,
+        "churn_events": 62,
+        "logo_churn_rate": 0.004232370810294218
+      },
+      {
+        "plan_id": "P3",
+        "active_rows": 20118,
+        "churn_events": 256,
+        "logo_churn_rate": 0.01272492295456805
+      },
+      {
+        "plan_id": "P4",
+        "active_rows": 14020,
+        "churn_events": 47,
+        "logo_churn_rate": 0.003352353780313837
+      },
+      {
+        "plan_id": "P5",
+        "active_rows": 7727,
+        "churn_events": 65,
+        "logo_churn_rate": 0.008412061602174194
+      },
+      {
+        "plan_id": "P6",
+        "active_rows": 9063,
+        "churn_events": 16,
+        "logo_churn_rate": 0.0017654198389054397
+      },
+      {
+        "plan_id": "P7",
+        "active_rows": 4387,
+        "churn_events": 26,
+        "logo_churn_rate": 0.0059266013220879874
+      },
+      {
+        "plan_id": "P8",
+        "active_rows": 6556,
+        "churn_events": 14,
+        "logo_churn_rate": 0.0021354484441732766
+      }
+    ],
+    "churn_channel": [
+      {
+        "acquisition_channel": "self_serve",
+        "active_rows": 19934,
+        "churn_events": 215,
+        "logo_churn_rate": 0.010785592455101837
+      },
+      {
+        "acquisition_channel": "paid_media",
+        "active_rows": 17217,
+        "churn_events": 173,
+        "logo_churn_rate": 0.010048208166347215
+      },
+      {
+        "acquisition_channel": "content_marketing",
+        "active_rows": 15865,
+        "churn_events": 150,
+        "logo_churn_rate": 0.009454774661203908
+      },
+      {
+        "acquisition_channel": "partner_referral",
+        "active_rows": 18763,
+        "churn_events": 140,
+        "logo_churn_rate": 0.007461493364600544
+      },
+      {
+        "acquisition_channel": "outbound_sdr",
+        "active_rows": 17282,
+        "churn_events": 103,
+        "logo_churn_rate": 0.005959958338155306
+      },
+      {
+        "acquisition_channel": "enterprise_sales",
+        "active_rows": 10668,
+        "churn_events": 41,
+        "logo_churn_rate": 0.0038432695913010874
+      }
+    ],
+    "renewal_churn": [
+      {
+        "renewal_due_flag": 0,
+        "active_rows": 78822,
+        "churn_events": 552,
+        "logo_churn_rate": 0.007003120956078252
+      },
+      {
+        "renewal_due_flag": 1,
+        "active_rows": 20907,
+        "churn_events": 270,
+        "logo_churn_rate": 0.012914334911752045
+      }
+    ]
+  },
+  "section3": {
+    "discount_future_churn_3m": [
+      {
+        "discount_band": "<=10%",
+        "rows": 17290,
+        "future_churn_3m_rate": 0.026373626373626374
+      },
+      {
+        "discount_band": "10-20%",
+        "rows": 39437,
+        "future_churn_3m_rate": 0.02162943428759794
+      },
+      {
+        "discount_band": "20-30%",
+        "rows": 35712,
+        "future_churn_3m_rate": 0.01808915770609319
+      },
+      {
+        "discount_band": ">30%",
+        "rows": 7290,
+        "future_churn_3m_rate": 0.043072702331961595
+      }
+    ]
+  },
+  "section4": {
+    "expansion_quality_summary": [
+      {
+        "expansion_quality": "fragile",
+        "events": 1060,
+        "expansion_mrr": 456672.31
+      },
+      {
+        "expansion_quality": "healthy",
+        "events": 1525,
+        "expansion_mrr": 715252.54
+      },
+      {
+        "expansion_quality": "watch",
+        "events": 964,
+        "expansion_mrr": 459653.22
+      }
+    ]
+  },
+  "section5": {
+    "at_risk_accounts_count": 80,
+    "at_risk_mrr_total": 380663.4,
+    "top20_at_risk_share_within_at_risk": 0.805493
+  },
+  "section6": {
+    "unusual_discount_managers": [
+      {
+        "account_manager_id": "AM0008",
+        "portfolio_mrr": 234656.43,
+        "avg_discount": 0.2064,
+        "retention_rate": 0.9425,
+        "churn_rate": 0.0805,
+        "expansion_rate": 0.0048,
+        "risk_weighted_portfolio_score": 9.926
+      },
+      {
+        "account_manager_id": "AM0040",
+        "portfolio_mrr": 425094.58,
+        "avg_discount": 0.2038,
+        "retention_rate": 0.9043,
+        "churn_rate": 0.117,
+        "expansion_rate": 0.0072,
+        "risk_weighted_portfolio_score": 7.701
+      },
+      {
+        "account_manager_id": "AM0029",
+        "portfolio_mrr": 261272.97,
+        "avg_discount": 0.2019,
+        "retention_rate": 0.8795,
+        "churn_rate": 0.1205,
+        "expansion_rate": 0.0087,
+        "risk_weighted_portfolio_score": 8.692
+      },
+      {
+        "account_manager_id": "AM0014",
+        "portfolio_mrr": 218573.98,
+        "avg_discount": 0.2018,
+        "retention_rate": 0.9091,
+        "churn_rate": 0.1061,
+        "expansion_rate": 0.0047,
+        "risk_weighted_portfolio_score": 7.514
+      }
+    ]
+  }
+}

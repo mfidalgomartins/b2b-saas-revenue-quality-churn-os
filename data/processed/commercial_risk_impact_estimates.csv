@@ -1,0 +1,8 @@
+metric,value,unit,definition
+arr_at_risk,4567960.8,ARR,Current ARR associated with High/Critical governance priority accounts.
+expected_contraction_exposure_mrr_6m,124165.46,MRR,Expected 6-month MRR loss from contraction frequency and historical contraction severity.
+concentration_adjusted_downside_mrr_6m,100608.41,MRR,Expected 6-month downside on high-risk cohort adjusted for concentration in top accounts.
+top20_high_risk_full_churn_arr_impact,3679462.44,ARR,Stress test: annualized ARR impact if top-20 high-risk accounts fully churn.
+top20_high_risk_20pct_contraction_arr_impact,735892.49,ARR,Stress test: annualized ARR impact if top-20 high-risk accounts contract by 20%.
+retention_improvement_opportunity_arr,3599667.6,ARR,ARR uplift opportunity from improvement scenario vs base case at forecast horizon.
+high_risk_mrr_share,0.04,share,Share of current MRR in High/Critical governance priority tier.

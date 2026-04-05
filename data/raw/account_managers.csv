@@ -1,0 +1,41 @@
+account_manager_id,team,region,tenure_months
+AM0001,Enterprise Strategic,EMEA,49
+AM0002,MM East,APAC,45
+AM0003,Enterprise Strategic,EMEA,28
+AM0004,MM West,North America,15
+AM0005,SMB Pod A,APAC,26
+AM0006,Enterprise Global,APAC,45
+AM0007,Enterprise Strategic,North America,50
+AM0008,Enterprise Strategic,North America,26
+AM0009,SMB Pod A,EMEA,10
+AM0010,MM East,North America,14
+AM0011,SMB Pod B,North America,43
+AM0012,Enterprise Global,North America,27
+AM0013,MM West,APAC,28
+AM0014,Enterprise Strategic,EMEA,19
+AM0015,MM East,EMEA,18
+AM0016,SMB Pod B,APAC,54
+AM0017,MM East,EMEA,44
+AM0018,SMB Pod A,EMEA,24
+AM0019,Enterprise Strategic,North America,36
+AM0020,MM West,North America,39
+AM0021,MM West,EMEA,78
+AM0022,SMB Pod B,EMEA,18
+AM0023,Enterprise Global,EMEA,39
+AM0024,Enterprise Strategic,APAC,54
+AM0025,Enterprise Strategic,EMEA,74
+AM0026,SMB Pod A,EMEA,23
+AM0027,MM East,EMEA,27
+AM0028,SMB Pod A,North America,49
+AM0029,SMB Pod A,North America,12
+AM0030,MM West,EMEA,41
+AM0031,MM West,North America,93
+AM0032,Enterprise Global,North America,44
+AM0033,SMB Pod B,APAC,7
+AM0034,SMB Pod B,North America,20
+AM0035,MM East,North America,23
+AM0036,SMB Pod A,North America,61
+AM0037,SMB Pod A,North America,31
+AM0038,MM East,EMEA,10
+AM0039,SMB Pod B,EMEA,33
+AM0040,MM West,APAC,37
