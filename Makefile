@@ -58,7 +58,7 @@ release-refresh:
 	$(PYTHON) src/pipeline/monthly_release_refresh.py --base-dir $(BASE_DIR) --seed $(SEED)
 
 docs:
-	@echo "Documentation is maintained in README.md, methodology.md, data_dictionary.md, executive_summary.md"
+	@echo "Documentation is maintained in README.md and docs/ (methodology.md, data_dictionary.md, executive_summary.md)"
 
 clean:
 	find . -name '__pycache__' -type d -prune -exec rm -rf {} +

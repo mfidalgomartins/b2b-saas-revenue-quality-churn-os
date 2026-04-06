@@ -12,7 +12,7 @@ All notable changes to this project are documented in this file.
 - Scoring backtest calibration layer and reports.
 - Monthly release refresh automation with manifest/checksums.
 - Notebook walkthrough and notebook dependency file.
-- Repository governance assets (`LICENSE`, `CONTRIBUTING`, `.editorconfig`, lint config).
+- Repository governance assets (`CONTRIBUTING`, `.editorconfig`, lint config).
 
 ### Changed
 - Synthetic data chronology and invoice arithmetic coherence.

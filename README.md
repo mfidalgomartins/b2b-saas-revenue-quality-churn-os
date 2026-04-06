@@ -23,10 +23,29 @@ This operating model gives Finance, RevOps, CS, and commercial leadership a comm
 ## Repository Structure
 ```text
 b2b-saas-revenue-quality-os/
+  src/
+    pipeline/
+    profiling/
+    data_generation/
+    features/
+    analysis/
+    scoring/
+    forecasting/
+    visualization/
+    dashboard/
+    validation/
   data/
     raw/
     processed/
+  sql/
+    staging/
+    marts/
   docs/
+    methodology.md
+    data_dictionary.md
+    executive_summary.md
+    CONTRIBUTING.md
+    CHANGELOG.md
     synthetic_data_design.md
     synthetic_data_generation_note.md
     analytical_layer_notes.md
@@ -50,32 +69,12 @@ b2b-saas-revenue-quality-os/
     scoring_priority_shortlist.md
     formal_validation_report.md
     formal_validation_findings.csv
-  src/
-    pipeline/
-    profiling/
-    data_generation/
-    features/
-    analysis/
-    scoring/
-    forecasting/
-    visualization/
-    dashboard/
-    validation/
-  sql/
-    staging/
-    marts/
   tests/
   .github/workflows/qa.yml
-  LICENSE
-  CONTRIBUTING.md
-  CHANGELOG.md
   pyproject.toml
   README.md
   requirements-notebook.txt
   requirements-dev.txt
-  methodology.md
-  data_dictionary.md
-  executive_summary.md
 ```
 
 ## Datasets Used
@@ -115,7 +114,7 @@ High-level flow:
 7. Executive chart package and offline dashboard.
 8. Formal validation across data, metrics, scoring, forecasting, dashboard feed, and narrative claims.
 
-Detailed methodology is in `methodology.md`.
+Detailed methodology is in `docs/methodology.md`.
 
 Formal reproducibility instructions are in `docs/reproducibility.md`.
 
@@ -255,5 +254,5 @@ jupyter notebook notebooks/01_operating_system_walkthrough.ipynb
 - Add temporal train/validation split with strict pre-event feature cutoffs for predictive-grade modeling.
 
 ## Contribution
-- Contribution process and quality expectations: `CONTRIBUTING.md`
-- Release history: `CHANGELOG.md`
+- Contribution process and quality expectations: `docs/CONTRIBUTING.md`
+- Release history: `docs/CHANGELOG.md`

@@ -58,10 +58,11 @@ def collect_artifacts(base_dir: Path, exclude_paths: set[Path] | None = None) ->
     exclude_paths = exclude_paths or set()
     patterns = [
         "README.md",
-        "methodology.md",
-        "data_dictionary.md",
-        "executive_summary.md",
-        "LICENSE",
+        "docs/methodology.md",
+        "docs/data_dictionary.md",
+        "docs/executive_summary.md",
+        "docs/CONTRIBUTING.md",
+        "docs/CHANGELOG.md",
         "requirements.txt",
         "requirements-notebook.txt",
         "Makefile",
