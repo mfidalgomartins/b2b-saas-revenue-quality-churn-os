@@ -1,10 +1,10 @@
-# Live Dashboard
+# Dashboard Executivo
 
-This folder contains the executive dashboard build.
+Este folder contém o dashboard executivo.
 
-**Open the live dashboard:**  
+**Acesso principal (GitHub Pages):**  
 https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/
 
-Secondary access: the offline HTML file (`revenue-quality-command-center.html`).
+**Acesso alternativo:** ficheiro HTML offline (`revenue-quality-command-center.html`).
 
-Note: GitHub shows HTML as source, not the interactive view.
+Nota: o GitHub mostra o HTML como código, não como visualização interativa.
