@@ -29,6 +29,8 @@ docs/core/   sql/         notebooks/   tests/
 - `reports/` (profiling memo, business analysis memo, validation report)
 - `data/processed/` (analytical tables, scoring outputs, scenario tables)
 
+Live dashboard (GitHub Pages): https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/
+
 ## Why this is above typical portfolio work
 It’s not a notebook exercise. It’s a full operating system with metric governance, scoring explainability, scenario logic, and validation discipline—built to support decisions, not just visuals.
 
