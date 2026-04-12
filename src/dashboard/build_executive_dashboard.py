@@ -14,7 +14,7 @@ import pandas as pd
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build executive offline dashboard with governed payload.")
     parser.add_argument("--base-dir", type=str, default=".")
-    parser.add_argument("--output", type=str, default="outputs/dashboard/executive_dashboard.html")
+    parser.add_argument("--output", type=str, default="outputs/dashboard/revenue-quality-command-center.html")
     return parser.parse_args()
 
 

@@ -33,7 +33,7 @@ viz:
 	$(PYTHON) src/visualization/build_leadership_charts.py --base-dir $(BASE_DIR)
 
 dashboard:
-	$(PYTHON) src/dashboard/build_executive_dashboard.py --base-dir $(BASE_DIR) --output $(BASE_DIR)/outputs/dashboard/executive_dashboard.html
+	$(PYTHON) src/dashboard/build_executive_dashboard.py --base-dir $(BASE_DIR) --output $(BASE_DIR)/outputs/dashboard/revenue-quality-command-center.html
 
 validate:
 	$(PYTHON) src/validation/run_full_project_validation.py --base-dir $(BASE_DIR)

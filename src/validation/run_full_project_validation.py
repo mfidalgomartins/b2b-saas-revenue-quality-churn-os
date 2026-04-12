@@ -103,7 +103,7 @@ def load_tables(base_dir: Path) -> Dict[str, pd.DataFrame]:
 
 
 def validate_dashboard_payload(base_dir: Path, tables: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
-    html_path = base_dir / "outputs" / "dashboard" / "executive_dashboard.html"
+    html_path = base_dir / "outputs" / "dashboard" / "revenue-quality-command-center.html"
     if not html_path.exists():
         return {"exists": False}
 
@@ -926,7 +926,7 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
         )
 
     # 19) Release artifact readiness (dashboard only)
-    dashboard_path = base_dir / "outputs" / "dashboard" / "executive_dashboard.html"
+    dashboard_path = base_dir / "outputs" / "dashboard" / "revenue-quality-command-center.html"
     dashboard_size_bytes = int(dashboard_path.stat().st_size) if dashboard_path.exists() else 0
     dashboard_size_ok = dashboard_size_bytes <= 15_000_000
     dashboard_ready = dashboard_path.exists() and dashboard_size_ok

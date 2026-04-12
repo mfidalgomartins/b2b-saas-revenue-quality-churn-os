@@ -41,7 +41,7 @@ class TestArtifactContracts(unittest.TestCase):
         self.assertIn("latest_nrr", analysis_payload["section2"])
 
     def test_dashboard_payload_contract(self) -> None:
-        html_path = OUTPUTS / "dashboard" / "executive_dashboard.html"
+        html_path = OUTPUTS / "dashboard" / "revenue-quality-command-center.html"
         self.assertTrue(html_path.exists(), "Dashboard HTML is missing")
 
         html = html_path.read_text(encoding="utf-8")

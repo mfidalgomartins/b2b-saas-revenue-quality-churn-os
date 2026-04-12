@@ -81,7 +81,7 @@ def main() -> None:
                     "--base-dir",
                     ".",
                     "--output",
-                    "outputs/dashboard/executive_dashboard.html",
+                    "outputs/dashboard/revenue-quality-command-center.html",
                 ],
             ),
         ]
@@ -98,7 +98,7 @@ def main() -> None:
                     "--base-dir",
                     ".",
                     "--output",
-                    "outputs/dashboard/executive_dashboard.html",
+                    "outputs/dashboard/revenue-quality-command-center.html",
                 ],
             )
         )

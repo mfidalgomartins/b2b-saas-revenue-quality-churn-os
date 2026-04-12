@@ -12,7 +12,7 @@ OUTPUTS = ROOT / "outputs"
 
 
 def load_dashboard_payload() -> dict:
-    html_path = OUTPUTS / "dashboard" / "executive_dashboard.html"
+html_path = OUTPUTS / "dashboard" / "revenue-quality-command-center.html"
     html = html_path.read_text(encoding="utf-8")
     match = re.search(r'<script id="dashboard-data" type="application/json">(.*?)</script>', html, flags=re.S)
     if not match:

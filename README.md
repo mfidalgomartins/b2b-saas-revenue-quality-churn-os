@@ -24,7 +24,7 @@ docs/core/   sql/         notebooks/   tests/
 ```
 
 ## Core outputs
-- `outputs/dashboard/executive_dashboard.html` (offline executive dashboard)
+- `outputs/dashboard/revenue-quality-command-center.html` (offline executive dashboard)
 - `outputs/charts/` (leadership‑grade visuals)
 - `reports/` (profiling memo, business analysis memo, validation report)
 - `data/processed/` (analytical tables, scoring outputs, scenario tables)
