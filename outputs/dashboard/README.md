@@ -1,8 +1,10 @@
-# Dashboard
+# Live Dashboard
 
-Live dashboard (GitHub Pages): https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/
+This folder contains the executive dashboard build.
 
-Local artifact:
-- `revenue-quality-command-center.html`
+**Open the live dashboard:**  
+https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/
 
-If you are browsing on GitHub, use the live link above (the HTML file view shows source, not the live UI).
+Secondary access: the offline HTML file (`revenue-quality-command-center.html`).
+
+Note: GitHub shows HTML as source, not the interactive view.
