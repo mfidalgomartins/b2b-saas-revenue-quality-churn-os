@@ -22,7 +22,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install -r requirements-dev.txt
 
       - name: Lint
         run: |
@@ -54,5 +53,3 @@ jobs:
             reports/formal_validation_report.md
             reports/formal_validation_findings.csv
             reports/formal_validation_summary.json
-            reports/release_manifest.json
-            reports/release_checksums.csv

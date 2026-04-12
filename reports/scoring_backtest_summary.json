@@ -1,9 +1,0 @@
-{
-  "horizon_months": 3,
-  "evaluation_rows": 88613,
-  "evaluation_accounts": 4343,
-  "overall_forward_churn_rate": 0.024635,
-  "monotonic_violations": [],
-  "max_tier_churn_rate": 0.12195121951219512,
-  "min_tier_churn_rate": 0.024058731944586503
-}

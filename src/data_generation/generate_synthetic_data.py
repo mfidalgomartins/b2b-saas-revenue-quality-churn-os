@@ -637,16 +637,16 @@ def build_generation_note(
     )
     paid_mix = invoices["payment_status"].value_counts(normalize=True).round(3).to_dict()
 
-    note = f"""# Synthetic Data Generation Note
+    note = f"""## Latest Generation Snapshot
 
-## Scope
+### Scope
 - Customers: {len(customers):,}
 - History length: {config.months_history} monthly periods ending {config.end_month}
 - Subscription-month snapshots: {len(subscriptions):,}
 - Monthly account metric rows: {len(monthly_metrics):,}
 - Invoice rows: {len(invoices):,}
 
-## Embedded Business Logic
+### Embedded Business Logic
 - Segment-specific retention behavior: Enterprise has lower baseline churn than SMB.
 - Discount behavior varies by acquisition channel, billing cycle, and customer quality.
 - Churn probability increases when usage declines, NPS falls, payment delays rise, support burden rises, and discounting is heavy.
@@ -656,13 +656,13 @@ def build_generation_note(
 - Revenue concentration is introduced via a small set of high-seat enterprise/concentrated accounts.
 - Renewal seasonality is encoded through renewal probabilities and churn pressure around renewal windows.
 
-## Quick Diagnostics
+### Quick Diagnostics
 - Unique churned customers in window: {churned_customers:,}
 - Average discount_pct in subscriptions: {avg_discount:.2%}
 - Top-10 account concentration (share of peak contracted MRR): {top10_share:.2%}
 - Payment status mix: {paid_mix}
 
-## Intended Patterns for Downstream Analysis
+### Intended Patterns for Downstream Analysis
 - Better GRR/NRR in enterprise cohorts vs SMB cohorts.
 - Higher discount intensity in paid_media and outbound-led acquisition.
 - At-risk ARR concentrated where usage/NPS trend down and delays/support worsen.
@@ -670,7 +670,17 @@ def build_generation_note(
 - High-MRR hidden-risk account watchlist should surface when combining ARR exposure with forward risk.
 """
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(note)
+    if output_path.exists():
+        existing = output_path.read_text()
+        marker = "## Latest Generation Snapshot"
+        if marker in existing:
+            prefix = existing.split(marker)[0].rstrip()
+            updated = f"{prefix}\n\n{note.strip()}\n"
+        else:
+            updated = f"{existing.rstrip()}\n\n{note.strip()}\n"
+        output_path.write_text(updated)
+    else:
+        output_path.write_text(note)
 
 
 def parse_args() -> argparse.Namespace:
@@ -688,8 +698,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--note-path",
         type=str,
-        default="docs/synthetic_data_generation_note.md",
-        help="Path for the data generation note markdown file.",
+        default="docs/core/synthetic_data.md",
+        help="Path for the synthetic data design and generation markdown file.",
     )
     return parser.parse_args()
 

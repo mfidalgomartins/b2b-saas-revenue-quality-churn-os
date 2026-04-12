@@ -681,7 +681,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build executive-grade visualization layer.")
     parser.add_argument("--base-dir", type=str, default=".")
     parser.add_argument("--charts-dir", type=str, default="outputs/charts")
-    parser.add_argument("--brief-path", type=str, default="reports/visualization_chart_brief.md")
+    parser.add_argument("--brief-path", type=str, default="")
     return parser.parse_args()
 
 
@@ -711,7 +711,8 @@ def main() -> None:
     entries.append(chart_usage_decline_vs_churn_risk(data["scoring"], data["health"], charts_dir))
     entries.append(chart_scenario_comparison(data["scenario_trajectories"], charts_dir))
 
-    write_chart_brief(entries, (base_dir / args.brief_path).resolve())
+    if args.brief_path:
+        write_chart_brief(entries, (base_dir / args.brief_path).resolve())
 
     print("Visualization layer build complete.")
     print(f"charts_created: {len(entries)}")

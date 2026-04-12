@@ -634,68 +634,11 @@ def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
             )
         )
 
-    variants = {
-        "baseline": governance_weights,
-        "churn_heavy": {
-            "churn_risk": 0.45,
-            "revenue_quality_risk": 0.15,
-            "discount_dependency": 0.12,
-            "expansion_fragility": 0.08,
-            "exposure_concentration": 0.15,
-            "renewal_urgency": 0.05,
-        },
-        "discount_heavy": {
-            "churn_risk": 0.25,
-            "revenue_quality_risk": 0.18,
-            "discount_dependency": 0.28,
-            "expansion_fragility": 0.09,
-            "exposure_concentration": 0.15,
-            "renewal_urgency": 0.05,
-        },
-        "exposure_heavy": {
-            "churn_risk": 0.25,
-            "revenue_quality_risk": 0.15,
-            "discount_dependency": 0.12,
-            "expansion_fragility": 0.08,
-            "exposure_concentration": 0.35,
-            "renewal_urgency": 0.05,
-        },
-    }
-
-    sensitivity_rows: List[Dict[str, object]] = []
-    rank_table = score_df[["customer_id"]].copy()
-    for name, weights in variants.items():
-        rank_table[f"score_{name}"] = governance_score_variant(weights)
-        rank_table[f"rank_{name}"] = rank_table[f"score_{name}"].rank(method="first", ascending=False)
-
-    baseline_top100 = set(rank_table.nsmallest(100, "rank_baseline")["customer_id"])
-
-    for name in ["churn_heavy", "discount_heavy", "exposure_heavy"]:
-        scenario_top100 = set(rank_table.nsmallest(100, f"rank_{name}")["customer_id"])
-        overlap = len(baseline_top100.intersection(scenario_top100))
-        jaccard = overlap / len(baseline_top100.union(scenario_top100))
-
-        baseline_slice = rank_table[rank_table["customer_id"].isin(baseline_top100)].copy()
-        avg_rank_shift = float((baseline_slice[f"rank_{name}"] - baseline_slice["rank_baseline"]).abs().mean())
-
-        sensitivity_rows.append(
-            {
-                "scenario": name,
-                "top100_overlap_count": overlap,
-                "top100_overlap_rate": overlap / 100.0,
-                "top100_jaccard": jaccard,
-                "avg_rank_shift_within_baseline_top100": avg_rank_shift,
-            }
-        )
-
-    sensitivity = pd.DataFrame(sensitivity_rows)
-
-    return score_output, components_table, shortlist, sensitivity
+    return score_output, components_table, shortlist
 
 
-def write_scoring_docs(base_dir: Path, sensitivity: pd.DataFrame) -> None:
-    methodology_path = base_dir / "docs/scoring_model_design.md"
-    sensitivity_path = base_dir / "reports/scoring_sensitivity.md"
+def write_scoring_docs(base_dir: Path) -> None:
+    methodology_path = base_dir / "docs/core/scoring_model_design.md"
 
     methodology = """# Scoring System Design (RevOps / Finance / CS Operating Model)
 
@@ -746,33 +689,9 @@ def write_scoring_docs(base_dir: Path, sensitivity: pd.DataFrame) -> None:
 - Rule-based design favors explainability over maximum predictive fit.
 - Threshold choices (for example, heavy discount >=25%) are policy choices and should be recalibrated when business context changes.
 - A common 0-100 scale improves comparability but compresses nuance; component tables should always accompany score usage.
+
 """
     methodology_path.write_text(methodology)
-
-    lines = [
-        "# Scoring Sensitivity Discussion",
-        "",
-        "Baseline governance weights were stress-tested against three alternative weighting schemes.",
-        "",
-        "| Scenario | Top-100 Overlap vs Baseline | Jaccard | Avg Rank Shift (within baseline top-100) |",
-        "|---|---:|---:|---:|",
-    ]
-    for _, row in sensitivity.iterrows():
-        lines.append(
-            f"| {row['scenario']} | {row['top100_overlap_rate']:.1%} | {row['top100_jaccard']:.3f} | {row['avg_rank_shift_within_baseline_top100']:.2f} |"
-        )
-
-    lines.extend(
-        [
-            "",
-            "Interpretation:",
-            "- High overlap indicates shortlist stability under reasonable policy-weight shifts.",
-            "- Rank shifts highlight accounts sensitive to policy emphasis (for example discount-heavy vs exposure-heavy governance).",
-            "- Baseline weights are suitable as an operating default; scenario views should be used in planning cycles and policy reviews.",
-        ]
-    )
-
-    sensitivity_path.write_text("\n".join(lines))
 
 
 def parse_args() -> argparse.Namespace:
@@ -788,20 +707,17 @@ def main() -> None:
     output_dir = (base_dir / args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    score_output, components_table, shortlist, sensitivity = build_scores(base_dir)
+    score_output, components_table, shortlist = build_scores(base_dir)
 
     score_output.to_csv(output_dir / "account_scoring_model_output.csv", index=False)
     components_table.to_csv(output_dir / "account_scoring_components.csv", index=False)
     shortlist.to_csv(output_dir / "scoring_priority_shortlist.csv", index=False)
-    sensitivity.to_csv(output_dir / "scoring_sensitivity_summary.csv", index=False)
-
-    write_scoring_docs(base_dir, sensitivity)
+    write_scoring_docs(base_dir)
 
     print("Scoring system build complete.")
     print(f"account_scoring_model_output: {len(score_output):,} rows")
     print(f"account_scoring_components: {len(components_table):,} rows")
     print(f"scoring_priority_shortlist: {len(shortlist):,} rows")
-    print(f"scoring_sensitivity_summary: {len(sensitivity):,} rows")
 
 
 if __name__ == "__main__":

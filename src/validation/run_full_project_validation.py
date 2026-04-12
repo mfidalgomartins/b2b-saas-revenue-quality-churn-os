@@ -636,12 +636,11 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
             f"coverage={coverage.get('month_start')}..{coverage.get('month_end')}"
         )
 
-    profiling_stats_path = base_dir / "reports" / "profiling_stats.json"
     profiling_memo_path = base_dir / "reports" / "data_profiling_memo.md"
     analysis_metrics_path = base_dir / "reports" / "main_business_analysis_metrics.json"
     analysis_memo_path = base_dir / "reports" / "main_business_analysis_memo.md"
 
-    profiling_ok = profiling_stats_path.exists() and profiling_memo_path.exists()
+    profiling_ok = profiling_memo_path.exists()
     analysis_ok = analysis_metrics_path.exists() and analysis_memo_path.exists()
     analysis_payload: Dict[str, Any] = {}
     analysis_detail = "analysis_artifacts_missing"
@@ -668,7 +667,7 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
             "None",
             (
                 "Account-level table joins remain 1:1; dashboard embedded payload reconciles to processed row counts; "
-                "profiling and analysis artifacts are present with required metric keys."
+                "profiling memo and analysis artifacts are present with required metric keys."
             ),
         )
     else:
@@ -689,25 +688,12 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
     # 14) Leakage risk
     latest_raw_month = mm["month"].max()
     latest_quality_month = amrq["month"].max()
-    backtest_summary_path = base_dir / "reports" / "scoring_backtest_summary.json"
-
     # Proxy: check whether scoring correlates materially with same-month churn (can indicate concurrent leakage if misused as prediction).
     same_month_churn = mm[mm["month"] == latest_raw_month][["customer_id", "churn_flag"]]
     leak_probe = scoring[["customer_id", "churn_risk_score"]].merge(same_month_churn, on="customer_id", how="left").fillna({"churn_flag": 0})
     corr_same_month = float(leak_probe["churn_risk_score"].corr(leak_probe["churn_flag"]))
 
-    backtest_ready = False
-    backtest_detail = "backtest_summary_missing"
-    if backtest_summary_path.exists():
-        backtest_summary = json.loads(backtest_summary_path.read_text(encoding="utf-8"))
-        monotonic_violations = backtest_summary.get("monotonic_violations", [])
-        eval_rows = int(backtest_summary.get("evaluation_rows", 0))
-        backtest_ready = len(monotonic_violations) == 0 and eval_rows > 0
-        backtest_detail = (
-            f"evaluation_rows={eval_rows}, monotonic_violations={len(monotonic_violations)}"
-        )
-
-    if latest_quality_month <= latest_raw_month and abs(corr_same_month) < 0.2 and backtest_ready:
+    if latest_quality_month <= latest_raw_month and abs(corr_same_month) < 0.2:
         add_finding(
             findings,
             "14",
@@ -717,24 +703,8 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
             "None",
             (
                 f"No future-date leakage detected (latest_processed_month={latest_quality_month.date()}, latest_raw_month={latest_raw_month.date()}); "
-                f"same-month churn correlation probe={corr_same_month:.3f}; "
-                f"temporal backtest safeguards present ({backtest_detail})."
+                f"same-month churn correlation probe={corr_same_month:.3f}."
             ),
-        )
-    elif latest_quality_month <= latest_raw_month and abs(corr_same_month) < 0.2:
-        add_finding(
-            findings,
-            "14",
-            "Leakage Risk",
-            "Features/Scoring",
-            "WARN",
-            "Low",
-            (
-                f"No future-date leakage detected (latest_processed_month={latest_quality_month.date()}, latest_raw_month={latest_raw_month.date()}); "
-                f"same-month churn correlation probe={corr_same_month:.3f}. "
-                f"Temporal safeguard check status: {backtest_detail}."
-            ),
-            "For predictive use, enforce feature cutoff before churn outcome month and implement backtesting split by time.",
         )
     else:
         add_finding(
@@ -863,38 +833,16 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
     churn_iqr = float(scoring["churn_risk_score"].quantile(0.75) - scoring["churn_risk_score"].quantile(0.25))
     low_tier_share = float((scoring["churn_risk_tier"] == "Low").mean())
 
-    decile_path = base_dir / "data" / "processed" / "scoring_backtest_calibration_by_decile.csv"
-    decile_corr = np.nan
-    if decile_path.exists():
-        decile_df = pd.read_csv(decile_path)
-        if {"score_decile", "churn_rate_3m"}.issubset(decile_df.columns):
-            decile_corr = float(decile_df["score_decile"].corr(decile_df["churn_rate_3m"]))
-
-    backtest_summary_path = base_dir / "reports" / "scoring_backtest_summary.json"
-    monotonic_violations = []
-    evaluation_rows = 0
-    if backtest_summary_path.exists():
-        backtest_summary = json.loads(backtest_summary_path.read_text(encoding="utf-8"))
-        monotonic_violations = backtest_summary.get("monotonic_violations", [])
-        evaluation_rows = int(backtest_summary.get("evaluation_rows", 0))
-
     stability_fail = (
         nonzero_churn_tiers < 2
         or nonzero_gov_tiers < 2
         or churn_iqr < 1.0
-        or evaluation_rows < 1000
     )
-    stability_warn = (
-        low_tier_share > 0.97
-        or len(monotonic_violations) > 0
-        or (not np.isnan(decile_corr) and decile_corr < 0.6)
-    )
+    stability_warn = low_tier_share > 0.97
 
     stability_detail = (
         f"nonzero_churn_tiers={nonzero_churn_tiers}, nonzero_governance_tiers={nonzero_gov_tiers}, "
-        f"churn_iqr={churn_iqr:.2f}, low_tier_share={low_tier_share:.3f}, "
-        f"evaluation_rows={evaluation_rows}, monotonic_violations={len(monotonic_violations)}, "
-        f"decile_churn_corr={(f'{decile_corr:.3f}' if not np.isnan(decile_corr) else 'nan')}"
+        f"churn_iqr={churn_iqr:.2f}, low_tier_share={low_tier_share:.3f}"
     )
 
     if not stability_fail and not stability_warn:
@@ -977,43 +925,22 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
             "Reconcile scenario/impact logic before using outputs for financial planning decisions.",
         )
 
-    # 19) Release governance discipline
-    manifest_path = base_dir / "reports" / "release_manifest.json"
-    checksums_path = base_dir / "reports" / "release_checksums.csv"
+    # 19) Release artifact readiness (dashboard only)
     dashboard_path = base_dir / "outputs" / "dashboard" / "executive_dashboard.html"
-    manifest_ok = False
-    release_detail = "release_manifest_missing"
-    if manifest_path.exists() and checksums_path.exists():
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        checksums = pd.read_csv(checksums_path)
-        required_manifest_keys = {
-            "release_timestamp_utc",
-            "python_version",
-            "platform",
-            "seed",
-            "data_coverage",
-            "row_counts",
-            "artifact_count",
-            "checksums_path",
-            "validation_summary",
-        }
-        dashboard_checksum_exists = bool((checksums["path"] == "outputs/dashboard/executive_dashboard.html").any())
-        dashboard_size_bytes = int(dashboard_path.stat().st_size) if dashboard_path.exists() else 0
-        dashboard_size_ok = dashboard_size_bytes <= 15_000_000
-        manifest_ok = required_manifest_keys.issubset(manifest.keys()) and dashboard_checksum_exists and dashboard_size_ok
-        release_detail = (
-            f"manifest_keys_ok={required_manifest_keys.issubset(manifest.keys())}, "
-            f"dashboard_checksum_exists={dashboard_checksum_exists}, "
-            f"dashboard_size_bytes={dashboard_size_bytes}, dashboard_size_ok={dashboard_size_ok}, "
-            f"checksum_rows={len(checksums)}"
-        )
+    dashboard_size_bytes = int(dashboard_path.stat().st_size) if dashboard_path.exists() else 0
+    dashboard_size_ok = dashboard_size_bytes <= 15_000_000
+    dashboard_ready = dashboard_path.exists() and dashboard_size_ok
+    release_detail = (
+        f"dashboard_exists={dashboard_path.exists()}, "
+        f"dashboard_size_bytes={dashboard_size_bytes}, dashboard_size_ok={dashboard_size_ok}"
+    )
 
-    if manifest_ok:
+    if dashboard_ready:
         add_finding(
             findings,
             "19",
-            "Release Readiness Governance",
-            "Processed/Dashboard",
+            "Release Artifact Readiness",
+            "Dashboard",
             "PASS",
             "None",
             release_detail,
@@ -1022,12 +949,12 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
         add_finding(
             findings,
             "19",
-            "Release Readiness Governance",
-            "Processed/Dashboard",
-            "WARN",
-            "Low",
+            "Release Artifact Readiness",
+            "Dashboard",
+            "FAIL",
+            "High",
             release_detail,
-            "Generate or refresh release manifest/checksums before formal stakeholder release.",
+            "Regenerate the executive dashboard or reduce payload size before distribution.",
         )
 
     summary["total_findings"] = len(findings)

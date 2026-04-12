@@ -24,11 +24,6 @@ def parse_args() -> argparse.Namespace:
         default="data/processed/scoring_backtest_calibration_by_decile.csv",
     )
     parser.add_argument(
-        "--report-path",
-        type=str,
-        default="reports/scoring_backtest_calibration.md",
-    )
-    parser.add_argument(
         "--summary-json-path",
         type=str,
         default="reports/scoring_backtest_summary.json",
@@ -162,15 +157,12 @@ def build_calibration_tables(panel: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     return {"by_tier": by_tier, "by_decile": by_decile}
 
 
-def write_report(
-    report_path: Path,
+def write_summary(
     summary_json_path: Path,
     panel: pd.DataFrame,
     by_tier: pd.DataFrame,
-    by_decile: pd.DataFrame,
     horizon_months: int,
 ) -> None:
-    report_path.parent.mkdir(parents=True, exist_ok=True)
     summary_json_path.parent.mkdir(parents=True, exist_ok=True)
 
     overall_rate = float(panel["forward_3m_churn_flag"].mean()) if len(panel) > 0 else 0.0
@@ -192,60 +184,12 @@ def write_report(
     }
     summary_json_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
-    def df_to_markdown(df: pd.DataFrame) -> str:
-        if len(df) == 0:
-            return "_No rows_"
-        cols = list(df.columns)
-        header = "| " + " | ".join(cols) + " |"
-        sep = "|" + "|".join(["---"] * len(cols)) + "|"
-        body = []
-        for _, row in df.iterrows():
-            values = []
-            for col in cols:
-                value = row[col]
-                if isinstance(value, (float, np.floating)):
-                    values.append(f"{value:.4f}")
-                else:
-                    values.append(str(value))
-            body.append("| " + " | ".join(values) + " |")
-        return "\n".join([header, sep, *body])
-
-    lines = [
-        "# Scoring Backtest Calibration Report",
-        "",
-        f"- Forward horizon: `{horizon_months}` months",
-        f"- Evaluation rows: `{len(panel):,}`",
-        f"- Evaluation accounts: `{panel['customer_id'].nunique():,}`",
-        f"- Overall forward churn rate: `{overall_rate:.2%}`",
-        "",
-        "## Tier Calibration",
-        "",
-        df_to_markdown(by_tier),
-        "",
-        "## Decile Calibration",
-        "",
-        df_to_markdown(by_decile),
-        "",
-        "## Interpretation",
-        "",
-    ]
-
-    if monotonic_violations:
-        lines.append(f"- Monotonicity warning: tier churn rates are not strictly increasing ({', '.join(monotonic_violations)}).")
-    else:
-        lines.append("- Tier calibration is monotonic: higher risk tiers show higher realized forward churn.")
-    lines.append("- This is a rule-based calibration diagnostic, not a causal model or externally validated forecast.")
-    lines.append("- Use this report to tune tier thresholds and operational intervention triggers.")
-    lines.append("")
-    report_path.write_text("\n".join(lines), encoding="utf-8")
-
 
 def main() -> None:
     args = parse_args()
     base_dir = Path(args.base_dir).resolve()
     tier_output_path = base_dir / args.tier_output_path
     decile_output_path = base_dir / args.decile_output_path
-    report_path = base_dir / args.report_path
     summary_json_path = base_dir / args.summary_json_path
 
     panel = build_risk_panel(base_dir, args.horizon_months)
@@ -258,12 +202,11 @@ def main() -> None:
     by_tier.to_csv(tier_output_path, index=False)
     by_decile.to_csv(decile_output_path, index=False)
 
-    write_report(report_path, summary_json_path, panel, by_tier, by_decile, args.horizon_months)
+    write_summary(summary_json_path, panel, by_tier, args.horizon_months)
 
     print("Scoring backtest calibration complete.")
     print(f"Tier output: {tier_output_path}")
     print(f"Decile output: {decile_output_path}")
-    print(f"Report: {report_path}")
     print(f"Summary JSON: {summary_json_path}")
 
 

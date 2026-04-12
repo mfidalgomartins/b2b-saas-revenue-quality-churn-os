@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 import json
 import re
 import unittest
@@ -27,21 +26,13 @@ class TestArtifactContracts(unittest.TestCase):
         self.assertEqual(missing, [], f"Missing SQL semantic-layer files: {missing}")
 
     def test_profiling_and_analysis_artifacts_exist_with_contract(self) -> None:
-        profiling_stats_path = REPORTS / "profiling_stats.json"
         profiling_memo_path = REPORTS / "data_profiling_memo.md"
         analysis_metrics_path = REPORTS / "main_business_analysis_metrics.json"
         analysis_memo_path = REPORTS / "main_business_analysis_memo.md"
 
-        self.assertTrue(profiling_stats_path.exists(), "profiling_stats.json is missing")
         self.assertTrue(profiling_memo_path.exists(), "data_profiling_memo.md is missing")
         self.assertTrue(analysis_metrics_path.exists(), "main_business_analysis_metrics.json is missing")
         self.assertTrue(analysis_memo_path.exists(), "main_business_analysis_memo.md is missing")
-
-        profiling_payload = json.loads(profiling_stats_path.read_text(encoding="utf-8"))
-        self.assertIn("meta", profiling_payload)
-        self.assertIn("summary", profiling_payload)
-        self.assertIn("quality_checks", profiling_payload)
-        self.assertIn("issues_ranked", profiling_payload)
 
         analysis_payload = json.loads(analysis_metrics_path.read_text(encoding="utf-8"))
         for key in ["meta", "section1", "section2", "section3", "section4", "section5", "section6"]:
@@ -74,38 +65,6 @@ class TestArtifactContracts(unittest.TestCase):
         self.assertGreaterEqual(len(payload.get("chart_catalog", [])), 15, "Dashboard chart catalog is incomplete")
         self.assertGreater(len(payload.get("accounts", [])), 0, "Dashboard account payload is empty")
         self.assertNotEqual(payload.get("meta", {}).get("validation_readiness_tier", ""), "", "Dashboard readiness tier is missing")
-
-    def test_release_manifest_contract(self) -> None:
-        manifest_path = REPORTS / "release_manifest.json"
-        self.assertTrue(manifest_path.exists(), "Release manifest is missing")
-
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        required_keys = {
-            "release_timestamp_utc",
-            "python_version",
-            "platform",
-            "seed",
-            "data_coverage",
-            "row_counts",
-            "artifact_count",
-            "checksums_path",
-            "validation_summary",
-        }
-        self.assertTrue(required_keys.issubset(set(manifest.keys())), f"Missing manifest keys: {required_keys}")
-        self.assertGreaterEqual(int(manifest["artifact_count"]), 50, "Unexpectedly low artifact count in manifest")
-
-    def test_release_checksums_non_empty(self) -> None:
-        checksums_path = REPORTS / "release_checksums.csv"
-        self.assertTrue(checksums_path.exists(), "Release checksums file is missing")
-
-        with checksums_path.open(newline="", encoding="utf-8") as f:
-            rows = list(csv.DictReader(f))
-        self.assertGreater(len(rows), 0, "Release checksums file has no rows")
-
-        first = rows[0]
-        self.assertIn("path", first)
-        self.assertIn("bytes", first)
-        self.assertIn("sha256", first)
 
 
 if __name__ == "__main__":

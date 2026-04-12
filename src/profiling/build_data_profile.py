@@ -339,7 +339,7 @@ def build_memo(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run formal raw-data profiling and emit profiling artifacts.")
     parser.add_argument("--base-dir", type=str, default=".")
-    parser.add_argument("--stats-path", type=str, default="reports/profiling_stats.json")
+    parser.add_argument("--stats-path", type=str, default="")
     parser.add_argument("--memo-path", type=str, default="reports/data_profiling_memo.md")
     return parser.parse_args()
 
@@ -364,14 +364,17 @@ def main() -> None:
         "issues_ranked": [issue.__dict__ for issue in issues],
     }
 
-    stats_path = (base_dir / args.stats_path).resolve()
-    stats_path.parent.mkdir(parents=True, exist_ok=True)
-    stats_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    stats_path = None
+    if args.stats_path:
+        stats_path = (base_dir / args.stats_path).resolve()
+        stats_path.parent.mkdir(parents=True, exist_ok=True)
+        stats_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     build_memo(profile_summary=profile_summary, checks=checks, issues=issues, output_path=(base_dir / args.memo_path).resolve())
 
     print("Data profiling complete.")
-    print(f"Stats: {stats_path}")
+    if stats_path:
+        print(f"Stats: {stats_path}")
     print(f"Memo: {(base_dir / args.memo_path).resolve()}")
 
 

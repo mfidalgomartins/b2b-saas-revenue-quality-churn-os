@@ -41,22 +41,14 @@ b2b-saas-revenue-quality-os/
     staging/
     marts/
   docs/
-    methodology.md
-    data_dictionary.md
-    executive_summary.md
-    CONTRIBUTING.md
-    CHANGELOG.md
-    synthetic_data_design.md
-    synthetic_data_generation_note.md
-    analytical_layer_notes.md
-    feature_dictionary.md
-    scoring_model_design.md
-    reproducibility.md
-    release_process.md
-    data_contracts.md
-    governance_readiness_policy.md
-    dashboard_architecture.md
-    release_readiness_checklist.md
+    core/
+      methodology.md
+      data_dictionary.md
+      executive_summary.md
+      synthetic_data.md
+      analytical_layer_notes.md
+      feature_dictionary.md
+      scoring_model_design.md
   notebooks/
     01_operating_system_walkthrough.ipynb
   outputs/
@@ -73,8 +65,6 @@ b2b-saas-revenue-quality-os/
   .github/workflows/qa.yml
   pyproject.toml
   README.md
-  requirements-notebook.txt
-  requirements-dev.txt
 ```
 
 ## Datasets Used
@@ -95,8 +85,6 @@ b2b-saas-revenue-quality-os/
 - `account_scoring_model_output.csv`
 - `account_scoring_components.csv`
 - `scoring_priority_shortlist.csv`
-- `scoring_backtest_calibration_by_tier.csv`
-- `scoring_backtest_calibration_by_decile.csv`
 - `baseline_mrr_forecast.csv`
 - `risk_adjusted_mrr_forecast.csv`
 - `scenario_mrr_trajectories.csv`
@@ -114,13 +102,13 @@ High-level flow:
 7. Executive chart package and offline dashboard.
 8. Formal validation across data, metrics, scoring, forecasting, dashboard feed, and narrative claims.
 
-Detailed methodology is in `docs/methodology.md`.
+Detailed methodology is in `docs/core/methodology.md`.
 
-Formal reproducibility instructions are in `docs/reproducibility.md`.
+Feature dictionary: `docs/core/feature_dictionary.md`
 
-Data and artifact contract definitions are in `docs/data_contracts.md`.
+Analytical layer notes: `docs/core/analytical_layer_notes.md`
 
-Governance readiness policy and release-state taxonomy are in `docs/governance_readiness_policy.md`.
+Scoring design: `docs/core/scoring_model_design.md`
 
 ## Key Metrics
 - MRR, ARR
@@ -151,7 +139,7 @@ Offline, self-contained executive dashboard:
 - file: `outputs/dashboard/executive_dashboard.html`
 - sections: Executive Overview, Revenue Quality, Retention & Churn, Account Risk, Portfolio/Manager, Scenario & Forecast, Methodology
 - includes governed KPI cards, embedded chart artifacts, filters for account-level slicing, sortable/searchable account drilldown, methodology drawer, and source-map panel.
-- dashboard technical architecture and update flow: `docs/dashboard_architecture.md`
+- dashboard feed alignment: see `docs/core/methodology.md`
 
 ## Key Findings (Current Run)
 - MRR grew from ~$3.75M to ~$9.52M (+154%) over 36 months.
@@ -170,7 +158,7 @@ Offline, self-contained executive dashboard:
 
 ## Limitations
 - Data is synthetic by design.
-- Latest formal validation run is fully green (`19 PASS / 0 WARN / 0 FAIL`) with governance tier `technically valid`.
+- Validation status depends on the latest local run; review `reports/formal_validation_report.md` after running the pipeline.
 - Scoring is rule-based and interpretable, not a causal/predictive ML model.
 
 ## How To Run
@@ -178,10 +166,10 @@ From project root:
 
 ```bash
 # 1) Generate synthetic data
-python3 src/data_generation/generate_synthetic_data.py --output-dir data/raw --note-path docs/synthetic_data_generation_note.md --seed 42
+python3 src/data_generation/generate_synthetic_data.py --output-dir data/raw --note-path docs/core/synthetic_data.md --seed 42
 
 # 2) Build analytical layer
-python3 src/features/build_analytical_layer.py --raw-dir data/raw --processed-dir data/processed --feature-dictionary-path docs/feature_dictionary.md --notes-path docs/analytical_layer_notes.md
+python3 src/features/build_analytical_layer.py --raw-dir data/raw --processed-dir data/processed --feature-dictionary-path docs/core/feature_dictionary.md --notes-path docs/core/analytical_layer_notes.md
 
 # 3) Run data profiling
 python3 src/profiling/build_data_profile.py --base-dir .
@@ -195,22 +183,19 @@ python3 src/analysis/build_main_business_analysis.py --base-dir .
 # 6) Build forecasting/scenarios
 python3 src/forecasting/build_forecasting_scenarios.py --base-dir .
 
-# 7) Backtest scoring calibration
-python3 src/scoring/backtest_scoring_calibration.py --base-dir .
-
-# 8) Build charts
+# 7) Build charts
 python3 src/visualization/build_leadership_charts.py --base-dir .
 
-# 9) Build executive dashboard
+# 8) Build executive dashboard
 python3 src/dashboard/build_executive_dashboard.py --base-dir . --output outputs/dashboard/executive_dashboard.html
 
-# 10) Run formal validation
+# 9) Run formal validation
 python3 src/validation/run_full_project_validation.py --base-dir .
 
-# 11) Enforce strict validation gate
+# 10) Enforce strict validation gate
 python3 src/validation/check_validation_gate.py --summary-path reports/formal_validation_summary.json --max-warn 0 --max-fail 0 --max-high-severity 0 --max-critical-severity 0
 
-# 12) Optional: enforce governance readiness tier explicitly
+# 11) Optional: enforce governance readiness tier explicitly
 python3 src/validation/check_validation_gate.py --summary-path reports/formal_validation_summary.json --max-warn 0 --max-fail 0 --max-high-severity 0 --max-critical-severity 0 --min-readiness-tier "technically valid"
 ```
 
@@ -242,7 +227,7 @@ make release-refresh
 Notebook walkthrough:
 ```bash
 # optional notebook dependency
-pip install -r requirements-notebook.txt
+pip install -r requirements.txt
 
 jupyter notebook notebooks/01_operating_system_walkthrough.ipynb
 ```
@@ -252,7 +237,3 @@ jupyter notebook notebooks/01_operating_system_walkthrough.ipynb
 - Add manager mix-adjusted benchmarking.
 - Add account-level intervention outcome tracking loop (closed-loop analytics).
 - Add temporal train/validation split with strict pre-event feature cutoffs for predictive-grade modeling.
-
-## Contribution
-- Contribution process and quality expectations: `docs/CONTRIBUTING.md`
-- Release history: `docs/CHANGELOG.md`

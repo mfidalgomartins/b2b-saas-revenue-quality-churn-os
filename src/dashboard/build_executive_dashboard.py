@@ -3,15 +3,12 @@ from __future__ import annotations
 import argparse
 import base64
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 
-DASHBOARD_VERSION = "2.0.0"
-DATA_CONTRACT_VERSION = "dashboard_payload_v2"
 
 
 def parse_args() -> argparse.Namespace:
@@ -212,11 +209,6 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
 
     analysis_metrics = json.loads((reports_dir / "main_business_analysis_metrics.json").read_text(encoding="utf-8"))
     validation_summary = json.loads((reports_dir / "formal_validation_summary.json").read_text(encoding="utf-8"))
-
-    release_manifest_path = reports_dir / "release_manifest.json"
-    release_manifest = {}
-    if release_manifest_path.exists():
-        release_manifest = json.loads(release_manifest_path.read_text(encoding="utf-8"))
 
     latest_plan = _load_latest_plan(customers, subscriptions, plans)
 
@@ -576,12 +568,8 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
 
     payload = {
         "meta": {
-            "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-            "dashboard_version": DASHBOARD_VERSION,
-            "data_contract_version": DATA_CONTRACT_VERSION,
             "validation_overall": validation_summary.get("overall_assessment", ""),
             "validation_readiness_tier": validation_summary.get("readiness", {}).get("tier", ""),
-            "release_timestamp_utc": release_manifest.get("release_timestamp_utc", ""),
             "data_coverage": data_coverage,
             "row_counts": {
                 "accounts": int(accounts.shape[0]),

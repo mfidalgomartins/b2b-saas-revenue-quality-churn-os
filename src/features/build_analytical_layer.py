@@ -661,8 +661,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build analytical layer tables for revenue quality and churn analytics.")
     parser.add_argument("--raw-dir", type=str, default="data/raw")
     parser.add_argument("--processed-dir", type=str, default="data/processed")
-    parser.add_argument("--feature-dictionary-path", type=str, default="docs/feature_dictionary.md")
-    parser.add_argument("--notes-path", type=str, default="docs/analytical_layer_notes.md")
+    parser.add_argument("--feature-dictionary-path", type=str, default="docs/core/feature_dictionary.md")
+    parser.add_argument("--notes-path", type=str, default="docs/core/analytical_layer_notes.md")
     return parser.parse_args()
 
 
