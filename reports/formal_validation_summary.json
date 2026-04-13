@@ -1,9 +1,9 @@
 {
   "overall_assessment": "Technically valid. Validation controls passed without material caveats.",
   "summary": {
-    "total_findings": 19,
+    "total_findings": 20,
     "status_counts": {
-      "PASS": 19,
+      "PASS": 20,
       "WARN": 0,
       "FAIL": 0
     },
@@ -12,7 +12,7 @@
       "High": 0,
       "Medium": 0,
       "Low": 0,
-      "None": 19
+      "None": 20
     },
     "readiness": {
       "tier": "technically valid",
@@ -42,7 +42,7 @@
     {
       "component": "Processed Tables",
       "confidence": "High",
-      "pass": 3,
+      "pass": 2,
       "warn": 0,
       "fail": 0
     },
@@ -77,12 +77,19 @@
     {
       "component": "Dashboard Feeding Tables",
       "confidence": "High",
-      "pass": 2,
+      "pass": 1,
       "warn": 0,
       "fail": 0
     },
     {
       "component": "Written Conclusions",
+      "confidence": "High",
+      "pass": 1,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "component": "Release Governance",
       "confidence": "High",
       "pass": 1,
       "warn": 0,

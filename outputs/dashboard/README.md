@@ -1,10 +1,10 @@
-# Dashboard Executivo
+# Executive Dashboard
 
-Este folder contém o dashboard executivo.
+This folder contains the interactive executive dashboard artifact.
 
-**Acesso principal (GitHub Pages):**  
+**Primary access (GitHub Pages):**  
 https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/
 
-**Acesso alternativo:** ficheiro HTML offline (`revenue-quality-command-center.html`).
+**Alternative access:** offline HTML file (`revenue-quality-command-center.html`).
 
-Nota: o GitHub mostra o HTML como código, não como visualização interativa.
+Note: opening the `.html` file directly on GitHub shows source code, not the interactive dashboard view.

@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List
@@ -957,6 +959,38 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
             "Regenerate the executive dashboard or reduce payload size before distribution.",
         )
 
+    # 20) Test suite integrity
+    test_cmd = [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"]
+    test_run = subprocess.run(
+        test_cmd,
+        cwd=str(base_dir),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if test_run.returncode == 0:
+        add_finding(
+            findings,
+            "20",
+            "Test Suite Integrity",
+            "Release Governance",
+            "PASS",
+            "None",
+            "Unit test discovery/execution completed successfully.",
+        )
+    else:
+        err_excerpt = (test_run.stderr or test_run.stdout)[-1000:]
+        add_finding(
+            findings,
+            "20",
+            "Test Suite Integrity",
+            "Release Governance",
+            "FAIL",
+            "Critical",
+            f"Unit test suite failed (exit={test_run.returncode}). Excerpt: {err_excerpt}",
+            "Fix failing/broken tests before claiming release readiness.",
+        )
+
     summary["total_findings"] = len(findings)
     summary["status_counts"] = {
         "PASS": sum(1 for f in findings if f.status == "PASS"),
@@ -982,6 +1016,7 @@ def confidence_by_component(findings: List[Finding]) -> pd.DataFrame:
         "Forecast Outputs": ["Forecasting"],
         "Dashboard Feeding Tables": ["Processed/Dashboard"],
         "Written Conclusions": ["Narrative"],
+        "Release Governance": ["Release Governance"],
     }
 
     rows = []

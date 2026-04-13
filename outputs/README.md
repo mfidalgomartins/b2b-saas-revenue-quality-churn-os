@@ -1,11 +1,11 @@
 # Outputs
 
-Este folder reúne os outputs finais do projeto.
+This folder contains the final project deliverables.
 
-- `dashboard/` — acesso ao dashboard interativo e ao HTML offline
-- `charts/` — pack de gráficos executivos usado no dashboard e nos relatórios
+- `dashboard/` - interactive dashboard access and offline HTML artifact
+- `charts/` - executive chart pack used in dashboard sections and reports
 
-**Dashboard ao vivo (GitHub Pages):**  
+**Live dashboard (GitHub Pages):**  
 https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/
 
-Pasta do dashboard: `dashboard/`
+Dashboard folder: `dashboard/`

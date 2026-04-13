@@ -9,8 +9,8 @@ Technically valid. Validation controls passed without material caveats.
 - Ordered scale: `publish-blocked` -> `not committee-grade` -> `screening-grade only` -> `decision-support only` -> `analytically acceptable` -> `technically valid`
 
 Validation execution summary:
-- Total checks run: 19
-- PASS: 19
+- Total checks run: 20
+- PASS: 20
 - WARN: 0
 - FAIL: 0
 - High/Critical findings: 0
@@ -28,13 +28,14 @@ No issues found.
 | Component | Confidence | PASS | WARN | FAIL |
 |---|---:|---:|---:|---:|
 | Raw Data Logic | High | 6 | 0 | 0 |
-| Processed Tables | High | 3 | 0 | 0 |
+| Processed Tables | High | 2 | 0 | 0 |
 | Feature Engineering | High | 2 | 0 | 0 |
 | Metrics | High | 2 | 0 | 0 |
 | Scoring Outputs | High | 3 | 0 | 0 |
 | Forecast Outputs | High | 2 | 0 | 0 |
-| Dashboard Feeding Tables | High | 2 | 0 | 0 |
+| Dashboard Feeding Tables | High | 1 | 0 | 0 |
 | Written Conclusions | High | 1 | 0 | 0 |
+| Release Governance | High | 1 | 0 | 0 |
 
 ## QA Positioning for Stakeholder Share-Out
 - This memo is a pre-publication QA gate.

@@ -47,4 +47,4 @@ python3 src/validation/check_validation_gate.py --summary-path reports/formal_va
 - Synthetic data by design.
 - Scoring is interpretable and rule‑based, not causal.
 
-Tools: Python, SQL, pandas, Plotly, HTML, CSS, JavaScript.
+Tools: Python, SQL, pandas, NumPy, Matplotlib, Seaborn, HTML, CSS, JavaScript.

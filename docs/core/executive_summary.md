@@ -38,7 +38,7 @@ The central question is whether ARR/MRR expansion is driven by healthy recurring
 - A relatively small set of accounts can drive outsized downside in stress scenarios.
 
 4. QA status is fully green.
-- Latest formal validation reports `15 PASS`, `0 WARN`, and `0 FAIL`.
+- Latest formal validation reports all controls passing with no warnings or failures.
 - No high/critical findings are open.
 
 ## Recommendations
@@ -49,6 +49,6 @@ The central question is whether ARR/MRR expansion is driven by healthy recurring
 5. Use scenario outputs in monthly planning to quantify downside and intervention upside.
 
 ## Next Steps
-1. Institutionalize monthly refresh using the release process (`manifest + checksums + validation gate`).
+1. Institutionalize monthly refresh using the release process (`pipeline + test suite + validation gate`).
 2. Publish dashboard/report pack as the recurring commercial operating review artifact.
 3. Add strict pre-event temporal splits for predictive-grade calibration as phase 2.

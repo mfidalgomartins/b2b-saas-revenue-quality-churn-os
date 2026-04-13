@@ -159,7 +159,7 @@ Outputs include:
 - commercial impact estimates (ARR at risk, downside exposure, stress tests).
 
 ## 6) Validation Approach
-A formal 19-check QA gate is implemented in:
+A formal 20-check QA gate is implemented in:
 - `src/validation/run_full_project_validation.py`
 
 ### Checks covered
@@ -182,6 +182,7 @@ A formal 19-check QA gate is implemented in:
 17. score stability and calibration safeguards
 18. financial/decision logic integrity for scenarios and impact table
 19. release artifact readiness for the executive dashboard
+20. test suite integrity (unittest discovery/execution)
 
 Validation outputs:
 - `reports/formal_validation_report.md`

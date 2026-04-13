@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 from pathlib import Path
 from typing import Any
@@ -30,11 +29,6 @@ def _safe_float(value: Any, digits: int = 4) -> float:
 
 def _fmt_pct(value: float) -> str:
     return f"{value * 100:.2f}%"
-
-
-def _encode_png_data_uri(path: Path) -> str:
-    data = base64.b64encode(path.read_bytes()).decode("ascii")
-    return f"data:image/png;base64,{data}"
 
 
 def _load_latest_plan(customers: pd.DataFrame, subscriptions: pd.DataFrame, plans: pd.DataFrame) -> pd.DataFrame:
@@ -181,7 +175,7 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
                 "subtitle": subtitle,
                 "section": section,
                 "filename": filename,
-                "image_data_uri": _encode_png_data_uri(path),
+                "image_src": f"../charts/{filename}",
             }
         )
     return catalog
@@ -1500,13 +1494,13 @@ function renderCharts(targetId, section) {{
       <div class="chart-subtitle">${{esc(c.subtitle)}}</div>
       <div class="chart-actions">
         <button class="chart-expand-btn" data-target="${{esc(targetId)}}" data-index="${{idx}}">Expand</button>
-        <a class="button-link" href="${{c.image_data_uri}}" download="${{esc(c.filename)}}" aria-label="Download chart">Download</a>
+        <a class="button-link" href="${{c.image_src}}" download="${{esc(c.filename)}}" aria-label="Download chart">Download</a>
       </div>
       <img
         class="chart-preview"
         data-target="${{esc(targetId)}}"
         data-index="${{idx}}"
-        src="${{c.image_data_uri}}"
+        src="${{c.image_src}}"
         alt="${{esc(c.title)}}"
         loading="lazy"
       />
@@ -1545,7 +1539,7 @@ function updateModalContent() {{
   document.getElementById('chartModalSubtitle').textContent = chart.subtitle || '';
   document.getElementById('chartModalPosition').textContent = `${{idx + 1}} / ${{modalState.charts.length}}`;
   const img = document.getElementById('chartModalImage');
-  img.src = chart.image_data_uri;
+  img.src = chart.image_src;
   img.alt = chart.title || 'Chart';
   modalState.zoom = MIN_MODAL_ZOOM;
   modalState.tx = 0;
