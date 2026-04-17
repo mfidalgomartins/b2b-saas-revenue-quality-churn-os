@@ -630,234 +630,399 @@ def build_html(payload: dict[str, Any]) -> str:
 <head>
 <meta charset=\"UTF-8\" />
 <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
-<title>B2B SaaS Revenue Quality & Churn Early Warning Operating Dashboard</title>
+<title>Revenue Quality Command Center</title>
 <style>
 :root {{
-  --bg: #f4f7fb;
-  --panel: #ffffff;
-  --panel-soft: #f8fbff;
-  --ink: #1a2633;
-  --muted: #5a6778;
-  --line: #d8e2ee;
-  --accent: #1f5db8;
-  --accent-soft: #e8f0ff;
-  --green: #1f7a53;
-  --orange: #be6b0d;
-  --red: #b3342b;
-  --header-bg: rgba(244, 247, 251, 0.95);
-  --chip-bg: #ffffff;
+  --bg: #f4f0e8;
+  --panel: rgba(255, 252, 247, 0.84);
+  --panel-soft: rgba(255, 249, 241, 0.78);
+  --panel-strong: #fffdf9;
+  --ink: #18212d;
+  --muted: #667384;
+  --line: rgba(143, 122, 92, 0.18);
+  --line-strong: rgba(23, 74, 114, 0.18);
+  --accent: #174a72;
+  --accent-strong: #102f4c;
+  --accent-soft: #e9eff4;
+  --green: #1d6c52;
+  --orange: #98611a;
+  --red: #9f3f34;
+  --header-bg: rgba(244, 240, 232, 0.9);
+  --chip-bg: rgba(255, 255, 255, 0.62);
   --chip-ink: #314256;
-  --input-bg: #ffffff;
-  --input-border: #c9d6e5;
-  --btn-bg: #ffffff;
-  --btn-border: #c2d1e2;
-  --btn-ink: #1e2b3d;
-  --btn-hover: #f2f6fc;
-  --tab-bg: #eaf1fa;
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-border: rgba(101, 121, 146, 0.25);
+  --btn-bg: rgba(255, 255, 255, 0.82);
+  --btn-border: rgba(101, 121, 146, 0.24);
+  --btn-ink: #1d2b3d;
+  --btn-hover: #eef3f7;
+  --tab-bg: rgba(232, 237, 242, 0.88);
   --tab-ink: #2e4057;
   --tab-active-bg: #ffffff;
-  --tab-active-ink: #193a66;
-  --kpi-bg: #fbfdff;
-  --chart-card-bg: #ffffff;
-  --chart-image-bg: #f8fbff;
-  --chart-image-border: #e0e8f3;
-  --chart-frame-bg: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  --tooltip-bg: rgba(18, 33, 56, 0.95);
+  --tab-active-ink: #163a5f;
+  --kpi-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 244, 238, 0.98) 100%);
+  --chart-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(249, 245, 239, 0.98) 100%);
+  --chart-image-bg: #fcfcfb;
+  --chart-image-border: #d8dee6;
+  --chart-frame-bg: linear-gradient(180deg, #fffefc 0%, #f6f8fb 100%);
+  --tooltip-bg: rgba(15, 27, 43, 0.95);
   --tooltip-ink: #ffffff;
-  --insight-bg: #f3f8ff;
-  --insight-border: #d7e5f6;
+  --insight-bg: #eff4f8;
+  --insight-border: #d5e0eb;
   --insight-ink: #34485f;
-  --table-head-bg: #f5f9ff;
-  --table-row-hover: #f8fbff;
-  --modal-overlay: rgba(11, 18, 30, 0.76);
-  --modal-bg: #ffffff;
-  --modal-line: #d4deea;
-  --modal-body-bg: #f7fbff;
-  --empty-bg: #f7faff;
-  --empty-line: #c9d5e4;
-  --empty-ink: #456;
-  --shadow: 0 10px 28px rgba(16, 24, 40, 0.08);
+  --table-head-bg: #f1ede6;
+  --table-row-hover: #f6f3ed;
+  --table-row-alt: rgba(23, 74, 114, 0.025);
+  --modal-overlay: rgba(12, 18, 28, 0.82);
+  --modal-bg: #fefcf9;
+  --modal-line: #d4dbe3;
+  --modal-body-bg: #f4f6f8;
+  --empty-bg: #f6f4ef;
+  --empty-line: #d4d8dd;
+  --empty-ink: #526273;
+  --shadow: 0 24px 56px rgba(42, 47, 56, 0.11);
+  --shadow-soft: 0 12px 28px rgba(42, 47, 56, 0.08);
 }}
 [data-theme="dark"] {{
-  --bg: #0f1724;
-  --panel: #152133;
-  --panel-soft: #18273b;
-  --ink: #e6edf7;
-  --muted: #a8b7cb;
-  --line: #30425b;
-  --accent: #74a8ff;
-  --accent-soft: #213858;
-  --header-bg: rgba(15, 23, 36, 0.95);
-  --chip-bg: #1a2a3f;
-  --chip-ink: #d4e1f2;
-  --input-bg: #162436;
-  --input-border: #3a4f6c;
-  --btn-bg: #1a2a3f;
-  --btn-border: #3a4f6c;
-  --btn-ink: #e4edf9;
-  --btn-hover: #22344d;
-  --tab-bg: #1a2b42;
-  --tab-ink: #c7d7ec;
-  --tab-active-bg: #2a4161;
-  --tab-active-ink: #f1f6ff;
-  --kpi-bg: #182638;
-  --chart-card-bg: #162436;
-  --chart-image-bg: #f8fbff;
-  --chart-image-border: #cfdae9;
-  --chart-frame-bg: linear-gradient(180deg, #fdfefe 0%, #f6faff 100%);
+  --bg: #0e1720;
+  --panel: rgba(19, 31, 44, 0.88);
+  --panel-soft: rgba(22, 36, 52, 0.84);
+  --panel-strong: #172433;
+  --ink: #e8edf4;
+  --muted: #a7b5c5;
+  --line: rgba(133, 157, 182, 0.2);
+  --line-strong: rgba(116, 168, 255, 0.22);
+  --accent: #8cb5ff;
+  --accent-strong: #c5dbff;
+  --accent-soft: #1a2c43;
+  --header-bg: rgba(13, 23, 33, 0.88);
+  --chip-bg: rgba(29, 46, 67, 0.7);
+  --chip-ink: #d8e4f1;
+  --input-bg: rgba(18, 35, 51, 0.9);
+  --input-border: rgba(116, 136, 160, 0.34);
+  --btn-bg: rgba(25, 42, 60, 0.9);
+  --btn-border: rgba(116, 136, 160, 0.34);
+  --btn-ink: #ecf3fb;
+  --btn-hover: #243a53;
+  --tab-bg: rgba(23, 39, 57, 0.92);
+  --tab-ink: #cfdaea;
+  --tab-active-bg: #304861;
+  --tab-active-ink: #f4f8fd;
+  --kpi-bg: linear-gradient(180deg, rgba(23, 37, 52, 0.96) 0%, rgba(18, 31, 45, 0.98) 100%);
+  --chart-card-bg: linear-gradient(180deg, rgba(22, 36, 52, 0.96) 0%, rgba(16, 28, 42, 0.98) 100%);
+  --chart-image-bg: #f7f9fb;
+  --chart-image-border: #d8e2ed;
+  --chart-frame-bg: linear-gradient(180deg, #ffffff 0%, #f5f8fb 100%);
   --tooltip-bg: rgba(6, 11, 18, 0.96);
   --tooltip-ink: #f4f7fb;
-  --insight-bg: #1c2f47;
-  --insight-border: #355170;
+  --insight-bg: #1a2d40;
+  --insight-border: #3d5b7c;
   --insight-ink: #d8e5f4;
-  --table-head-bg: #1d2f47;
-  --table-row-hover: #21344f;
+  --table-head-bg: #1c3047;
+  --table-row-hover: #20364d;
+  --table-row-alt: rgba(255, 255, 255, 0.015);
   --modal-overlay: rgba(5, 10, 16, 0.85);
-  --modal-bg: #122033;
-  --modal-line: #2f4664;
-  --modal-body-bg: #0e1928;
-  --empty-bg: #162437;
-  --empty-line: #3a5272;
+  --modal-bg: #132233;
+  --modal-line: #314a68;
+  --modal-body-bg: #101b29;
+  --empty-bg: #162537;
+  --empty-line: #415877;
   --empty-ink: #ccd9ea;
-  --shadow: 0 12px 30px rgba(5, 10, 18, 0.42);
+  --shadow: 0 26px 60px rgba(3, 8, 14, 0.45);
+  --shadow-soft: 0 14px 30px rgba(3, 8, 14, 0.32);
 }}
 * {{ box-sizing: border-box; }}
-html, body {{ margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: "IBM Plex Sans", "Segoe UI", Arial, sans-serif; }}
-body {{ line-height: 1.35; transition: background-color 0.25s ease, color 0.25s ease; }}
+html, body {{
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+}}
+body {{
+  line-height: 1.42;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  position: relative;
+  background-image:
+    radial-gradient(circle at top left, rgba(23, 74, 114, 0.10), transparent 34%),
+    radial-gradient(circle at top right, rgba(155, 106, 28, 0.10), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 18%);
+  background-attachment: fixed;
+}}
 body[data-theme="light"] {{ color-scheme: light; }}
 body[data-theme="dark"] {{ color-scheme: dark; }}
+body::before,
+body::after {{
+  content: "";
+  position: fixed;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(28px);
+  opacity: 0.16;
+  z-index: 0;
+}}
+body::before {{
+  top: -8rem;
+  left: -10rem;
+  background: rgba(23, 74, 114, 0.42);
+}}
+body::after {{
+  top: 16rem;
+  right: -10rem;
+  background: rgba(155, 106, 28, 0.32);
+}}
 
 header {{
   position: sticky;
   top: 0;
   z-index: 60;
   background: var(--header-bg);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
 }}
 .header-inner {{
-  max-width: 1500px;
+  position: relative;
+  z-index: 1;
+  max-width: 1520px;
   margin: 0 auto;
-  padding: 14px 20px 12px;
+  padding: 18px 22px 16px;
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }}
 .title-row {{
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
   gap: 14px;
-  flex-wrap: wrap;
+  align-items: stretch;
 }}
-.title-block h1 {{ margin: 0; font-size: 1.25rem; font-weight: 700; }}
-.subtitle {{ margin-top: 4px; color: var(--muted); font-size: 0.88rem; }}
-.meta-row {{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }}
+.eyebrow {{
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  color: var(--accent);
+}}
+.title-block h1 {{
+  margin: 8px 0 0;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: clamp(1.65rem, 2.4vw, 2.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  max-width: 14ch;
+}}
+.subtitle {{
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  max-width: 68ch;
+}}
+.header-brief {{
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(248, 243, 235, 0.8) 100%);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-soft);
+}}
+[data-theme="dark"] .header-brief {{
+  background: linear-gradient(180deg, rgba(24, 38, 55, 0.88) 0%, rgba(18, 31, 45, 0.92) 100%);
+}}
+.brief-label {{
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  font-weight: 700;
+}}
+.brief-copy {{
+  margin: 8px 0 12px;
+  font-size: 0.88rem;
+  color: var(--ink);
+}}
+.meta-row {{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}}
 .chip {{
   border: 1px solid var(--line);
   background: var(--chip-bg);
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   color: var(--chip-ink);
-  padding: 3px 10px;
+  padding: 5px 10px;
   white-space: nowrap;
+  backdrop-filter: blur(10px);
 }}
-.chip.alert-high {{ border-color: #f4b8b2; background: #fff3f2; color: #8e2f29; }}
-.chip.alert-medium {{ border-color: #f5d6b3; background: #fff8ef; color: #8a4f08; }}
+.chip.alert-high {{ border-color: rgba(159, 63, 52, 0.26); background: rgba(255, 239, 236, 0.82); color: #8e2f29; }}
+.chip.alert-medium {{ border-color: rgba(152, 97, 26, 0.28); background: rgba(255, 247, 233, 0.82); color: #8a4f08; }}
 .theme-btn {{
   border-radius: 999px;
-  padding: 5px 12px;
+  padding: 7px 13px;
   font-size: 0.76rem;
   font-weight: 700;
   border: 1px solid var(--btn-border);
   background: var(--btn-bg);
   color: var(--btn-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }}
 .theme-btn:hover {{ background: var(--btn-hover); }}
 
+.filter-shell {{
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--shadow-soft);
+  padding: 14px;
+  backdrop-filter: blur(12px);
+}}
+.filter-shell-head {{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}}
+.filter-shell-title {{
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  color: var(--accent);
+}}
+.filter-shell-note {{
+  margin-top: 5px;
+  font-size: 0.86rem;
+  color: var(--muted);
+}}
 .filters {{
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 10px;
 }}
-.filter {{ display: grid; gap: 4px; }}
-.filter label {{ font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 700; }}
+.filter {{ display: grid; gap: 5px; }}
+.filter label {{
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}}
 .filter select, .filter input {{
   width: 100%;
   border: 1px solid var(--input-border);
-  border-radius: 8px;
-  padding: 7px 8px;
-  font-size: 0.85rem;
+  border-radius: 12px;
+  padding: 10px 11px;
+  font-size: 0.84rem;
   background: var(--input-bg);
   color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}}
+.filter select:focus, .filter input:focus {{
+  border-color: rgba(23, 74, 114, 0.45);
+  box-shadow: 0 0 0 3px rgba(23, 74, 114, 0.10);
 }}
 .filter input::placeholder {{ color: var(--muted); }}
-.filter-actions {{ display: flex; gap: 8px; align-items: end; }}
+.filter-actions {{
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  flex-wrap: wrap;
+}}
 button {{
   border: 1px solid var(--btn-border);
   background: var(--btn-bg);
   color: var(--btn-ink);
-  border-radius: 8px;
-  padding: 8px 11px;
+  border-radius: 12px;
+  padding: 9px 13px;
   font-size: 0.82rem;
   cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.14s ease, background-color 0.2s ease, border-color 0.2s ease;
 }}
 button.primary {{ background: var(--accent); color: #fff; border-color: var(--accent); }}
-button:hover {{ background: var(--btn-hover); }}
+button:hover {{ background: var(--btn-hover); transform: translateY(-1px); }}
 .button-link {{
   border: 1px solid var(--btn-border);
   background: var(--btn-bg);
   color: var(--btn-ink);
-  border-radius: 8px;
-  padding: 8px 11px;
+  border-radius: 12px;
+  padding: 9px 13px;
   font-size: 0.82rem;
   cursor: pointer;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  font-weight: 600;
 }}
 .button-link:hover {{ background: var(--btn-hover); }}
 
 main {{
-  max-width: 1500px;
+  position: relative;
+  z-index: 1;
+  max-width: 1520px;
   margin: 0 auto;
-  padding: 16px 20px 28px;
+  padding: 20px 22px 36px;
 }}
 .tab-nav {{
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }}
 .tab-btn {{
   border: 1px solid var(--line);
   background: var(--tab-bg);
   color: var(--tab-ink);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 999px;
+  padding: 10px 14px;
   font-size: 0.84rem;
   font-weight: 600;
+  box-shadow: var(--shadow-soft);
 }}
-.tab-btn.active {{ background: var(--tab-active-bg); color: var(--tab-active-ink); border-color: var(--line); }}
+.tab-btn.active {{ background: var(--tab-active-bg); color: var(--tab-active-ink); border-color: var(--line-strong); }}
 .section {{
   display: none;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 22px;
   box-shadow: var(--shadow);
-  padding: 14px;
+  padding: 18px;
+  backdrop-filter: blur(12px);
 }}
 .section.active {{ display: block; }}
-.section-head {{ display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 10px; }}
-.section-head h2 {{ margin: 0; font-size: 1.08rem; }}
-.section-note {{ color: var(--muted); font-size: 0.84rem; }}
+.section-head {{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}}
+.section-head h2 {{
+  margin: 0;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: 1.42rem;
+  letter-spacing: -0.03em;
+}}
+.section-note {{ color: var(--muted); font-size: 0.88rem; max-width: 64ch; }}
 
 .chart-toolbar {{
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   flex-wrap: wrap;
+}}
+.chart-toolbar-copy {{
+  display: grid;
+  gap: 4px;
 }}
 .chart-density-controls {{ display: flex; gap: 6px; flex-wrap: wrap; }}
 .chart-density-btn.active {{
@@ -868,59 +1033,184 @@ main {{
 
 .kpi-grid {{
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 9px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
 }}
 .kpi-card {{
+  position: relative;
+  overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 18px;
   background: var(--kpi-bg);
-  padding: 10px;
+  padding: 16px 16px 14px;
+  box-shadow: var(--shadow-soft);
+  min-width: 0;
 }}
-.kpi-label {{ font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); font-weight: 700; }}
-.kpi-value {{ margin-top: 5px; font-size: 1.15rem; font-weight: 700; color: var(--ink); }}
-.kpi-foot {{ margin-top: 3px; font-size: 0.75rem; color: var(--muted); }}
+.kpi-card::before {{
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent) 0%, rgba(23, 74, 114, 0.18) 100%);
+}}
+.kpi-card-primary {{ grid-column: span 6; min-height: 136px; }}
+.kpi-card-secondary {{ grid-column: span 3; min-height: 120px; }}
+.kpi-tone-good::before {{ background: linear-gradient(90deg, var(--green) 0%, rgba(29, 108, 82, 0.16) 100%); }}
+.kpi-tone-warning::before {{ background: linear-gradient(90deg, var(--orange) 0%, rgba(152, 97, 26, 0.16) 100%); }}
+.kpi-tone-risk::before {{ background: linear-gradient(90deg, var(--red) 0%, rgba(159, 63, 52, 0.18) 100%); }}
+.kpi-tone-accent::before {{ background: linear-gradient(90deg, var(--accent) 0%, rgba(23, 74, 114, 0.18) 100%); }}
+.kpi-meta {{
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: start;
+}}
+.kpi-state {{
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 3px 8px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 700;
+}}
+.kpi-label {{ font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }}
+.kpi-value {{
+  margin-top: 12px;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: clamp(1.28rem, 1.2vw + 1rem, 2.2rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  color: var(--ink);
+}}
+.kpi-foot {{ margin-top: 8px; font-size: 0.78rem; color: var(--muted); }}
+
+.decision-grid {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}}
+.decision-card {{
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(247, 242, 234, 0.95) 100%);
+  box-shadow: var(--shadow-soft);
+  padding: 16px;
+}}
+[data-theme="dark"] .decision-card {{
+  background: linear-gradient(180deg, rgba(25, 40, 57, 0.92) 0%, rgba(18, 31, 45, 0.96) 100%);
+}}
+.decision-label {{
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: var(--accent);
+}}
+.decision-title {{
+  margin-top: 8px;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: 1.2rem;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}}
+.decision-copy {{
+  margin-top: 8px;
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.5;
+}}
 
 .panel-grid {{
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 12px;
 }}
 .panel {{
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px;
-  background: var(--panel-soft);
+  border-radius: 18px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.52) 0%, rgba(248, 243, 236, 0.82) 100%);
   min-width: 0;
+  box-shadow: var(--shadow-soft);
 }}
-.panel h3 {{ margin: 0 0 8px; font-size: 0.93rem; }}
-.panel p {{ margin: 0; color: var(--ink); font-size: 0.86rem; }}
+.panel h3 {{
+  margin: 0 0 10px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}}
+.panel p {{ margin: 0; color: var(--ink); font-size: 0.92rem; line-height: 1.55; }}
+.narrative-lead {{
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: 1.16rem;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}}
+.narrative-support {{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}}
 .alert-list {{ display: grid; gap: 7px; }}
-.alert-item {{ border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--panel); }}
-.alert-item.high {{ border-color: #efb6b2; background: #fff4f3; }}
-.alert-item.medium {{ border-color: #f0d4b6; background: #fff8ef; }}
-.alert-item.low {{ border-color: #cfe2f5; background: #f4f8ff; }}
-.alert-title {{ font-size: 0.82rem; font-weight: 700; }}
-.alert-detail {{ margin-top: 2px; font-size: 0.82rem; color: #44556a; }}
+.alert-item {{
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: var(--panel);
+}}
+.alert-item.high {{ border-color: rgba(159, 63, 52, 0.24); border-left-color: var(--red); background: rgba(255, 243, 241, 0.86); }}
+.alert-item.medium {{ border-color: rgba(152, 97, 26, 0.22); border-left-color: var(--orange); background: rgba(255, 248, 239, 0.88); }}
+.alert-item.low {{ border-color: rgba(23, 74, 114, 0.18); border-left-color: var(--accent); background: rgba(243, 248, 255, 0.9); }}
+.alert-title {{ font-size: 0.84rem; font-weight: 700; }}
+.alert-detail {{ margin-top: 3px; font-size: 0.82rem; color: #44556a; line-height: 1.45; }}
 [data-theme="dark"] .alert-detail {{ color: #dbe6f6; }}
 [data-theme="dark"] .alert-item.high {{ border-color: #9a4e4a; background: #442724; color: #ffd9d4; }}
 [data-theme="dark"] .alert-item.medium {{ border-color: #8f6c3e; background: #43331e; color: #ffe6c2; }}
 [data-theme="dark"] .alert-item.low {{ border-color: #4b6489; background: #25374f; color: #dbe9ff; }}
 
-.chart-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(620px, 1fr)); gap: 12px; }}
-.chart-card {{ border: 1px solid var(--line); border-radius: 10px; background: var(--chart-card-bg); padding: 12px; min-width: 0; }}
-.chart-title {{ font-size: 0.89rem; font-weight: 700; margin-bottom: 2px; }}
-.chart-subtitle {{ font-size: 0.78rem; color: var(--muted); margin-bottom: 7px; }}
+.chart-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(540px, 1fr)); gap: 14px; }}
+.chart-card {{
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--chart-card-bg);
+  padding: 14px;
+  min-width: 0;
+  box-shadow: var(--shadow-soft);
+}}
+.chart-card::before {{
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent) 0%, rgba(23, 74, 114, 0.14) 100%);
+}}
+.chart-title {{ font-size: 0.98rem; font-weight: 700; margin-bottom: 4px; line-height: 1.3; }}
+.chart-subtitle {{ font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }}
 .chart-actions {{ display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 8px; }}
 .chart-card img {{
   width: 100%;
   height: auto;
-  min-height: 420px;
+  min-height: 460px;
   display: block;
-  border-radius: 8px;
+  border-radius: 14px;
   border: 1px solid var(--chart-image-border);
   background: var(--chart-image-bg);
   cursor: zoom-in;
+  padding: 10px;
 }}
 body.density-compact .chart-grid {{ grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); }}
 body.density-compact .chart-card img {{ min-height: 340px; }}
@@ -999,11 +1289,22 @@ body.density-presentation .chart-card img {{ min-height: 620px; }}
   margin-top: 10px;
 }}
 .svg-chart-card {{
+  position: relative;
+  overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px;
-  background: var(--panel-soft);
+  border-radius: 20px;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62) 0%, rgba(247, 243, 236, 0.84) 100%);
   min-width: 0;
+  box-shadow: var(--shadow-soft);
+}}
+.svg-chart-card::before {{
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent) 0%, rgba(23, 74, 114, 0.12) 100%);
 }}
 .svg-chart-head {{
   display: flex;
@@ -1017,13 +1318,14 @@ body.density-presentation .chart-card img {{ min-height: 620px; }}
 .chart-svg-wrap {{
   position: relative;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--chart-frame-bg);
   overflow: hidden;
+  padding: 4px;
 }}
 .chart-svg {{
   width: 100%;
-  height: 360px;
+  height: 380px;
   display: block;
 }}
 .svg-tooltip {{
@@ -1048,12 +1350,35 @@ body.density-presentation .chart-card img {{ min-height: 620px; }}
   padding: 7px 8px;
 }
 
-.table-wrap {{ border: 1px solid var(--line); border-radius: 10px; overflow: auto; background: var(--panel); }}
-table {{ border-collapse: collapse; width: 100%; min-width: 900px; }}
-th, td {{ border-bottom: 1px solid var(--line); padding: 8px 9px; text-align: left; font-size: 0.8rem; white-space: nowrap; }}
-th {{ background: var(--table-head-bg); position: sticky; top: 0; z-index: 1; cursor: pointer; }}
+.table-wrap {{
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: auto;
+  background: var(--panel);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}}
+table {{ border-collapse: collapse; width: 100%; min-width: 980px; }}
+th, td {{
+  border-bottom: 1px solid var(--line);
+  padding: 12px 12px;
+  text-align: left;
+  font-size: 0.81rem;
+  white-space: nowrap;
+}}
+th {{
+  background: var(--table-head-bg);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.69rem;
+  color: var(--muted);
+}}
+tbody tr:nth-child(even) td {{ background: var(--table-row-alt); }}
 tr:hover td {{ background: var(--table-row-hover); }}
-.table-meta {{ margin-top: 6px; color: var(--muted); font-size: 0.78rem; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }}
+.table-meta {{ margin-top: 8px; color: var(--muted); font-size: 0.79rem; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }}
 .pager {{ display: flex; gap: 6px; align-items: center; }}
 
 .risk-stack {{ display: grid; gap: 6px; }}
@@ -1078,22 +1403,60 @@ tr:hover td {{ background: var(--table-row-hover); }}
 
 .empty-state {{
   border: 1px dashed var(--empty-line);
-  border-radius: 9px;
+  border-radius: 14px;
   background: var(--empty-bg);
-  padding: 12px;
+  padding: 16px;
   color: var(--empty-ink);
   font-size: 0.84rem;
+}}
+.badge {{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+}}
+.badge-low {{ background: rgba(79, 141, 217, 0.12); color: #1d5ea4; border-color: rgba(79, 141, 217, 0.2); }}
+.badge-moderate {{ background: rgba(50, 160, 127, 0.12); color: #176e58; border-color: rgba(50, 160, 127, 0.2); }}
+.badge-high {{ background: rgba(217, 145, 36, 0.14); color: #91560a; border-color: rgba(217, 145, 36, 0.22); }}
+.badge-critical {{ background: rgba(199, 75, 64, 0.13); color: #9d2f26; border-color: rgba(199, 75, 64, 0.24); }}
+.action-pill {{
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.74rem;
+  font-weight: 700;
 }}
 
 @media (max-width: 980px) {{
   .header-inner, main {{ padding-left: 12px; padding-right: 12px; }}
+  .title-row {{ grid-template-columns: 1fr; }}
   .tab-btn {{ flex: 1 1 auto; text-align: center; }}
   table {{ min-width: 760px; }}
   .chart-grid {{ grid-template-columns: 1fr; }}
+  .kpi-grid {{ grid-template-columns: repeat(6, minmax(0, 1fr)); }}
+  .kpi-card-primary {{ grid-column: span 6; }}
+  .kpi-card-secondary {{ grid-column: span 3; }}
+  .decision-grid {{ grid-template-columns: 1fr; }}
   .interactive-grid {{ grid-template-columns: 1fr; }}
   .chart-svg {{ height: 280px; }}
   .chart-card img {{ min-height: 300px; }}
   .chart-modal-dialog {{ width: 100%; height: 96vh; }}
+}}
+@media (max-width: 720px) {{
+  .filters {{ grid-template-columns: 1fr 1fr; }}
+  .kpi-grid {{ grid-template-columns: 1fr; }}
+  .kpi-card-primary,
+  .kpi-card-secondary {{ grid-column: span 1; }}
+  .filter-actions {{ width: 100%; }}
+  .filter-actions button {{ flex: 1 1 auto; }}
 }}
 </style>
 </head>
@@ -1102,29 +1465,42 @@ tr:hover td {{ background: var(--table-row-hover); }}
   <div class=\"header-inner\">
     <div class=\"title-row\">
       <div class=\"title-block\">
-        <h1>B2B SaaS Revenue Quality & Churn Early Warning Operating Dashboard</h1>
-        <div class=\"subtitle\">Executive operating view for commercial leadership, finance, RevOps, CS, and strategy.</div>
+        <div class=\"eyebrow\">B2B SaaS operating system</div>
+        <h1>Revenue Quality Command Center</h1>
+        <div class=\"subtitle\">Executive view of retention quality, pricing discipline, churn exposure, and account intervention priority.</div>
       </div>
-      <div class=\"meta-row\">
-        <span class=\"chip info\" id=\"filterStateChip\">Filtered: all accounts</span>
-        <button id=\"btn_theme\" class=\"theme-btn\" type=\"button\" aria-pressed=\"false\">Dark mode</button>
+      <div class=\"header-brief\">
+        <div class=\"brief-label\">Decision focus</div>
+        <div class=\"brief-copy\">Identify where revenue is durable, where pricing discipline is weakening, and which accounts need intervention first.</div>
+        <div class=\"meta-row\">
+          <span class=\"chip info\" id=\"filterStateChip\">Filtered: all accounts</span>
+          <button id=\"btn_theme\" class=\"theme-btn\" type=\"button\" aria-pressed=\"false\">Dark mode</button>
+        </div>
       </div>
     </div>
 
-    <div class=\"filters\">
-      <div class=\"filter\"><label>Region</label><select id=\"f_region\"></select></div>
-      <div class=\"filter\"><label>Segment</label><select id=\"f_segment\"></select></div>
-      <div class=\"filter\"><label>Industry</label><select id=\"f_industry\"></select></div>
-      <div class=\"filter\"><label>Plan Tier</label><select id=\"f_plan\"></select></div>
-      <div class=\"filter\"><label>Acquisition Channel</label><select id=\"f_channel\"></select></div>
-      <div class=\"filter\"><label>Account Manager</label><select id=\"f_manager\"></select></div>
-      <div class=\"filter\"><label>Risk Tier</label><select id=\"f_risk\"></select></div>
-      <div class=\"filter\"><label>Signup Start</label><select id=\"f_start\"></select></div>
-      <div class=\"filter\"><label>Signup End</label><select id=\"f_end\"></select></div>
-      <div class=\"filter\"><label>Account Search</label><input id=\"f_search\" type=\"text\" placeholder=\"customer id / industry / action\" /></div>
-      <div class=\"filter-actions\">
-        <button id=\"btn_reset\">Reset Filters</button>
-        <button id=\"btn_method\" class=\"primary\">Methodology</button>
+    <div class=\"filter-shell\">
+      <div class=\"filter-shell-head\">
+        <div>
+          <div class=\"filter-shell-title\">Portfolio filters</div>
+          <div class=\"filter-shell-note\">Every KPI, chart, and account table updates with the selected commercial slice.</div>
+        </div>
+        <div class=\"filter-actions\">
+          <button id=\"btn_reset\">Reset Filters</button>
+          <button id=\"btn_method\" class=\"primary\">Methodology</button>
+        </div>
+      </div>
+      <div class=\"filters\">
+        <div class=\"filter\"><label>Region</label><select id=\"f_region\"></select></div>
+        <div class=\"filter\"><label>Segment</label><select id=\"f_segment\"></select></div>
+        <div class=\"filter\"><label>Industry</label><select id=\"f_industry\"></select></div>
+        <div class=\"filter\"><label>Plan Tier</label><select id=\"f_plan\"></select></div>
+        <div class=\"filter\"><label>Acquisition Channel</label><select id=\"f_channel\"></select></div>
+        <div class=\"filter\"><label>Account Manager</label><select id=\"f_manager\"></select></div>
+        <div class=\"filter\"><label>Risk Tier</label><select id=\"f_risk\"></select></div>
+        <div class=\"filter\"><label>Signup Start</label><select id=\"f_start\"></select></div>
+        <div class=\"filter\"><label>Signup End</label><select id=\"f_end\"></select></div>
+        <div class=\"filter\"><label>Account Search</label><input id=\"f_search\" type=\"text\" placeholder=\"customer id / industry / action\" /></div>
       </div>
     </div>
   </div>
@@ -1142,7 +1518,10 @@ tr:hover td {{ background: var(--table-row-hover); }}
   </nav>
 
   <div class=\"panel chart-toolbar\">
-    <div class=\"section-note\">Interactive view: click charts to expand, zoom, and navigate presentation mode.</div>
+    <div class=\"chart-toolbar-copy\">
+      <div class=\"eyebrow\">Display mode</div>
+      <div class=\"section-note\">Switch between compact analysis and presentation layout without changing filters.</div>
+    </div>
     <div class=\"chart-density-controls\">
       <button class=\"chart-density-btn\" data-density=\"compact\" id=\"densityCompact\">Compact</button>
       <button class=\"chart-density-btn active\" data-density=\"comfortable\" id=\"densityComfortable\">Comfortable</button>
@@ -1156,11 +1535,12 @@ tr:hover td {{ background: var(--table-row-hover); }}
       <div class=\"section-note\">Executive cards and insights update instantly with filters.</div>
     </div>
     <div class=\"kpi-grid\" id=\"officialKpis\"></div>
+    <div class=\"decision-grid\" id=\"decisionSignals\"></div>
 
     <div class=\"panel-grid\" style=\"margin-top:10px;\">
       <div class=\"panel\">
         <h3>Executive Narrative</h3>
-        <p id=\"executiveNarrative\"></p>
+        <div id=\"executiveNarrative\"></div>
       </div>
       <div class=\"panel\">
         <h3>Key Alerts</h3>
@@ -1958,32 +2338,129 @@ function getFilteredAccounts() {{
   return accounts.filter(a => accountMatches(a, f));
 }}
 
+function deltaSummary(deltaValue, isPct = false) {{
+  const value = Number(deltaValue || 0);
+  const threshold = isPct ? 0.0005 : 1;
+  if (Math.abs(value) < threshold) return 'In line with portfolio';
+  const sign = value > 0 ? '+' : '';
+  return isPct
+    ? `${{sign}}${{(value * 100).toFixed(2)}}pp vs portfolio`
+    : `${{sign}}${{fmtMoney(value)}} vs portfolio`;
+}}
+
+function badgeClass(value) {{
+  const slug = String(value || 'unknown')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `badge-${{slug || 'unknown'}}`;
+}}
+
 function renderOfficialKpis(k, filteredCount) {{
   const baseline = payload.official_kpis || {{}};
   const total = accounts.length || 1;
   const isFiltered = filteredCount < total;
-  const foot = (label, deltaValue, isPct = false) => {{
-    if (!isFiltered) return 'Full portfolio scope';
-    const sign = deltaValue > 0 ? '+' : '';
-    if (isPct) return `vs portfolio: ${{sign}}${{(deltaValue * 100).toFixed(2)}}pp`;
-    return `vs portfolio: ${{sign}}${{fmtMoney(deltaValue)}}`;
-  }};
   const cards = [
-    ['Current MRR', fmtMoney(k.current_mrr), foot('MRR', Number(k.current_mrr || 0) - Number(baseline.current_mrr || 0))],
-    ['ARR', fmtMoney(k.arr), foot('ARR', Number(k.arr || 0) - Number(baseline.arr || 0))],
-    ['Gross Retention', fmtPct(k.gross_retention), foot('GRR', Number(k.gross_retention || 0) - Number(baseline.gross_retention || 0), true)],
-    ['Net Retention', fmtPct(k.net_retention), foot('NRR', Number(k.net_retention || 0) - Number(baseline.net_retention || 0), true)],
-    ['Logo Churn', fmtPct(k.logo_churn), foot('Logo Churn', Number(k.logo_churn || 0) - Number(baseline.logo_churn || 0), true)],
-    ['Average Discount', fmtPct(k.avg_discount), foot('Discount', Number(k.avg_discount || 0) - Number(baseline.avg_discount || 0), true)],
-    ['Discounted Revenue Share', fmtPct(k.discounted_revenue_share), foot('Disc. Share', Number(k.discounted_revenue_share || 0) - Number(baseline.discounted_revenue_share || 0), true)],
-    ['Revenue At Risk (MRR)', fmtMoney(k.revenue_at_risk_mrr), foot('Risk MRR', Number(k.revenue_at_risk_mrr || 0) - Number(baseline.revenue_at_risk_mrr || 0))],
-    ['Critical-Risk Accounts', fmtNum(k.critical_risk_account_count, 0), isFiltered ? 'Filtered critical account count' : 'Full portfolio critical count'],
+    {{
+      label: 'Current MRR',
+      value: fmtMoney(k.current_mrr),
+      meta: isFiltered ? 'Revenue base in current slice' : 'Recurring revenue base',
+      state: Number(k.current_mrr || 0) >= Number(baseline.current_mrr || 0) ? 'Above portfolio run-rate' : 'Below portfolio run-rate',
+      foot: isFiltered ? deltaSummary(Number(k.current_mrr || 0) - Number(baseline.current_mrr || 0)) : 'Full portfolio scope',
+      tone: 'accent',
+      emphasis: 'primary',
+    }},
+    {{
+      label: 'ARR',
+      value: fmtMoney(k.arr),
+      meta: 'Annualized recurring revenue view',
+      state: Number(k.arr || 0) >= Number(baseline.arr || 0) ? 'Higher annualized base' : 'Lower annualized base',
+      foot: isFiltered ? deltaSummary(Number(k.arr || 0) - Number(baseline.arr || 0)) : 'Full portfolio scope',
+      tone: 'accent',
+      emphasis: 'secondary',
+    }},
+    {{
+      label: 'Net Retention',
+      value: fmtPct(k.net_retention),
+      meta: 'Expansion versus contraction and churn',
+      state: Number(k.net_retention || 0) >= 1 ? 'Expansion offsets losses' : 'Losses exceed expansion',
+      foot: isFiltered ? deltaSummary(Number(k.net_retention || 0) - Number(baseline.net_retention || 0), true) : 'Full portfolio scope',
+      tone: Number(k.net_retention || 0) >= 1 ? 'good' : 'risk',
+      emphasis: 'primary',
+    }},
+    {{
+      label: 'Gross Retention',
+      value: fmtPct(k.gross_retention),
+      meta: 'Base-book durability before expansion',
+      state: Number(k.gross_retention || 0) >= 0.9 ? 'Core book holding' : 'Core book weakening',
+      foot: isFiltered ? deltaSummary(Number(k.gross_retention || 0) - Number(baseline.gross_retention || 0), true) : 'Full portfolio scope',
+      tone: Number(k.gross_retention || 0) >= 0.9 ? 'good' : 'warning',
+      emphasis: 'secondary',
+    }},
+    {{
+      label: 'Discounted Revenue Share',
+      value: fmtPct(k.discounted_revenue_share),
+      meta: 'Revenue exposed to pricing concessions',
+      state: Number(k.discounted_revenue_share || 0) > 0.15 ? 'Pricing pressure elevated' : 'Pricing discipline contained',
+      foot: isFiltered ? deltaSummary(Number(k.discounted_revenue_share || 0) - Number(baseline.discounted_revenue_share || 0), true) : 'Full portfolio scope',
+      tone: Number(k.discounted_revenue_share || 0) > 0.15 ? 'warning' : 'good',
+      emphasis: 'secondary',
+    }},
+    {{
+      label: 'Revenue At Risk',
+      value: fmtMoney(k.revenue_at_risk_mrr),
+      meta: 'MRR needing active protection',
+      state: Number(k.revenue_at_risk_mrr || 0) > Number(baseline.revenue_at_risk_mrr || 0) ? 'Risk above portfolio mix' : 'Risk contained versus portfolio',
+      foot: isFiltered ? deltaSummary(Number(k.revenue_at_risk_mrr || 0) - Number(baseline.revenue_at_risk_mrr || 0)) : 'Full portfolio scope',
+      tone: Number(k.revenue_at_risk_mrr || 0) > 0 ? 'risk' : 'good',
+      emphasis: 'primary',
+    }},
   ];
-  document.getElementById('officialKpis').innerHTML = cards.map(([label, value, foot]) => `
-    <article class="kpi-card">
-      <div class="kpi-label">${{esc(label)}}</div>
-      <div class="kpi-value">${{esc(value)}}</div>
-      <div class="kpi-foot">${{esc(foot)}}</div>
+  document.getElementById('officialKpis').innerHTML = cards.map(card => `
+    <article class="kpi-card ${{card.emphasis === 'primary' ? 'kpi-card-primary' : 'kpi-card-secondary'}} kpi-tone-${{card.tone}}">
+      <div class="kpi-label">${{esc(card.label)}}</div>
+      <div class="kpi-value">${{esc(card.value)}}</div>
+      <div class="kpi-meta">
+        <span>${{esc(card.meta)}}</span>
+        <span class="kpi-state">${{esc(card.state)}}</span>
+      </div>
+      <div class="kpi-foot">${{esc(card.foot)}}</div>
+    </article>
+  `).join('');
+}}
+
+function renderDecisionSignals(filtered, kpis) {{
+  if (!filtered.length) {{
+    document.getElementById('decisionSignals').innerHTML = '<div class="empty-state">No accounts match current filters.</div>';
+    return;
+  }}
+  const total = Math.max(filtered.length, 1);
+  const highCritical = filtered.filter(r => ['High', 'Critical'].includes(r.governance_priority_tier)).length;
+  const highCriticalShare = highCritical / total;
+  const pricingPressure = Number(kpis.discounted_revenue_share || 0);
+  const avgDiscount = Number(kpis.avg_discount || 0);
+  const cards = [
+    {{
+      label: 'Revenue durability',
+      title: Number(kpis.net_retention || 0) >= 1 ? 'Expansion is covering losses' : 'Retention is under pressure',
+      copy: `NRR is ${{fmtPct(kpis.net_retention)}} and GRR is ${{fmtPct(kpis.gross_retention)}} in the active slice.`,
+    }},
+    {{
+      label: 'Pricing discipline',
+      title: pricingPressure > 0.15 ? 'Discount exposure is shaping the book' : 'Discount exposure remains controlled',
+      copy: `Discounted revenue share is ${{fmtPct(kpis.discounted_revenue_share)}} with average discount at ${{fmtPct(avgDiscount)}}.`,
+    }},
+    {{
+      label: 'Execution queue',
+      title: highCriticalShare >= 0.3 ? 'Intervention load is heavy' : highCritical > 0 ? 'Priority queue is active but manageable' : 'No urgent recovery queue in view',
+      copy: `${{highCritical}} high or critical accounts represent ${{(highCriticalShare * 100).toFixed(1)}}% of the slice, with ${{fmtMoney(kpis.revenue_at_risk_mrr)}} MRR at risk.`,
+    }},
+  ];
+  document.getElementById('decisionSignals').innerHTML = cards.map(card => `
+    <article class="decision-card">
+      <div class="decision-label">${{esc(card.label)}}</div>
+      <div class="decision-title">${{esc(card.title)}}</div>
+      <div class="decision-copy">${{esc(card.copy)}}</div>
     </article>
   `).join('');
 }}
@@ -1993,29 +2470,29 @@ function renderAlerts(kpis, filteredCount) {{
   if (kpis.net_retention < 1) {{
     alerts.push({{
       severity: 'high',
-      label: 'NRR Below 100%',
-      detail: `Filtered NRR is ${{fmtPct(kpis.net_retention)}}; expansion is not fully offsetting losses.`,
+      label: 'Retention gap',
+      detail: `NRR is ${{fmtPct(kpis.net_retention)}}. Expansion is not covering churn and contraction in this slice; review renewal saves and expansion coverage now.`,
     }});
   }}
   if (kpis.discounted_revenue_share > 0.15) {{
     alerts.push({{
       severity: 'medium',
-      label: 'High Discount Dependency',
-      detail: `Filtered discounted-revenue share is ${{fmtPct(kpis.discounted_revenue_share)}}.`,
+      label: 'Pricing discipline needs attention',
+      detail: `Discounted revenue share is ${{fmtPct(kpis.discounted_revenue_share)}}. Protect margin quality before approving further concessions.`,
     }});
   }}
   if (kpis.critical_risk_account_count > 0) {{
     alerts.push({{
       severity: 'high',
-      label: 'Critical Accounts Present',
-      detail: `${{kpis.critical_risk_account_count}} critical accounts remain in current filter scope.`,
+      label: 'Recovery queue active',
+      detail: `${{kpis.critical_risk_account_count}} critical accounts remain in scope. Assign owners and recovery actions before the next renewal milestone.`,
     }});
   }}
   if (!alerts.length) {{
     alerts.push({{
       severity: 'low',
-      label: 'No Alert Threshold Breach',
-      detail: `No high-priority breach detected in current filtered scope (${{filteredCount.toLocaleString()}} accounts).`,
+      label: 'No major threshold breach',
+      detail: `No major alert threshold is breached in the current scope of ${{filteredCount.toLocaleString()}} accounts.`,
     }});
   }}
   document.getElementById('alerts').innerHTML = alerts.map(a => `
@@ -2036,17 +2513,56 @@ function renderSliceKpis(filtered) {{
   const highCritical = filtered.filter(r => ['High', 'Critical'].includes(r.governance_priority_tier)).length;
   const avgChurn = filtered.reduce((acc, r) => acc + Number(r.churn_risk_score || 0), 0) / filtered.length;
   const cards = [
-    ['Filtered Accounts', fmtNum(filtered.length, 0), 'Accounts in current view'],
-    ['Filtered Portfolio MRR', fmtMoney(totalMrr), 'Current recurring revenue in scope'],
-    ['Avg Governance Priority', fmtNum(avgGov, 1), 'Intervention urgency index'],
-    ['High/Critical Share', `${{((highCritical / filtered.length) * 100).toFixed(1)}}%`, 'Share of accounts needing active attention'],
-    ['Avg Churn Risk', fmtNum(avgChurn, 1), 'Forward churn-pressure index'],
+    {{
+      label: 'Filtered Accounts',
+      value: fmtNum(filtered.length, 0),
+      meta: 'Accounts currently in view',
+      state: filtered.length >= 100 ? 'Broad management slice' : 'Narrow drill-down slice',
+      foot: 'Current filtered universe',
+      tone: 'accent',
+    }},
+    {{
+      label: 'Filtered Portfolio MRR',
+      value: fmtMoney(totalMrr),
+      meta: 'Recurring revenue in current scope',
+      state: totalMrr >= 1000000 ? 'Material commercial exposure' : 'Focused revenue pocket',
+      foot: 'Revenue protected by this view',
+      tone: 'accent',
+    }},
+    {{
+      label: 'Avg Governance Priority',
+      value: fmtNum(avgGov, 1),
+      meta: 'Intervention urgency index',
+      state: avgGov >= 60 ? 'Active management required' : 'Manageable oversight level',
+      foot: 'Average action pressure',
+      tone: avgGov >= 60 ? 'warning' : 'good',
+    }},
+    {{
+      label: 'High / Critical Share',
+      value: `${{((highCritical / filtered.length) * 100).toFixed(1)}}%`,
+      meta: 'Accounts requiring active attention',
+      state: (highCritical / filtered.length) >= 0.3 ? 'Heavy frontline queue' : 'Contained escalation load',
+      foot: 'Risk queue concentration',
+      tone: (highCritical / filtered.length) >= 0.3 ? 'risk' : 'good',
+    }},
+    {{
+      label: 'Avg Churn Risk',
+      value: fmtNum(avgChurn, 1),
+      meta: 'Forward churn-pressure index',
+      state: avgChurn >= 55 ? 'Elevated churn pressure' : 'Moderate churn pressure',
+      foot: 'Average account-level risk',
+      tone: avgChurn >= 55 ? 'warning' : 'good',
+    }},
   ];
-  document.getElementById('sliceKpis').innerHTML = cards.map(([label, value, foot]) => `
-    <article class="kpi-card">
-      <div class="kpi-label">${{esc(label)}}</div>
-      <div class="kpi-value">${{esc(value)}}</div>
-      <div class="kpi-foot">${{esc(foot)}}</div>
+  document.getElementById('sliceKpis').innerHTML = cards.map(card => `
+    <article class="kpi-card kpi-card-secondary kpi-tone-${{card.tone}}">
+      <div class="kpi-label">${{esc(card.label)}}</div>
+      <div class="kpi-value">${{esc(card.value)}}</div>
+      <div class="kpi-meta">
+        <span>${{esc(card.meta)}}</span>
+        <span class="kpi-state">${{esc(card.state)}}</span>
+      </div>
+      <div class="kpi-foot">${{esc(card.foot)}}</div>
     </article>
   `).join('');
 }}
@@ -2103,8 +2619,8 @@ function renderAccountsTable(filtered) {{
         <td>${{fmtMoney(r.current_mrr)}}</td>
         <td>${{fmtNum(r.churn_risk_score, 1)}}</td>
         <td>${{fmtNum(r.governance_priority_score, 1)}}</td>
-        <td>${{esc(r.governance_priority_tier)}}</td>
-        <td title="${{esc(r.recommended_action_reason)}}">${{esc(r.recommended_action)}}</td>
+        <td><span class="badge ${{badgeClass(r.governance_priority_tier)}}">${{esc(r.governance_priority_tier)}}</span></td>
+        <td title="${{esc(r.recommended_action_reason)}}"><span class="action-pill">${{esc(r.recommended_action)}}</span></td>
       </tr>
     `).join('');
   }}
@@ -2167,9 +2683,13 @@ function renderManagerTable(filtered) {{
 
 function renderScenarioCards() {{
   const cards = (payload.scenario_cards || []).map(s => `
-    <article class="kpi-card">
+    <article class="kpi-card kpi-card-secondary kpi-tone-accent">
       <div class="kpi-label">${{esc(s.scenario)}}</div>
       <div class="kpi-value">${{fmtMoney(s.end_mrr)}}</div>
+      <div class="kpi-meta">
+        <span>Scenario landing point</span>
+        <span class="kpi-state">Growth ${{(Number(s.mrr_growth_pct || 0) * 100).toFixed(2)}}%</span>
+      </div>
       <div class="kpi-foot">End MRR | growth ${{(Number(s.mrr_growth_pct || 0) * 100).toFixed(2)}}%</div>
       <div class="kpi-foot">vs base MRR: ${{fmtMoney(s.mrr_vs_base)}} | vs base ARR: ${{fmtMoney(s.arr_vs_base)}}</div>
     </article>
@@ -2240,14 +2760,23 @@ function renderSliceNotes(filtered) {{
 }}
 
 function renderExecutiveNarrative(kpis, filteredCount) {{
+  if (!filteredCount) {{
+    document.getElementById('executiveNarrative').innerHTML = '<div class="narrative-support">No accounts match current filters. Reset or widen the commercial slice to restore the executive view.</div>';
+    return;
+  }}
   const total = accounts.length || 1;
   const scope = `${{filteredCount.toLocaleString()}} / ${{total.toLocaleString()}} accounts`;
-  const narrative = [
-    `Current filter scope covers ${{scope}}.`,
-    `MRR is ${{fmtMoney(kpis.current_mrr)}} with NRR at ${{fmtPct(kpis.net_retention)}} and GRR at ${{fmtPct(kpis.gross_retention)}}.`,
-    `Discounted revenue share is ${{fmtPct(kpis.discounted_revenue_share)}} and revenue-at-risk is ${{fmtMoney(kpis.revenue_at_risk_mrr)}}.`,
-  ].join(' ');
-  document.getElementById('executiveNarrative').textContent = narrative;
+  const lead = Number(kpis.net_retention || 0) >= 1
+    ? 'This commercial slice is still compounding revenue, but pricing and account-risk signals should stay under active control.'
+    : 'This commercial slice is not compounding cleanly and needs immediate retention and pricing attention.';
+  const support = [
+    `Scope: ${{scope}} with ${{fmtMoney(kpis.current_mrr)}} current MRR and ${{fmtMoney(kpis.revenue_at_risk_mrr)}} identified as at risk.`,
+    `Retention quality stands at NRR ${{fmtPct(kpis.net_retention)}} and GRR ${{fmtPct(kpis.gross_retention)}}, while discounted revenue share is ${{fmtPct(kpis.discounted_revenue_share)}}.`,
+  ];
+  document.getElementById('executiveNarrative').innerHTML = `
+    <div class="narrative-lead">${{esc(lead)}}</div>
+    ${{support.map(line => `<div class="narrative-support">${{esc(line)}}</div>`).join('')}}
+  `;
 }
 
 function renderFilterStateChip(filtered) {{
@@ -2266,6 +2795,7 @@ function applyAll() {{
   const filteredKpis = computeFilteredKpis(filtered, monthlyFiltered);
 
   renderOfficialKpis(filteredKpis, filtered.length);
+  renderDecisionSignals(filtered, filteredKpis);
   renderAlerts(filteredKpis, filtered.length);
   renderExecutiveNarrative(filteredKpis, filtered.length);
   renderInteractiveOverviewCharts(monthlyFiltered);
