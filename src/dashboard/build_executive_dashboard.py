@@ -680,8 +680,14 @@ def build_html(payload: dict[str, Any]) -> str:
   --empty-bg: #f6f4ef;
   --empty-line: #d4d8dd;
   --empty-ink: #526273;
+  --gold: #9a7341;
+  --gold-soft: #f4eadb;
+  --radius-shell: 24px;
+  --radius-card: 22px;
+  --radius-control: 14px;
   --shadow: 0 24px 56px rgba(42, 47, 56, 0.11);
   --shadow-soft: 0 12px 28px rgba(42, 47, 56, 0.08);
+  --shadow-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.46);
 }}
 [data-theme="dark"] {{
   --bg: #0e1720;
@@ -728,8 +734,11 @@ def build_html(payload: dict[str, Any]) -> str:
   --empty-bg: #162537;
   --empty-line: #415877;
   --empty-ink: #ccd9ea;
+  --gold: #d4b47f;
+  --gold-soft: #3c2e1d;
   --shadow: 0 26px 60px rgba(3, 8, 14, 0.45);
   --shadow-soft: 0 14px 30px rgba(3, 8, 14, 0.32);
+  --shadow-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }}
 * {{ box-sizing: border-box; }}
 html, body {{
@@ -744,6 +753,7 @@ body {{
   line-height: 1.42;
   transition: background-color 0.25s ease, color 0.25s ease;
   position: relative;
+  font-variant-numeric: tabular-nums;
   background-image:
     radial-gradient(circle at top left, rgba(23, 74, 114, 0.10), transparent 34%),
     radial-gradient(circle at top right, rgba(155, 106, 28, 0.10), transparent 30%),
@@ -779,7 +789,7 @@ header {{
   position: sticky;
   top: 0;
   z-index: 60;
-  background: var(--header-bg);
+  background: linear-gradient(180deg, var(--header-bg) 0%, rgba(255, 255, 255, 0) 100%);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
 }}
@@ -788,14 +798,14 @@ header {{
   z-index: 1;
   max-width: 1520px;
   margin: 0 auto;
-  padding: 18px 22px 16px;
+  padding: 22px 24px 18px;
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }}
 .title-row {{
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: 14px;
+  gap: 18px;
   align-items: stretch;
 }}
 .eyebrow {{
@@ -803,28 +813,29 @@ header {{
   text-transform: uppercase;
   letter-spacing: 0.18em;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--gold);
 }}
 .title-block h1 {{
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-  font-size: clamp(1.65rem, 2.4vw, 2.4rem);
-  line-height: 1.04;
+  font-size: clamp(1.8rem, 2.5vw, 2.6rem);
+  line-height: 1.02;
   letter-spacing: -0.04em;
-  max-width: 14ch;
+  max-width: 13ch;
 }}
 .subtitle {{
-  margin-top: 10px;
+  margin-top: 12px;
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: 0.96rem;
+  line-height: 1.58;
   max-width: 68ch;
 }}
 .header-brief {{
   border: 1px solid var(--line);
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(248, 243, 235, 0.8) 100%);
-  padding: 14px 16px;
-  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-shell);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(248, 243, 235, 0.88) 100%);
+  padding: 18px;
+  box-shadow: var(--shadow-soft), var(--shadow-hairline);
 }}
 [data-theme="dark"] .header-brief {{
   background: linear-gradient(180deg, rgba(24, 38, 55, 0.88) 0%, rgba(18, 31, 45, 0.92) 100%);
@@ -837,8 +848,9 @@ header {{
   font-weight: 700;
 }}
 .brief-copy {{
-  margin: 8px 0 12px;
-  font-size: 0.88rem;
+  margin: 10px 0 14px;
+  font-size: 0.9rem;
+  line-height: 1.56;
   color: var(--ink);
 }}
 .meta-row {{
@@ -861,23 +873,26 @@ header {{
 .chip.alert-medium {{ border-color: rgba(152, 97, 26, 0.28); background: rgba(255, 247, 233, 0.82); color: #8a4f08; }}
 .theme-btn {{
   border-radius: 999px;
-  padding: 7px 13px;
+  padding: 8px 14px;
   font-size: 0.76rem;
   font-weight: 700;
   border: 1px solid var(--btn-border);
   background: var(--btn-bg);
   color: var(--btn-ink);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: var(--shadow-hairline);
 }}
 .theme-btn:hover {{ background: var(--btn-hover); }}
 
 .filter-shell {{
   border: 1px solid var(--line);
-  border-radius: 20px;
-  background: var(--panel);
-  box-shadow: var(--shadow-soft);
-  padding: 14px;
+  border-radius: var(--radius-shell);
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.9) 0%, rgba(248, 243, 236, 0.82) 100%);
+  box-shadow: var(--shadow-soft), var(--shadow-hairline);
+  padding: 16px;
   backdrop-filter: blur(12px);
+}}
+[data-theme="dark"] .filter-shell {{
+  background: linear-gradient(180deg, rgba(22, 36, 52, 0.92) 0%, rgba(17, 29, 43, 0.94) 100%);
 }}
 .filter-shell-head {{
   display: flex;
@@ -885,44 +900,59 @@ header {{
   align-items: flex-end;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }}
 .filter-shell-title {{
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--gold);
 }}
 .filter-shell-note {{
   margin-top: 5px;
-  font-size: 0.86rem;
+  font-size: 0.87rem;
+  line-height: 1.5;
   color: var(--muted);
 }}
 .filters {{
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
+  gap: 12px;
 }}
-.filter {{ display: grid; gap: 5px; }}
+.filter {{ display: grid; gap: 6px; }}
 .filter label {{
   font-size: 0.7rem;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   font-weight: 700;
 }}
 .filter select, .filter input {{
   width: 100%;
   border: 1px solid var(--input-border);
-  border-radius: 12px;
-  padding: 10px 11px;
+  border-radius: var(--radius-control);
+  min-height: 46px;
+  padding: 12px 14px;
   font-size: 0.84rem;
   background: var(--input-bg);
   color: var(--ink);
   outline: none;
+  box-shadow: var(--shadow-hairline);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }}
+.filter select {{
+  appearance: none;
+  padding-right: 36px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 21px) calc(50% - 2px),
+    calc(100% - 15px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
 .filter select:focus, .filter input:focus {{
   border-color: rgba(23, 74, 114, 0.45);
   box-shadow: 0 0 0 3px rgba(23, 74, 114, 0.10);
@@ -938,27 +968,45 @@ button {{
   border: 1px solid var(--btn-border);
   background: var(--btn-bg);
   color: var(--btn-ink);
-  border-radius: 12px;
-  padding: 9px 13px;
+  border-radius: 13px;
+  padding: 10px 14px;
   font-size: 0.82rem;
   cursor: pointer;
   font-weight: 600;
-  transition: transform 0.14s ease, background-color 0.2s ease, border-color 0.2s ease;
+  box-shadow: var(--shadow-hairline);
+  transition: transform 0.14s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }}
-button.primary {{ background: var(--accent); color: #fff; border-color: var(--accent); }}
-button:hover {{ background: var(--btn-hover); transform: translateY(-1px); }}
+button.primary {{
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
+  color: #fff;
+  border-color: rgba(16, 47, 76, 0.72);
+  box-shadow: 0 10px 22px rgba(23, 74, 114, 0.18);
+}}
+button:hover {{
+  background: var(--btn-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(35, 49, 65, 0.10);
+}}
+button.primary:hover {{
+  background: linear-gradient(180deg, #205a88 0%, #123a5b 100%);
+}}
+button:focus-visible, .button-link:focus-visible {{
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(23, 74, 114, 0.18);
+}
 .button-link {{
   border: 1px solid var(--btn-border);
   background: var(--btn-bg);
   color: var(--btn-ink);
-  border-radius: 12px;
-  padding: 9px 13px;
+  border-radius: 13px;
+  padding: 10px 14px;
   font-size: 0.82rem;
   cursor: pointer;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   font-weight: 600;
+  box-shadow: var(--shadow-hairline);
 }}
 .button-link:hover {{ background: var(--btn-hover); }}
 
@@ -967,33 +1015,68 @@ main {{
   z-index: 1;
   max-width: 1520px;
   margin: 0 auto;
-  padding: 20px 22px 36px;
+  padding: 24px 24px 42px;
 }}
 .tab-nav {{
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-shell);
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.8) 0%, rgba(248, 243, 236, 0.76) 100%);
+  box-shadow: var(--shadow-soft), var(--shadow-hairline);
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+}}
+[data-theme="dark"] .tab-nav {{
+  background: linear-gradient(180deg, rgba(22, 36, 52, 0.9) 0%, rgba(16, 28, 42, 0.92) 100%);
 }}
 .tab-btn {{
-  border: 1px solid var(--line);
-  background: var(--tab-bg);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--tab-ink);
   border-radius: 999px;
-  padding: 10px 14px;
+  padding: 11px 15px;
   font-size: 0.84rem;
   font-weight: 600;
-  box-shadow: var(--shadow-soft);
+  box-shadow: none;
 }}
-.tab-btn.active {{ background: var(--tab-active-bg); color: var(--tab-active-ink); border-color: var(--line-strong); }}
+.tab-btn:hover {{
+  background: rgba(255, 255, 255, 0.42);
+  transform: none;
+  box-shadow: none;
+}}
+.tab-btn.active {{
+  background: var(--tab-active-bg);
+  color: var(--tab-active-ink);
+  border-color: var(--line-strong);
+  box-shadow: 0 10px 20px rgba(30, 44, 60, 0.08);
+}}
+.tab-btn.active:hover {{
+  background: var(--tab-active-bg);
+  transform: none;
+}}
 .section {{
+  position: relative;
+  overflow: hidden;
   display: none;
-  background: var(--panel);
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.88) 0%, rgba(248, 243, 236, 0.82) 100%);
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 28px;
   box-shadow: var(--shadow);
-  padding: 18px;
+  padding: 22px;
   backdrop-filter: blur(12px);
+}}
+.section::before {{
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+}}
+[data-theme="dark"] .section {{
+  background: linear-gradient(180deg, rgba(20, 32, 46, 0.92) 0%, rgba(16, 28, 42, 0.95) 100%);
 }}
 .section.active {{ display: block; }}
 .section-head {{
@@ -1002,15 +1085,15 @@ main {{
   gap: 12px;
   align-items: end;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }}
 .section-head h2 {{
   margin: 0;
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-  font-size: 1.42rem;
+  font-size: 1.52rem;
   letter-spacing: -0.03em;
 }}
-.section-note {{ color: var(--muted); font-size: 0.88rem; max-width: 64ch; }}
+.section-note {{ color: var(--muted); font-size: 0.89rem; line-height: 1.55; max-width: 64ch; }}
 
 .chart-toolbar {{
   margin-bottom: 12px;
@@ -1034,17 +1117,19 @@ main {{
 .kpi-grid {{
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }}
 .kpi-card {{
   position: relative;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   background: var(--kpi-bg);
-  padding: 16px 16px 14px;
-  box-shadow: var(--shadow-soft);
+  padding: 18px 18px 16px;
+  box-shadow: var(--shadow-soft), var(--shadow-hairline);
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }}
 .kpi-card::before {{
   content: "";
@@ -1054,8 +1139,19 @@ main {{
   height: 4px;
   background: linear-gradient(90deg, var(--accent) 0%, rgba(23, 74, 114, 0.18) 100%);
 }}
-.kpi-card-primary {{ grid-column: span 6; min-height: 136px; }}
-.kpi-card-secondary {{ grid-column: span 3; min-height: 120px; }}
+.kpi-card::after {{
+  content: "";
+  position: absolute;
+  top: -20%;
+  right: -8%;
+  width: 42%;
+  height: 55%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 72%);
+  pointer-events: none;
+}}
+.kpi-card-primary {{ grid-column: span 6; min-height: 152px; }}
+.kpi-card-secondary {{ grid-column: span 3; min-height: 132px; }}
 .kpi-tone-good::before {{ background: linear-gradient(90deg, var(--green) 0%, rgba(29, 108, 82, 0.16) 100%); }}
 .kpi-tone-warning::before {{ background: linear-gradient(90deg, var(--orange) 0%, rgba(152, 97, 26, 0.16) 100%); }}
 .kpi-tone-risk::before {{ background: linear-gradient(90deg, var(--red) 0%, rgba(159, 63, 52, 0.18) 100%); }}
@@ -1065,44 +1161,66 @@ main {{
   justify-content: space-between;
   gap: 8px;
   align-items: start;
+  margin-top: 12px;
+  font-size: 0.76rem;
+  color: var(--muted);
 }}
 .kpi-state {{
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.72);
   padding: 3px 8px;
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
   font-weight: 700;
+  box-shadow: var(--shadow-hairline);
 }}
-.kpi-label {{ font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }}
+.kpi-label {{ font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); font-weight: 700; }}
 .kpi-value {{
   margin-top: 12px;
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-  font-size: clamp(1.28rem, 1.2vw + 1rem, 2.2rem);
+  font-size: clamp(1.28rem, 1.2vw + 1rem, 2.25rem);
   line-height: 1.02;
   letter-spacing: -0.04em;
   font-weight: 700;
   color: var(--ink);
 }}
-.kpi-foot {{ margin-top: 8px; font-size: 0.78rem; color: var(--muted); }}
+.kpi-card-primary .kpi-value {{ font-size: clamp(1.62rem, 1.55vw + 1rem, 2.55rem); }}
+.kpi-foot {{
+  margin-top: auto;
+  padding-top: 12px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  border-top: 1px solid rgba(143, 122, 92, 0.12);
+}}
+[data-theme="dark"] .kpi-foot {{ border-top-color: rgba(133, 157, 182, 0.12); }}
 
 .decision-grid {{
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
   margin-top: 12px;
 }}
 .decision-card {{
+  position: relative;
+  overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(247, 242, 234, 0.95) 100%);
-  box-shadow: var(--shadow-soft);
-  padding: 16px;
+  box-shadow: var(--shadow-soft), var(--shadow-hairline);
+  padding: 18px;
+}}
+.decision-card::before {{
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--gold) 0%, rgba(154, 115, 65, 0.14) 100%);
 }}
 [data-theme="dark"] .decision-card {{
   background: linear-gradient(180deg, rgba(25, 40, 57, 0.92) 0%, rgba(18, 31, 45, 0.96) 100%);
@@ -1112,41 +1230,41 @@ main {{
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--gold);
 }}
 .decision-title {{
-  margin-top: 8px;
+  margin-top: 10px;
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-  font-size: 1.2rem;
-  line-height: 1.1;
+  font-size: 1.24rem;
+  line-height: 1.14;
   letter-spacing: -0.03em;
 }}
 .decision-copy {{
-  margin-top: 8px;
-  font-size: 0.86rem;
+  margin-top: 10px;
+  font-size: 0.87rem;
   color: var(--muted);
-  line-height: 1.5;
+  line-height: 1.58;
 }}
 
 .panel-grid {{
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 12px;
+  gap: 14px;
 }}
 .panel {{
   border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.52) 0%, rgba(248, 243, 236, 0.82) 100%);
+  border-radius: var(--radius-card);
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.68) 0%, rgba(248, 243, 236, 0.88) 100%);
   min-width: 0;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-soft), var(--shadow-hairline);
 }}
 .panel h3 {{
   margin: 0 0 10px;
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--muted);
+  color: var(--gold);
 }}
 .panel p {{ margin: 0; color: var(--ink); font-size: 0.92rem; line-height: 1.55; }}
 .narrative-lead {{
@@ -1184,11 +1302,11 @@ main {{
   position: relative;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: var(--radius-card);
   background: var(--chart-card-bg);
-  padding: 14px;
+  padding: 16px;
   min-width: 0;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-soft), var(--shadow-hairline);
 }}
 .chart-card::before {{
   content: "";
@@ -1198,19 +1316,38 @@ main {{
   height: 4px;
   background: linear-gradient(90deg, var(--accent) 0%, rgba(23, 74, 114, 0.14) 100%);
 }}
-.chart-title {{ font-size: 0.98rem; font-weight: 700; margin-bottom: 4px; line-height: 1.3; }}
-.chart-subtitle {{ font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }}
+.chart-card::after {{
+  content: "";
+  position: absolute;
+  top: -24%;
+  right: -10%;
+  width: 38%;
+  height: 54%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0) 74%);
+  pointer-events: none;
+}}
+.chart-title {{
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: 1.03rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  line-height: 1.28;
+  letter-spacing: -0.02em;
+}}
+.chart-subtitle {{ font-size: 0.82rem; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }}
 .chart-actions {{ display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 8px; }}
 .chart-card img {{
   width: 100%;
   height: auto;
   min-height: 460px;
   display: block;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid var(--chart-image-border);
   background: var(--chart-image-bg);
   cursor: zoom-in;
-  padding: 10px;
+  padding: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }}
 body.density-compact .chart-grid {{ grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); }}
 body.density-compact .chart-card img {{ min-height: 340px; }}
@@ -1232,7 +1369,7 @@ body.density-presentation .chart-card img {{ min-height: 620px; }}
   width: min(1600px, 98vw);
   height: min(94vh, 980px);
   background: var(--modal-bg);
-  border-radius: 12px;
+  border-radius: 18px;
   border: 1px solid var(--modal-line);
   box-shadow: 0 14px 50px rgba(15, 23, 42, 0.34);
   display: grid;
@@ -1285,18 +1422,18 @@ body.density-presentation .chart-card img {{ min-height: 620px; }}
 .interactive-grid {{
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-  gap: 12px;
-  margin-top: 10px;
+  gap: 14px;
+  margin-top: 12px;
 }}
 .svg-chart-card {{
   position: relative;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62) 0%, rgba(247, 243, 236, 0.84) 100%);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(247, 243, 236, 0.9) 100%);
   min-width: 0;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-soft), var(--shadow-hairline);
 }}
 .svg-chart-card::before {{
   content: "";
@@ -1306,22 +1443,39 @@ body.density-presentation .chart-card img {{ min-height: 620px; }}
   height: 4px;
   background: linear-gradient(90deg, var(--accent) 0%, rgba(23, 74, 114, 0.12) 100%);
 }}
+.svg-chart-card::after {{
+  content: "";
+  position: absolute;
+  top: -26%;
+  right: -12%;
+  width: 40%;
+  height: 56%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 74%);
+  pointer-events: none;
+}}
 .svg-chart-head {{
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }}
-.svg-chart-title {{ font-size: 0.9rem; font-weight: 700; }}
-.svg-chart-subtitle {{ font-size: 0.76rem; color: var(--muted); }}
+.svg-chart-title {{
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}}
+.svg-chart-subtitle {{ font-size: 0.78rem; color: var(--muted); }}
 .chart-svg-wrap {{
   position: relative;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--chart-frame-bg);
   overflow: hidden;
-  padding: 4px;
+  padding: 10px 10px 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
 }}
 .chart-svg {{
   width: 100%;
@@ -1341,28 +1495,29 @@ body.density-presentation .chart-card img {{ min-height: 620px; }}
   z-index: 4;
 }}
 .chart-insight {{
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 0.8rem;
   color: var(--insight-ink);
   background: var(--insight-bg);
   border: 1px solid var(--insight-border);
-  border-radius: 8px;
-  padding: 7px 8px;
+  border-radius: 12px;
+  padding: 9px 10px;
+  line-height: 1.5;
 }
 
 .table-wrap {{
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   overflow: auto;
-  background: var(--panel);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.74) 0%, rgba(247, 242, 235, 0.84) 100%);
+  box-shadow: var(--shadow-soft), var(--shadow-hairline);
 }}
 table {{ border-collapse: collapse; width: 100%; min-width: 980px; }}
 th, td {{
   border-bottom: 1px solid var(--line);
-  padding: 12px 12px;
+  padding: 14px 14px;
   text-align: left;
-  font-size: 0.81rem;
+  font-size: 0.82rem;
   white-space: nowrap;
 }}
 th {{
@@ -1372,13 +1527,15 @@ th {{
   z-index: 1;
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.69rem;
+  letter-spacing: 0.1em;
+  font-size: 0.68rem;
   color: var(--muted);
 }}
+tbody td {{ color: var(--ink); }}
 tbody tr:nth-child(even) td {{ background: var(--table-row-alt); }}
 tr:hover td {{ background: var(--table-row-hover); }}
-.table-meta {{ margin-top: 8px; color: var(--muted); font-size: 0.79rem; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }}
+tbody tr:last-child td {{ border-bottom: none; }}
+.table-meta {{ margin-top: 10px; color: var(--muted); font-size: 0.79rem; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }}
 .pager {{ display: flex; gap: 6px; align-items: center; }}
 
 .risk-stack {{ display: grid; gap: 6px; }}
@@ -1403,21 +1560,22 @@ tr:hover td {{ background: var(--table-row-hover); }}
 
 .empty-state {{
   border: 1px dashed var(--empty-line);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--empty-bg);
-  padding: 16px;
+  padding: 18px;
   color: var(--empty-ink);
   font-size: 0.84rem;
+  line-height: 1.55;
 }}
 .badge {{
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 0.71rem;
+  padding: 5px 10px;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   border: 1px solid transparent;
 }}
 .badge-low {{ background: rgba(79, 141, 217, 0.12); color: #1d5ea4; border-color: rgba(79, 141, 217, 0.2); }}
@@ -1428,11 +1586,35 @@ tr:hover td {{ background: var(--table-row-hover); }}
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 5px 10px;
-  background: var(--accent-soft);
+  max-width: 240px;
+  padding: 6px 11px;
+  background: linear-gradient(180deg, rgba(233, 239, 244, 0.96) 0%, rgba(222, 232, 240, 0.98) 100%);
   color: var(--accent-strong);
-  font-size: 0.74rem;
+  font-size: 0.73rem;
   font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}}
+
+*::-webkit-scrollbar {{
+  width: 10px;
+  height: 10px;
+}}
+*::-webkit-scrollbar-track {{
+  background: transparent;
+}}
+*::-webkit-scrollbar-thumb {{
+  background: rgba(111, 127, 148, 0.35);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}}
+[data-theme="dark"] *::-webkit-scrollbar-thumb {{
+  background: rgba(168, 188, 211, 0.28);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }}
 
 @media (max-width: 980px) {{

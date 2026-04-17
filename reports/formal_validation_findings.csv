@@ -17,5 +17,5 @@ check_id,check_name,component,status,severity,details,recommended_fix,fix_applie
 16,Cross-Output Metric Consistency,Metrics,PASS,None,"Governed metrics reconcile across processed tables, analysis report, and dashboard KPI payload.",None,No
 17,Score Stability & Calibration Guardrails,Scoring,PASS,None,"nonzero_churn_tiers=3, nonzero_governance_tiers=4, churn_iqr=9.33, low_tier_share=0.942",None,No
 18,Financial & Decision Logic Integrity,Forecasting,PASS,None,"delta_arr_at_risk=0.00, stress_ratio=5.0000, scenario_order_ok=True",None,No
-19,Release Artifact Readiness,Dashboard,PASS,None,"dashboard_exists=True, dashboard_size_bytes=9965632, dashboard_size_ok=True",None,No
+19,Release Artifact Readiness,Dashboard,PASS,None,"dashboard_exists=True, dashboard_size_bytes=9965571, dashboard_size_ok=True",None,No
 20,Test Suite Integrity,Release Governance,PASS,None,Unit test discovery/execution completed successfully.,None,No
