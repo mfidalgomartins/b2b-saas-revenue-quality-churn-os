@@ -21,6 +21,7 @@ env/
 *.log
 *.tmp
 /tmp/
+.Rhistory
 
 # Editor/IDE
 .vscode/

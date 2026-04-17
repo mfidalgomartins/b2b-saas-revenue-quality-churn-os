@@ -760,6 +760,9 @@ body {{
     linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 18%);
   background-attachment: fixed;
 }}
+body.modal-open {{
+  overflow: hidden;
+}}
 body[data-theme="light"] {{ color-scheme: light; }}
 body[data-theme="dark"] {{ color-scheme: dark; }}
 body::before,
@@ -786,21 +789,20 @@ body::after {{
 }}
 
 header {{
-  position: sticky;
-  top: 0;
-  z-index: 60;
+  position: relative;
+  z-index: 10;
   background: linear-gradient(180deg, var(--header-bg) 0%, rgba(255, 255, 255, 0) 100%);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 0;
 }}
 .header-inner {{
   position: relative;
   z-index: 1;
   max-width: 1520px;
   margin: 0 auto;
-  padding: 22px 24px 18px;
+  padding: 18px 24px 12px;
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }}
 .title-row {{
   display: grid;
@@ -834,7 +836,7 @@ header {{
   border: 1px solid var(--line);
   border-radius: var(--radius-shell);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(248, 243, 235, 0.88) 100%);
-  padding: 18px;
+  padding: 16px 18px;
   box-shadow: var(--shadow-soft), var(--shadow-hairline);
 }}
 [data-theme="dark"] .header-brief {{
@@ -858,6 +860,7 @@ header {{
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
 }}
 .chip {{
   border: 1px solid var(--line);
@@ -888,19 +891,26 @@ header {{
   border-radius: var(--radius-shell);
   background: linear-gradient(180deg, rgba(255, 252, 247, 0.9) 0%, rgba(248, 243, 236, 0.82) 100%);
   box-shadow: var(--shadow-soft), var(--shadow-hairline);
-  padding: 16px;
+  padding: 14px 16px;
   backdrop-filter: blur(12px);
 }}
 [data-theme="dark"] .filter-shell {{
   background: linear-gradient(180deg, rgba(22, 36, 52, 0.92) 0%, rgba(17, 29, 43, 0.94) 100%);
 }}
+.filter-shell-body {{
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}}
+.filter-shell.collapsed .filter-shell-body {{
+  display: none;
+}}
 .filter-shell-head {{
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
 }}
 .filter-shell-title {{
   font-size: 0.72rem;
@@ -914,6 +924,18 @@ header {{
   font-size: 0.87rem;
   line-height: 1.5;
   color: var(--muted);
+}}
+.filter-status {{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}}
+.ghost-btn {{
+  background: transparent;
+}}
+.ghost-btn:hover {{
+  background: rgba(255, 255, 255, 0.42);
 }}
 .filters {{
   display: grid;
@@ -1015,7 +1037,7 @@ main {{
   z-index: 1;
   max-width: 1520px;
   margin: 0 auto;
-  padding: 24px 24px 42px;
+  padding: 12px 24px 42px;
 }}
 .tab-nav {{
   padding: 8px;
@@ -1096,12 +1118,20 @@ main {{
 .section-note {{ color: var(--muted); font-size: 0.89rem; line-height: 1.55; max-width: 64ch; }}
 
 .chart-toolbar {{
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.72) 0%, rgba(248, 243, 236, 0.68) 100%);
+  box-shadow: var(--shadow-soft), var(--shadow-hairline);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}}
+[data-theme="dark"] .chart-toolbar {{
+  background: linear-gradient(180deg, rgba(21, 34, 49, 0.9) 0%, rgba(16, 28, 42, 0.92) 100%);
 }}
 .chart-toolbar-copy {{
   display: grid;
@@ -1425,6 +1455,9 @@ body.density-presentation .chart-card img {{ min-height: 620px; }}
   gap: 14px;
   margin-top: 12px;
 }}
+.interactive-grid .svg-chart-card:last-child {{
+  grid-column: 1 / -1;
+}
 .svg-chart-card {{
   position: relative;
   overflow: hidden;
@@ -1479,7 +1512,7 @@ body.density-presentation .chart-card img {{ min-height: 620px; }}
 }}
 .chart-svg {{
   width: 100%;
-  height: 380px;
+  height: 350px;
   display: block;
 }}
 .svg-tooltip {{
@@ -1628,6 +1661,7 @@ tbody tr:last-child td {{ border-bottom: none; }}
   .kpi-card-secondary {{ grid-column: span 3; }}
   .decision-grid {{ grid-template-columns: 1fr; }}
   .interactive-grid {{ grid-template-columns: 1fr; }}
+  .interactive-grid .svg-chart-card:last-child {{ grid-column: auto; }}
   .chart-svg {{ height: 280px; }}
   .chart-card img {{ min-height: 300px; }}
   .chart-modal-dialog {{ width: 100%; height: 96vh; }}
@@ -1655,7 +1689,6 @@ tbody tr:last-child td {{ border-bottom: none; }}
         <div class=\"brief-label\">Decision focus</div>
         <div class=\"brief-copy\">Identify where revenue is durable, where pricing discipline is weakening, and which accounts need intervention first.</div>
         <div class=\"meta-row\">
-          <span class=\"chip info\" id=\"filterStateChip\">Filtered: all accounts</span>
           <button id=\"btn_theme\" class=\"theme-btn\" type=\"button\" aria-pressed=\"false\">Dark mode</button>
         </div>
       </div>
@@ -1668,21 +1701,28 @@ tbody tr:last-child td {{ border-bottom: none; }}
           <div class=\"filter-shell-note\">Every KPI, chart, and account table updates with the selected commercial slice.</div>
         </div>
         <div class=\"filter-actions\">
+          <div class=\"filter-status\">
+            <span class=\"chip info\" id=\"filterStateChip\">Filtered: all accounts</span>
+            <span class=\"chip info\" id=\"activeFilterChip\">No active filters</span>
+          </div>
+          <button id=\"filterToggleBtn\" class=\"ghost-btn\" type=\"button\" aria-expanded=\"true\">Hide Filters</button>
           <button id=\"btn_reset\">Reset Filters</button>
           <button id=\"btn_method\" class=\"primary\">Methodology</button>
         </div>
       </div>
-      <div class=\"filters\">
-        <div class=\"filter\"><label>Region</label><select id=\"f_region\"></select></div>
-        <div class=\"filter\"><label>Segment</label><select id=\"f_segment\"></select></div>
-        <div class=\"filter\"><label>Industry</label><select id=\"f_industry\"></select></div>
-        <div class=\"filter\"><label>Plan Tier</label><select id=\"f_plan\"></select></div>
-        <div class=\"filter\"><label>Acquisition Channel</label><select id=\"f_channel\"></select></div>
-        <div class=\"filter\"><label>Account Manager</label><select id=\"f_manager\"></select></div>
-        <div class=\"filter\"><label>Risk Tier</label><select id=\"f_risk\"></select></div>
-        <div class=\"filter\"><label>Signup Start</label><select id=\"f_start\"></select></div>
-        <div class=\"filter\"><label>Signup End</label><select id=\"f_end\"></select></div>
-        <div class=\"filter\"><label>Account Search</label><input id=\"f_search\" type=\"text\" placeholder=\"customer id / industry / action\" /></div>
+      <div class=\"filter-shell-body\" id=\"filterShellBody\">
+        <div class=\"filters\">
+          <div class=\"filter\"><label>Region</label><select id=\"f_region\"></select></div>
+          <div class=\"filter\"><label>Segment</label><select id=\"f_segment\"></select></div>
+          <div class=\"filter\"><label>Industry</label><select id=\"f_industry\"></select></div>
+          <div class=\"filter\"><label>Plan Tier</label><select id=\"f_plan\"></select></div>
+          <div class=\"filter\"><label>Acquisition Channel</label><select id=\"f_channel\"></select></div>
+          <div class=\"filter\"><label>Account Manager</label><select id=\"f_manager\"></select></div>
+          <div class=\"filter\"><label>Risk Tier</label><select id=\"f_risk\"></select></div>
+          <div class=\"filter\"><label>Signup Start</label><select id=\"f_start\"></select></div>
+          <div class=\"filter\"><label>Signup End</label><select id=\"f_end\"></select></div>
+          <div class=\"filter\"><label>Account Search</label><input id=\"f_search\" type=\"text\" placeholder=\"customer id / industry / action\" /></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1699,7 +1739,7 @@ tbody tr:last-child td {{ border-bottom: none; }}
     <button class=\"tab-btn\" data-tab=\"method\">Methodology & Definitions</button>
   </nav>
 
-  <div class=\"panel chart-toolbar\">
+  <div class=\"chart-toolbar\">
     <div class=\"chart-toolbar-copy\">
       <div class=\"eyebrow\">Display mode</div>
       <div class=\"section-note\">Switch between compact analysis and presentation layout without changing filters.</div>
@@ -1964,6 +2004,7 @@ const monthlyCompactRows = payload.monthly_compact_rows || [];
 const MIN_MODAL_ZOOM = 0.45;
 const MAX_MODAL_ZOOM = 4;
 const THEME_STORAGE_KEY = 'executive_dashboard_theme';
+const FILTER_PANEL_STORAGE_KEY = 'executive_dashboard_filters_expanded';
 
 const state = {{
   page: 1,
@@ -2009,6 +2050,11 @@ function fmtNum(value, d = 1) {{
   return Number(value || 0).toLocaleString('en-US', {{ maximumFractionDigits: d, minimumFractionDigits: d }});
 }}
 
+function themeVar(name, fallback) {{
+  const value = getComputedStyle(document.body).getPropertyValue(name).trim();
+  return value || fallback;
+}}
+
 function loadThemePreference() {{
   try {{
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
@@ -2022,6 +2068,24 @@ function loadThemePreference() {{
 function saveThemePreference(theme) {{
   try {{
     localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }} catch (err) {{
+    return;
+  }}
+}}
+
+function loadFilterPanelPreference() {{
+  try {{
+    const stored = localStorage.getItem(FILTER_PANEL_STORAGE_KEY);
+    if (stored === 'collapsed' || stored === 'expanded') return stored;
+  }} catch (err) {{
+    return 'expanded';
+  }}
+  return 'expanded';
+}}
+
+function saveFilterPanelPreference(mode) {{
+  try {{
+    localStorage.setItem(FILTER_PANEL_STORAGE_KEY, mode);
   }} catch (err) {{
     return;
   }}
@@ -2113,12 +2177,14 @@ function openChartModal(targetId, index) {{
   modalState.charts = chartContext[targetId] || [];
   modalState.index = index || 0;
   if (!modalState.charts.length) return;
+  document.body.classList.add('modal-open');
   document.getElementById('chartModal').classList.add('active');
   document.getElementById('chartModal').setAttribute('aria-hidden', 'false');
   updateModalContent();
 }}
 
 function closeChartModal() {{
+  document.body.classList.remove('modal-open');
   document.getElementById('chartModal').classList.remove('active');
   document.getElementById('chartModal').setAttribute('aria-hidden', 'true');
 }}
@@ -2162,9 +2228,14 @@ function hideTooltip(tooltipId) {{
 function drawLineChart(svgId, tooltipId, data, config) {{
   const {{ svg, width, height }} = clearSvg(svgId);
   if (!data.length) {{
-    svg.appendChild(svgEl('text', {{ x: 12, y: 22, fill: '#64748b', 'font-size': 12 }})).textContent = 'No data';
+    svg.appendChild(svgEl('text', {{ x: 12, y: 22, fill: themeVar('--muted', '#64748b'), 'font-size': 12 }})).textContent = 'No data';
     return;
   }}
+  const plotBg = themeVar('--panel-strong', '#ffffff');
+  const axisColor = themeVar('--line-strong', '#c9d8ea');
+  const gridColor = themeVar('--line', '#edf2f8');
+  const mutedColor = themeVar('--muted', '#64748b');
+  const inkColor = themeVar('--ink', '#334155');
   const m = {{ l: 54, r: 18, t: 14, b: 34 }};
   const plotW = width - m.l - m.r;
   const plotH = height - m.t - m.b;
@@ -2181,16 +2252,16 @@ function drawLineChart(svgId, tooltipId, data, config) {{
   const x = i => m.l + (labels.length === 1 ? plotW / 2 : (i * plotW) / (labels.length - 1));
   const y = v => m.t + ((yMax - v) / (yMax - yMin)) * plotH;
 
-  svg.appendChild(svgEl('rect', {{ x: m.l, y: m.t, width: plotW, height: plotH, fill: '#ffffff' }}));
-  svg.appendChild(svgEl('line', {{ x1: m.l, y1: m.t + plotH, x2: m.l + plotW, y2: m.t + plotH, stroke: '#c9d8ea', 'stroke-width': 1 }}));
-  svg.appendChild(svgEl('line', {{ x1: m.l, y1: m.t, x2: m.l, y2: m.t + plotH, stroke: '#c9d8ea', 'stroke-width': 1 }}));
+  svg.appendChild(svgEl('rect', {{ x: m.l, y: m.t, width: plotW, height: plotH, fill: plotBg }}));
+  svg.appendChild(svgEl('line', {{ x1: m.l, y1: m.t + plotH, x2: m.l + plotW, y2: m.t + plotH, stroke: axisColor, 'stroke-width': 1 }}));
+  svg.appendChild(svgEl('line', {{ x1: m.l, y1: m.t, x2: m.l, y2: m.t + plotH, stroke: axisColor, 'stroke-width': 1 }}));
 
   const tickCount = 4;
   for (let i = 0; i <= tickCount; i += 1) {{
     const v = yMin + ((yMax - yMin) * i) / tickCount;
     const ty = y(v);
-    svg.appendChild(svgEl('line', {{ x1: m.l, y1: ty, x2: m.l + plotW, y2: ty, stroke: '#edf2f8', 'stroke-width': 1 }}));
-    const t = svgEl('text', {{ x: m.l - 6, y: ty + 4, fill: '#64748b', 'font-size': 11, 'text-anchor': 'end' }});
+    svg.appendChild(svgEl('line', {{ x1: m.l, y1: ty, x2: m.l + plotW, y2: ty, stroke: gridColor, 'stroke-width': 1 }}));
+    const t = svgEl('text', {{ x: m.l - 6, y: ty + 4, fill: mutedColor, 'font-size': 11, 'text-anchor': 'end' }});
     t.textContent = config.yTickFormat ? config.yTickFormat(v) : Number(v).toFixed(2);
     svg.appendChild(t);
   }}
@@ -2198,7 +2269,7 @@ function drawLineChart(svgId, tooltipId, data, config) {{
   const labelStep = Math.max(1, Math.floor(labels.length / 8));
   labels.forEach((label, i) => {{
     if (i % labelStep !== 0 && i !== labels.length - 1) return;
-    const tx = svgEl('text', {{ x: x(i), y: height - 8, fill: '#64748b', 'font-size': 11, 'text-anchor': 'middle' }});
+    const tx = svgEl('text', {{ x: x(i), y: height - 8, fill: mutedColor, 'font-size': 11, 'text-anchor': 'middle' }});
     tx.textContent = label;
     svg.appendChild(tx);
   }});
@@ -2240,7 +2311,7 @@ function drawLineChart(svgId, tooltipId, data, config) {{
   config.series.forEach((s, i) => {{
     const lx = legendStart + i * 140;
     svg.appendChild(svgEl('rect', {{ x: lx, y: 4, width: 12, height: 12, rx: 2, fill: s.color }}));
-    const lt = svgEl('text', {{ x: lx + 16, y: 14, fill: '#334155', 'font-size': 11 }});
+    const lt = svgEl('text', {{ x: lx + 16, y: 14, fill: inkColor, 'font-size': 11 }});
     lt.textContent = s.label;
     svg.appendChild(lt);
   }});
@@ -2249,9 +2320,11 @@ function drawLineChart(svgId, tooltipId, data, config) {{
 function drawBarChart(svgId, tooltipId, rows, opts) {{
   const {{ svg, width, height }} = clearSvg(svgId);
   if (!rows.length) {{
-    svg.appendChild(svgEl('text', {{ x: 12, y: 22, fill: '#64748b', 'font-size': 12 }})).textContent = 'No data';
+    svg.appendChild(svgEl('text', {{ x: 12, y: 22, fill: themeVar('--muted', '#64748b'), 'font-size': 12 }})).textContent = 'No data';
     return;
   }}
+  const axisColor = themeVar('--line-strong', '#c9d8ea');
+  const mutedColor = themeVar('--muted', '#64748b');
   const m = {{ l: 42, r: 12, t: 14, b: 38 }};
   const plotW = width - m.l - m.r;
   const plotH = height - m.t - m.b;
@@ -2260,7 +2333,7 @@ function drawBarChart(svgId, tooltipId, rows, opts) {{
   const gap = plotW / rows.length;
   const y = v => m.t + plotH - (Number(v || 0) / maxVal) * plotH;
 
-  svg.appendChild(svgEl('line', {{ x1: m.l, y1: m.t + plotH, x2: m.l + plotW, y2: m.t + plotH, stroke: '#c9d8ea', 'stroke-width': 1 }}));
+  svg.appendChild(svgEl('line', {{ x1: m.l, y1: m.t + plotH, x2: m.l + plotW, y2: m.t + plotH, stroke: axisColor, 'stroke-width': 1 }}));
   rows.forEach((r, i) => {{
     const x = m.l + i * gap + (gap - barW) / 2;
     const h = m.t + plotH - y(r.value);
@@ -2281,7 +2354,7 @@ function drawBarChart(svgId, tooltipId, rows, opts) {{
     if (opts.onClick) rect.addEventListener('click', () => opts.onClick(r));
     svg.appendChild(rect);
 
-    const tx = svgEl('text', {{ x: x + barW / 2, y: m.t + plotH + 14, fill: '#64748b', 'font-size': 11, 'text-anchor': 'middle' }});
+    const tx = svgEl('text', {{ x: x + barW / 2, y: m.t + plotH + 14, fill: mutedColor, 'font-size': 11, 'text-anchor': 'middle' }});
     tx.textContent = r.label;
     svg.appendChild(tx);
   }});
@@ -2967,7 +3040,28 @@ function renderFilterStateChip(filtered) {{
   const total = accounts.length || 1;
   const filteredCount = filtered.length;
   const share = (filteredCount / total) * 100;
-  chip.textContent = `Filtered: ${{filteredCount.toLocaleString()}} / ${{total.toLocaleString()}} accounts (${{share.toFixed(1)}}%)`;
+  chip.textContent = `${{filteredCount.toLocaleString()}} / ${{total.toLocaleString()}} accounts (${{share.toFixed(1)}}%)`;
+}}
+
+function renderActiveFilterChip() {{
+  const chip = document.getElementById('activeFilterChip');
+  if (!chip) return;
+  const f = getFilterValues();
+  const activeCount = [
+    f.region, f.segment, f.industry, f.plan, f.channel, f.manager, f.risk, f.start, f.end,
+  ].filter(v => v && v !== 'All').length + (f.search ? 1 : 0);
+  chip.textContent = activeCount ? `${{activeCount}} active filters` : 'No active filters';
+}}
+
+function applyFilterShellState(mode) {{
+  const shell = document.querySelector('.filter-shell');
+  const btn = document.getElementById('filterToggleBtn');
+  if (!shell || !btn) return;
+  const collapsed = mode === 'collapsed';
+  shell.classList.toggle('collapsed', collapsed);
+  btn.textContent = collapsed ? 'Show Filters' : 'Hide Filters';
+  btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  saveFilterPanelPreference(collapsed ? 'collapsed' : 'expanded');
 }}
 
 function applyAll() {{
@@ -2982,6 +3076,7 @@ function applyAll() {{
   renderExecutiveNarrative(filteredKpis, filtered.length);
   renderInteractiveOverviewCharts(monthlyFiltered);
   renderFilterStateChip(filtered);
+  renderActiveFilterChip();
   renderSliceKpis(filtered);
   renderRiskBars(filtered);
   renderSliceNotes(filtered);
@@ -3028,7 +3123,8 @@ function bindTabs() {{
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       const section = document.getElementById(`section_${{tab}}`);
       if (section) section.classList.add('active');
-      window.scrollTo({{ top: 0, behavior: 'smooth' }});
+      const top = document.querySelector('main')?.offsetTop || 0;
+      window.scrollTo({{ top: Math.max(0, top - 10), behavior: 'smooth' }});
     }});
   }});
 }}
@@ -3040,6 +3136,7 @@ function bindTheme() {{
     const next = state.theme === 'dark' ? 'light' : 'dark';
     applyTheme(next);
     saveThemePreference(next);
+    applyAll();
   }});
 }}
 
@@ -3139,6 +3236,12 @@ function bindFilters() {{
     applyAll();
   }});
 
+  document.getElementById('filterToggleBtn').addEventListener('click', () => {{
+    const shell = document.querySelector('.filter-shell');
+    const collapsed = shell?.classList.contains('collapsed');
+    applyFilterShellState(collapsed ? 'expanded' : 'collapsed');
+  }});
+
   document.getElementById('acctPrev').addEventListener('click', () => {{
     state.page = Math.max(1, state.page - 1);
     applyAll();
@@ -3160,6 +3263,7 @@ function bindFilters() {{
 function init() {{
   state.chartDensity = 'comfortable';
   applyTheme(loadThemePreference());
+  applyFilterShellState(loadFilterPanelPreference());
   populateSelect('f_region', filters.regions || []);
   populateSelect('f_segment', filters.segments || []);
   populateSelect('f_industry', filters.industries || []);
