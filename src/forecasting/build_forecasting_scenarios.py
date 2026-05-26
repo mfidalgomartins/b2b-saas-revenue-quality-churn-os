@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Dict, List
 
+# (typing imports removed)
 import numpy as np
 import pandas as pd
 
 
-def load_inputs(base_dir: Path) -> Dict[str, pd.DataFrame]:
+def load_inputs(base_dir: Path) -> dict[str, pd.DataFrame]:
     processed = base_dir / "data/processed"
     raw = base_dir / "data/raw"
 
-    tables: Dict[str, pd.DataFrame] = {
+    tables: dict[str, pd.DataFrame] = {
         "monthly_quality": pd.read_csv(processed / "account_monthly_revenue_quality.csv", parse_dates=["month"]),
         "monthly_raw": pd.read_csv(raw / "monthly_account_metrics.csv", parse_dates=["month"]),
         "scoring": pd.read_csv(processed / "account_scoring_model_output.csv"),
@@ -76,7 +76,7 @@ def weighted_recent_average(series: pd.Series) -> float:
     return float(np.average(values, weights=weights))
 
 
-def estimate_baseline_rates(company_monthly: pd.DataFrame, lookback_months: int = 6) -> Dict[str, float]:
+def estimate_baseline_rates(company_monthly: pd.DataFrame, lookback_months: int = 6) -> dict[str, float]:
     hist = company_monthly.tail(lookback_months).copy()
 
     rates = {
@@ -96,9 +96,9 @@ def estimate_baseline_rates(company_monthly: pd.DataFrame, lookback_months: int 
 
 
 def estimate_risk_overlay_rates(
-    baseline_rates: Dict[str, float],
+    baseline_rates: dict[str, float],
     scoring: pd.DataFrame,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     active = scoring[scoring["current_mrr"] > 0].copy()
     total_mrr = float(active["current_mrr"].sum())
 
@@ -131,14 +131,14 @@ def simulate_mrr_trajectory(
     start_month: pd.Timestamp,
     start_mrr: float,
     horizon_months: int,
-    rates: Dict[str, float],
+    rates: dict[str, float],
     scenario_name: str,
     scenario_type: str,
     realized_price_index_assumption: float,
 ) -> pd.DataFrame:
     forecast_months = pd.date_range(start=start_month + pd.DateOffset(months=1), periods=horizon_months, freq="MS")
 
-    rows: List[Dict[str, object]] = []
+    rows: list[dict[str, object]] = []
     mrr = float(start_mrr)
     for month in forecast_months:
         expansion_mrr = mrr * rates["expansion_rate"]
@@ -186,8 +186,8 @@ def simulate_mrr_trajectory(
 def build_scenarios(
     latest_month: pd.Timestamp,
     start_mrr: float,
-    baseline_rates: Dict[str, float],
-    risk_adjusted_rates: Dict[str, float],
+    baseline_rates: dict[str, float],
+    risk_adjusted_rates: dict[str, float],
     latest_realized_price_index: float,
     horizon_months: int,
 ) -> pd.DataFrame:
@@ -402,8 +402,8 @@ def compute_business_impacts(
 def write_narrative_report(
     output_path: Path,
     company_monthly: pd.DataFrame,
-    baseline_rates: Dict[str, float],
-    risk_adjusted_rates: Dict[str, float],
+    baseline_rates: dict[str, float],
+    risk_adjusted_rates: dict[str, float],
     scenario_summary: pd.DataFrame,
     impacts: pd.DataFrame,
     horizon_months: int,

@@ -7,10 +7,14 @@ import subprocess
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.scoring.scoring_utils import CHURN_WEIGHTS  # noqa: E402
 
 
 @dataclass
@@ -38,7 +42,7 @@ READINESS_ORDER = {
 
 
 def add_finding(
-    findings: List[Finding],
+    findings: list[Finding],
     check_id: str,
     check_name: str,
     component: str,
@@ -76,7 +80,7 @@ def quality_to_risk_tier(score: float) -> str:
     return risk_tier(100.0 - score)
 
 
-def load_tables(base_dir: Path) -> Dict[str, pd.DataFrame]:
+def load_tables(base_dir: Path) -> dict[str, pd.DataFrame]:
     raw = base_dir / "data" / "raw"
     processed = base_dir / "data" / "processed"
 
@@ -104,28 +108,41 @@ def load_tables(base_dir: Path) -> Dict[str, pd.DataFrame]:
     }
 
 
-def validate_dashboard_payload(base_dir: Path, tables: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
+def validate_dashboard_payload(base_dir: Path, tables: dict[str, pd.DataFrame]) -> dict[str, Any]:
     html_path = base_dir / "outputs" / "dashboard" / "revenue-quality-command-center.html"
+    html_files = [
+        path
+        for path in base_dir.rglob("*.html")
+        if ".git" not in path.parts and ".venv" not in path.parts
+    ]
+    payload_files = []
+    for path in html_files:
+        html_text = path.read_text(encoding="utf-8")
+        if re.search(r'<script id="dashboard-data" type="application/json">', html_text):
+            payload_files.append(str(path.relative_to(base_dir)))
+
     if not html_path.exists():
-        return {"exists": False}
+        return {"exists": False, "payload_files": payload_files}
 
     html = html_path.read_text(encoding="utf-8")
     match = re.search(r'<script id="dashboard-data" type="application/json">(.*?)</script>', html, flags=re.S)
     if not match:
-        return {"exists": True, "embedded_json_found": False}
+        return {"exists": True, "embedded_json_found": False, "payload_files": payload_files}
 
     payload = json.loads(match.group(1))
     return {
         "exists": True,
         "embedded_json_found": True,
         "payload": payload,
+        "html_files": [str(path.relative_to(base_dir)) for path in html_files],
+        "payload_files": payload_files,
     }
 
 
-def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
+def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
     t = load_tables(base_dir)
-    findings: List[Finding] = []
-    summary: Dict[str, Any] = {}
+    findings: list[Finding] = []
+    summary: dict[str, Any] = {}
 
     customers = t["customers"]
     plans = t["plans"]
@@ -603,7 +620,7 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
     dashboard = validate_dashboard_payload(base_dir, t)
     dashboard_ok = False
     dashboard_detail = "dashboard_not_found"
-    dashboard_payload: Dict[str, Any] = {}
+    dashboard_payload: dict[str, Any] = {}
     if dashboard.get("exists") and dashboard.get("embedded_json_found"):
         payload = dashboard["payload"]
         dashboard_payload = payload
@@ -623,6 +640,7 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
             "chart_catalog",
             "methodology",
             "source_map",
+            "dashboard_contract",
         }
         dashboard_ok = (
             required_keys.issubset(payload.keys())
@@ -644,7 +662,7 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
 
     profiling_ok = profiling_memo_path.exists()
     analysis_ok = analysis_metrics_path.exists() and analysis_memo_path.exists()
-    analysis_payload: Dict[str, Any] = {}
+    analysis_payload: dict[str, Any] = {}
     analysis_detail = "analysis_artifacts_missing"
     if analysis_ok:
         analysis_payload = json.loads(analysis_metrics_path.read_text(encoding="utf-8"))
@@ -927,14 +945,20 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
             "Reconcile scenario/impact logic before using outputs for financial planning decisions.",
         )
 
-    # 19) Release artifact readiness (dashboard only)
+    # 19) Release artifact readiness (canonical dashboard only)
     dashboard_path = base_dir / "outputs" / "dashboard" / "revenue-quality-command-center.html"
     dashboard_size_bytes = int(dashboard_path.stat().st_size) if dashboard_path.exists() else 0
     dashboard_size_ok = dashboard_size_bytes <= 15_000_000
-    dashboard_ready = dashboard_path.exists() and dashboard_size_ok
+    payload_files = dashboard.get("payload_files", []) if dashboard else []
+    contract = dashboard_payload.get("dashboard_contract", {}) if dashboard_payload else {}
+    canonical_path = contract.get("canonical_dashboard_path", "")
+    single_payload_ok = payload_files == ["outputs/dashboard/revenue-quality-command-center.html"]
+    contract_ok = canonical_path == "outputs/dashboard/revenue-quality-command-center.html"
+    dashboard_ready = dashboard_path.exists() and dashboard_size_ok and single_payload_ok and contract_ok
     release_detail = (
         f"dashboard_exists={dashboard_path.exists()}, "
-        f"dashboard_size_bytes={dashboard_size_bytes}, dashboard_size_ok={dashboard_size_ok}"
+        f"dashboard_size_bytes={dashboard_size_bytes}, dashboard_size_ok={dashboard_size_ok}, "
+        f"payload_files={payload_files}, contract_ok={contract_ok}"
     )
 
     if dashboard_ready:
@@ -956,7 +980,7 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
             "FAIL",
             "High",
             release_detail,
-            "Regenerate the executive dashboard or reduce payload size before distribution.",
+            "Regenerate the canonical dashboard, remove duplicate dashboard payloads, or restore dashboard_contract before distribution.",
         )
 
     # 20) Test suite integrity
@@ -964,8 +988,7 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
     test_run = subprocess.run(
         test_cmd,
         cwd=str(base_dir),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
     if test_run.returncode == 0:
@@ -991,6 +1014,59 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
             "Fix failing/broken tests before claiming release readiness.",
         )
 
+    # 21) Backtest calibration monotonicity
+    #
+    # The backtest scores every historical (customer, month) with the SAME
+    # weights as production and measures forward 3M churn by tier. A credible
+    # risk model must produce a monotonic relationship — accounts the model
+    # labels High must churn more often than Moderate, which must churn more
+    # often than Low. Tiers with fewer than 30 observations are excluded
+    # because their rates are too noisy to falsify monotonicity.
+    backtest_summary_path = base_dir / "reports" / "scoring_backtest_summary.json"
+    backtest_tier_path = base_dir / "data" / "processed" / "scoring_backtest_calibration_by_tier.csv"
+    if backtest_summary_path.exists() and backtest_tier_path.exists():
+        backtest_summary = json.loads(backtest_summary_path.read_text())
+        tier_df = pd.read_csv(backtest_tier_path)
+        eligible = tier_df[tier_df["observations"] >= 30].set_index("risk_tier")
+        ordered = [t for t in ["Low", "Moderate", "High", "Critical"] if t in eligible.index]
+        rates = [(t, float(eligible.loc[t, "forward_churn_rate"])) for t in ordered]
+        violations = [
+            f"{a[0]}({a[1]:.1%})>{b[0]}({b[1]:.1%})"
+            for a, b in zip(rates, rates[1:], strict=False)
+            if a[1] > b[1]
+        ]
+        weights_match = backtest_summary.get("weights") == dict(CHURN_WEIGHTS)
+        evidence = (
+            f"Eligible tiers (≥30 obs): {', '.join(f'{t}={r:.2%}' for t, r in rates)}; "
+            f"weights match production: {weights_match}"
+        )
+        if not weights_match:
+            add_finding(
+                findings, "21", "Backtest Calibration",
+                "Release Governance", "FAIL", "Critical",
+                evidence + ". Weights drift detected between backtest and production scorer.",
+                "Re-run backtest after confirming scoring_utils.CHURN_WEIGHTS is the single source.",
+            )
+        elif violations:
+            add_finding(
+                findings, "21", "Backtest Calibration",
+                "Release Governance", "FAIL", "High",
+                f"Monotonicity violated: {', '.join(violations)}. {evidence}",
+                "Inspect component weights/thresholds; the model is not separating tiers reliably.",
+            )
+        else:
+            add_finding(
+                findings, "21", "Backtest Calibration",
+                "Release Governance", "PASS", "None", evidence,
+            )
+    else:
+        add_finding(
+            findings, "21", "Backtest Calibration",
+            "Release Governance", "WARN", "Medium",
+            "Backtest artifacts not found (reports/scoring_backtest_summary.json).",
+            "Run src/scoring/backtest_scoring_calibration.py to generate the calibration report.",
+        )
+
     summary["total_findings"] = len(findings)
     summary["status_counts"] = {
         "PASS": sum(1 for f in findings if f.status == "PASS"),
@@ -1006,7 +1082,7 @@ def run_validation(base_dir: Path) -> tuple[List[Finding], Dict[str, Any]]:
     return findings, summary
 
 
-def confidence_by_component(findings: List[Finding]) -> pd.DataFrame:
+def confidence_by_component(findings: list[Finding]) -> pd.DataFrame:
     component_map = {
         "Raw Data Logic": ["Raw/Processed", "Raw/Features"],
         "Processed Tables": ["Processed/Metrics", "Processed/Dashboard"],
@@ -1045,7 +1121,7 @@ def confidence_by_component(findings: List[Finding]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def classify_readiness(summary: Dict[str, Any]) -> Dict[str, str]:
+def classify_readiness(summary: dict[str, Any]) -> dict[str, str]:
     status_counts = summary.get("status_counts", {})
     severity_counts = summary.get("severity_counts", {})
     fail_count = int(status_counts.get("FAIL", 0))
@@ -1086,7 +1162,7 @@ def classify_readiness(summary: Dict[str, Any]) -> Dict[str, str]:
     }
 
 
-def overall_assessment(findings: List[Finding], summary: Dict[str, Any]) -> str:
+def overall_assessment(findings: list[Finding], summary: dict[str, Any]) -> str:
     readiness = classify_readiness(summary)
     tier = readiness["tier"]
     rationale = readiness["rationale"]
@@ -1118,7 +1194,7 @@ def overall_assessment(findings: List[Finding], summary: Dict[str, Any]) -> str:
     return "Technically valid. Validation controls passed without material caveats."
 
 
-def write_report(base_dir: Path, findings: List[Finding], summary: Dict[str, Any]) -> None:
+def write_validation_outputs(base_dir: Path, findings: list[Finding], summary: dict[str, Any]) -> None:
     reports_dir = base_dir / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1132,104 +1208,22 @@ def write_report(base_dir: Path, findings: List[Finding], summary: Dict[str, Any
     findings_csv_path = reports_dir / "formal_validation_findings.csv"
     findings_df.to_csv(findings_csv_path, index=False)
 
-    confidence_df = confidence_by_component(findings)
-    confidence_md = "\n".join(
-        [
-            "| Component | Confidence | PASS | WARN | FAIL |",
-            "|---|---:|---:|---:|---:|",
-        ]
-        + [
-            f"| {r.component} | {r.confidence} | {r['pass']} | {r.warn} | {r.fail} |"
-            for _, r in confidence_df.iterrows()
-        ]
-    )
-
-    issues = [f for f in findings_sorted if f.status in {"WARN", "FAIL"}]
-    if issues:
-        issues_md = "\n".join(
-            [
-                "| Check | Status | Severity | Component | Issue | Recommended Fix |",
-                "|---|---|---|---|---|---|",
-            ]
-            + [
-                f"| {f.check_id}. {f.check_name} | {f.status} | {f.severity} | {f.component} | {f.details} | {f.recommended_fix} |"
-                for f in issues
-            ]
-        )
-    else:
-        issues_md = "No issues found."
-
-    fixes_applied = [f for f in findings_sorted if f.fix_applied == "Yes"]
-    fixes_md = "\n".join(
-        [f"- {f.check_id}. {f.check_name}: {f.details}" for f in fixes_applied]
-    )
-    if not fixes_md:
-        fixes_md = "- No automatic data/output rewrites were applied during validation."
-
-    unresolved = [f for f in issues if f.status in {"WARN", "FAIL"}]
-    unresolved_md = "\n".join(
-        [f"- [{f.severity}] {f.check_id}. {f.check_name}: {f.details}" for f in unresolved]
-    )
-    if not unresolved_md:
-        unresolved_md = "- None."
-
     overall = overall_assessment(findings, summary)
     readiness = summary.get("readiness", classify_readiness(summary))
-    readiness_tier = readiness.get("tier", "publish-blocked")
-    readiness_rationale = readiness.get("rationale", "")
-
-    report_text = f"""# Formal Validation QA Memo
-
-## Overall Assessment
-{overall}
-
-## Governance Readiness Classification
-- Current tier: `{readiness_tier}`
-- Rationale: {readiness_rationale}
-- Ordered scale: `publish-blocked` -> `not committee-grade` -> `screening-grade only` -> `decision-support only` -> `analytically acceptable` -> `technically valid`
-
-Validation execution summary:
-- Total checks run: {summary['total_findings']}
-- PASS: {summary['status_counts']['PASS']}
-- WARN: {summary['status_counts']['WARN']}
-- FAIL: {summary['status_counts']['FAIL']}
-- High/Critical findings: {summary['severity_counts']['High'] + summary['severity_counts']['Critical']}
-
-## Issues Found (Ranked by Severity)
-{issues_md}
-
-## Fixes Applied During Validation
-{fixes_md}
-
-## Unresolved Caveats
-{unresolved_md}
-
-## Confidence Level by Project Component
-{confidence_md}
-
-## QA Positioning for Stakeholder Share-Out
-- This memo is a pre-publication QA gate.
-- Any unresolved High/Critical findings should be disclosed in stakeholder readouts.
-- Narrative claims should remain associative (not causal) unless supported by causal design.
-"""
-
-    report_path = reports_dir / "formal_validation_report.md"
-    report_path.write_text(report_text, encoding="utf-8")
 
     summary_payload = {
         "overall_assessment": overall,
         "summary": summary,
         "readiness": readiness,
         "readiness_scale": list(READINESS_ORDER.keys()),
-        "confidence_by_component": confidence_df.to_dict(orient="records"),
-        "report_path": str(report_path),
+        "confidence_by_component": confidence_by_component(findings).to_dict(orient="records"),
         "findings_csv_path": str(findings_csv_path),
     }
     (reports_dir / "formal_validation_summary.json").write_text(json.dumps(summary_payload, indent=2), encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run full-project formal validation and produce QA memo.")
+    parser = argparse.ArgumentParser(description="Run full-project validation and write governed machine-readable outputs.")
     parser.add_argument("--base-dir", type=str, default=".")
     return parser.parse_args()
 
@@ -1239,9 +1233,9 @@ def main() -> None:
     base_dir = Path(args.base_dir).resolve()
 
     findings, summary = run_validation(base_dir)
-    write_report(base_dir, findings, summary)
+    write_validation_outputs(base_dir, findings, summary)
 
-    print("Formal validation complete")
+    print("Project validation complete")
     print(f"checks_run: {summary['total_findings']}")
     print(f"pass: {summary['status_counts']['PASS']}")
     print(f"warn: {summary['status_counts']['WARN']}")

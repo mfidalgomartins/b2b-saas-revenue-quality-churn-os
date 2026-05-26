@@ -1,19 +1,34 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
+try:
+    from dashboard_contract import (
+        CANONICAL_DASHBOARD_PATH,
+        DASHBOARD_SECTIONS,
+        OFFICIAL_KPI_SPECS,
+        REDIRECT_ENTRYPOINTS,
+    )
+except ImportError:  # pragma: no cover - supports package-style imports in tests.
+    from src.dashboard.dashboard_contract import (
+        CANONICAL_DASHBOARD_PATH,
+        DASHBOARD_SECTIONS,
+        OFFICIAL_KPI_SPECS,
+        REDIRECT_ENTRYPOINTS,
+    )
 
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build executive offline dashboard with governed payload.")
     parser.add_argument("--base-dir", type=str, default=".")
-    parser.add_argument("--output", type=str, default="outputs/dashboard/revenue-quality-command-center.html")
+    parser.add_argument("--output", type=str, default=CANONICAL_DASHBOARD_PATH)
     return parser.parse_args()
 
 
@@ -53,12 +68,19 @@ def _load_latest_plan(customers: pd.DataFrame, subscriptions: pd.DataFrame, plan
     return customers[["customer_id"]].merge(latest_sub, on="customer_id", how="left")
 
 
+def _png_data_uri(path: Path) -> str:
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
 def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
     chart_specs = [
         (
             "chart_01_mrr_arr",
             "Recurring Revenue Is Growing, But Quality Guardrails Matter",
             "MRR/ARR trend over time",
+            "Is recurring revenue compounding at a pace that justifies the current risk profile?",
+            "Use this to separate headline growth from the quality controls needed to protect it.",
             "01_mrr_arr_growth_trend.png",
             "executive_overview",
         ),
@@ -66,6 +88,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_02_grr_nrr",
             "Retention Quality Holds Near Parity, With Limited Expansion Cushion",
             "Gross vs net retention trend",
+            "Is expansion large enough to offset churn and contraction?",
+            "Use this before approving growth plans that depend on upsell masking base-book weakness.",
             "02_grr_nrr_retention_trend.png",
             "retention_churn",
         ),
@@ -73,6 +97,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_03_churn_segment",
             "Churn Burden Is Uneven Across Segments",
             "Logo churn by segment",
+            "Which segments are creating disproportionate logo churn pressure?",
+            "Use this to target retention plays where churn is structurally concentrated.",
             "03_logo_churn_by_segment.png",
             "retention_churn",
         ),
@@ -80,6 +106,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_04_concentration",
             "A Small Account Core Concentrates Disproportionate Revenue Exposure",
             "Revenue concentration curve",
+            "How dependent is the portfolio on the largest accounts?",
+            "Use this to size executive attention on concentration and renewal exposure.",
             "04_revenue_concentration_curve.png",
             "revenue_quality",
         ),
@@ -87,6 +115,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_05_discount_mix",
             "Discount Behavior Differs Materially by Segment, Channel, and Manager",
             "Average discount by segment/channel/manager",
+            "Where is discounting becoming a management behavior rather than a deal exception?",
+            "Use this to focus pricing governance by segment, channel, or manager.",
             "05_average_discount_segment_channel_manager.png",
             "revenue_quality",
         ),
@@ -94,6 +124,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_06_discount_share",
             "Discount-Dependent Revenue Share Stays Material",
             "Discounted revenue share trend",
+            "Is more of the book becoming dependent on pricing concessions?",
+            "Use this as the guardrail for margin quality and renewal-price discipline.",
             "06_discounted_revenue_share_trend.png",
             "revenue_quality",
         ),
@@ -101,6 +133,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_07_churn_risk_dist",
             "Risk Distribution Is Skewed to Low, With a High-Impact Tail",
             "Churn risk score distribution",
+            "Is churn exposure broad-based or concentrated in a manageable tail?",
+            "Use this to decide whether the response is operating cadence or targeted recovery.",
             "07_churn_risk_score_distribution.png",
             "account_risk",
         ),
@@ -108,6 +142,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_08_revenue_quality_dist",
             "Revenue Quality Scores Reveal Meaningful Fragility Pockets",
             "Revenue quality score distribution",
+            "How much of the customer base has weak revenue quality signals?",
+            "Use this to identify whether pricing, usage, and retention quality need systemic attention.",
             "08_revenue_quality_score_distribution.png",
             "account_risk",
         ),
@@ -115,6 +151,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_09_expansion_quality",
             "Expansion Quality Is Strongest in Specific Segments Only",
             "Expansion quality by segment",
+            "Which segments produce expansion that is likely to be durable?",
+            "Use this to steer expansion effort toward segments with healthier quality signals.",
             "09_expansion_quality_by_segment.png",
             "revenue_quality",
         ),
@@ -122,6 +160,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_10_governance_priority_accounts",
             "Priority Queue Is Concentrated in a Small Set of Accounts",
             "Top accounts by governance priority",
+            "Which accounts should leadership act on first?",
+            "Use this as the intervention queue for owner assignment and next-action tracking.",
             "10_top_accounts_governance_priority.png",
             "account_risk",
         ),
@@ -129,6 +169,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_11_cohort_heatmap",
             "Cohort Retention Heatmap Highlights Uneven Durability",
             "Cohort retention heatmap",
+            "Which cohorts are retaining value and which cohorts are degrading?",
+            "Use this to separate onboarding quality issues from current-period commercial pressure.",
             "11_cohort_retention_heatmap.png",
             "retention_churn",
         ),
@@ -136,6 +178,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_12_discount_vs_risk",
             "Higher Discount Intensity Is Associated with Higher Risk",
             "Discount vs churn risk",
+            "Are heavily discounted accounts also more likely to churn?",
+            "Use this to challenge concession-led retention and renewal strategies.",
             "12_discount_vs_churn_risk.png",
             "account_risk",
         ),
@@ -143,6 +187,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_13_payment_vs_risk",
             "Payment Delay Is a Leading Commercial Risk Signal",
             "Payment delay vs churn risk",
+            "Do payment delays identify churn pressure before renewal?",
+            "Use this to trigger commercial follow-up before risk becomes a renewal event.",
             "13_payment_delay_vs_churn_risk.png",
             "account_risk",
         ),
@@ -150,6 +196,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_14_usage_vs_risk",
             "Usage Deterioration Aligns with Elevated Churn Risk",
             "Usage decline vs churn risk",
+            "Is usage decay explaining elevated churn risk?",
+            "Use this to route recovery work between customer success and commercial teams.",
             "14_usage_decline_vs_churn_risk.png",
             "account_risk",
         ),
@@ -157,6 +205,8 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "chart_15_scenarios",
             "Fragile-Growth Case Compresses Near-Term MRR Trajectory",
             "Scenario comparison",
+            "How much MRR is at stake if revenue quality deteriorates?",
+            "Use this to quantify downside exposure and the value of intervention.",
             "15_scenario_mrr_comparison.png",
             "scenario_forecast",
         ),
@@ -164,7 +214,7 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
 
     charts_dir = base_dir / "outputs" / "charts"
     catalog: list[dict[str, str]] = []
-    for chart_id, title, subtitle, filename, section in chart_specs:
+    for chart_id, title, subtitle, question, decision_use, filename, section in chart_specs:
         path = charts_dir / filename
         if not path.exists():
             continue
@@ -173,9 +223,12 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
                 "chart_id": chart_id,
                 "title": title,
                 "subtitle": subtitle,
+                "question": question,
+                "decision_use": decision_use,
                 "section": section,
                 "filename": filename,
-                "image_src": f"../charts/{filename}",
+                "image_path": f"../charts/{filename}",
+                "image_src": _png_data_uri(path),
             }
         )
     return catalog
@@ -618,6 +671,13 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
         "chart_catalog": chart_catalog,
         "methodology": methodology,
         "source_map": source_map,
+        "dashboard_contract": {
+            "canonical_dashboard_path": CANONICAL_DASHBOARD_PATH,
+            "redirect_entrypoints": list(REDIRECT_ENTRYPOINTS),
+            "official_kpi_specs": list(OFFICIAL_KPI_SPECS),
+            "sections": list(DASHBOARD_SECTIONS),
+            "source_of_truth": "reports/main_business_analysis_metrics.json + governed processed tables",
+        },
     }
     return payload
 
@@ -633,10 +693,10 @@ def build_html(payload: dict[str, Any]) -> str:
 <title>Revenue Quality Command Center</title>
 <style>
 :root {{
-  --bg: #f4f0e8;
-  --panel: rgba(255, 252, 247, 0.84);
-  --panel-soft: rgba(255, 249, 241, 0.78);
-  --panel-strong: #fffdf9;
+  --bg: #f5f3ef;
+  --panel: #ffffff;
+  --panel-soft: #faf8f4;
+  --panel-strong: #ffffff;
   --ink: #18212d;
   --muted: #667384;
   --line: rgba(143, 122, 92, 0.18);
@@ -682,63 +742,12 @@ def build_html(payload: dict[str, Any]) -> str:
   --empty-ink: #526273;
   --gold: #9a7341;
   --gold-soft: #f4eadb;
-  --radius-shell: 24px;
-  --radius-card: 22px;
-  --radius-control: 14px;
-  --shadow: 0 24px 56px rgba(42, 47, 56, 0.11);
-  --shadow-soft: 0 12px 28px rgba(42, 47, 56, 0.08);
+  --radius-shell: 14px;
+  --radius-card: 8px;
+  --radius-control: 8px;
+  --shadow: 0 18px 38px rgba(42, 47, 56, 0.08);
+  --shadow-soft: 0 8px 20px rgba(42, 47, 56, 0.06);
   --shadow-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.46);
-}}
-[data-theme="dark"] {{
-  --bg: #0e1720;
-  --panel: rgba(19, 31, 44, 0.88);
-  --panel-soft: rgba(22, 36, 52, 0.84);
-  --panel-strong: #172433;
-  --ink: #e8edf4;
-  --muted: #a7b5c5;
-  --line: rgba(133, 157, 182, 0.2);
-  --line-strong: rgba(116, 168, 255, 0.22);
-  --accent: #8cb5ff;
-  --accent-strong: #c5dbff;
-  --accent-soft: #1a2c43;
-  --header-bg: rgba(13, 23, 33, 0.88);
-  --chip-bg: rgba(29, 46, 67, 0.7);
-  --chip-ink: #d8e4f1;
-  --input-bg: rgba(18, 35, 51, 0.9);
-  --input-border: rgba(116, 136, 160, 0.34);
-  --btn-bg: rgba(25, 42, 60, 0.9);
-  --btn-border: rgba(116, 136, 160, 0.34);
-  --btn-ink: #ecf3fb;
-  --btn-hover: #243a53;
-  --tab-bg: rgba(23, 39, 57, 0.92);
-  --tab-ink: #cfdaea;
-  --tab-active-bg: #304861;
-  --tab-active-ink: #f4f8fd;
-  --kpi-bg: linear-gradient(180deg, rgba(23, 37, 52, 0.96) 0%, rgba(18, 31, 45, 0.98) 100%);
-  --chart-card-bg: linear-gradient(180deg, rgba(22, 36, 52, 0.96) 0%, rgba(16, 28, 42, 0.98) 100%);
-  --chart-image-bg: #f7f9fb;
-  --chart-image-border: #d8e2ed;
-  --chart-frame-bg: linear-gradient(180deg, #ffffff 0%, #f5f8fb 100%);
-  --tooltip-bg: rgba(6, 11, 18, 0.96);
-  --tooltip-ink: #f4f7fb;
-  --insight-bg: #1a2d40;
-  --insight-border: #3d5b7c;
-  --insight-ink: #d8e5f4;
-  --table-head-bg: #1c3047;
-  --table-row-hover: #20364d;
-  --table-row-alt: rgba(255, 255, 255, 0.015);
-  --modal-overlay: rgba(5, 10, 16, 0.85);
-  --modal-bg: #132233;
-  --modal-line: #314a68;
-  --modal-body-bg: #101b29;
-  --empty-bg: #162537;
-  --empty-line: #415877;
-  --empty-ink: #ccd9ea;
-  --gold: #d4b47f;
-  --gold-soft: #3c2e1d;
-  --shadow: 0 26px 60px rgba(3, 8, 14, 0.45);
-  --shadow-soft: 0 14px 30px rgba(3, 8, 14, 0.32);
-  --shadow-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }}
 * {{ box-sizing: border-box; }}
 html, body {{
@@ -751,42 +760,28 @@ html, body {{
 }}
 body {{
   line-height: 1.42;
+  color-scheme: light;
   transition: background-color 0.25s ease, color 0.25s ease;
   position: relative;
   font-variant-numeric: tabular-nums;
-  background-image:
-    radial-gradient(circle at top left, rgba(23, 74, 114, 0.10), transparent 34%),
-    radial-gradient(circle at top right, rgba(155, 106, 28, 0.10), transparent 30%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 18%);
-  background-attachment: fixed;
+  background-image: linear-gradient(180deg, #f8f6f2 0%, #f2efe8 100%);
 }}
 body.modal-open {{
   overflow: hidden;
 }}
-body[data-theme="light"] {{ color-scheme: light; }}
-body[data-theme="dark"] {{ color-scheme: dark; }}
-body::before,
-body::after {{
-  content: "";
-  position: fixed;
-  width: 24rem;
-  height: 24rem;
-  border-radius: 50%;
-  pointer-events: none;
-  filter: blur(28px);
-  opacity: 0.16;
-  z-index: 0;
+.skip-link {{
+  position: absolute;
+  top: -48px;
+  left: 16px;
+  z-index: 100;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
 }}
-body::before {{
-  top: -8rem;
-  left: -10rem;
-  background: rgba(23, 74, 114, 0.42);
-}}
-body::after {{
-  top: 16rem;
-  right: -10rem;
-  background: rgba(155, 106, 28, 0.32);
-}}
+.skip-link:focus {{ top: 12px; }}
 
 header {{
   position: relative;
@@ -823,7 +818,7 @@ header {{
   font-size: clamp(1.8rem, 2.5vw, 2.6rem);
   line-height: 1.02;
   letter-spacing: -0.04em;
-  max-width: 13ch;
+  max-width: 16ch;
 }}
 .subtitle {{
   margin-top: 12px;
@@ -838,9 +833,6 @@ header {{
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(248, 243, 235, 0.88) 100%);
   padding: 16px 18px;
   box-shadow: var(--shadow-soft), var(--shadow-hairline);
-}}
-[data-theme="dark"] .header-brief {{
-  background: linear-gradient(180deg, rgba(24, 38, 55, 0.88) 0%, rgba(18, 31, 45, 0.92) 100%);
 }}
 .brief-label {{
   font-size: 0.72rem;
@@ -874,17 +866,6 @@ header {{
 }}
 .chip.alert-high {{ border-color: rgba(159, 63, 52, 0.26); background: rgba(255, 239, 236, 0.82); color: #8e2f29; }}
 .chip.alert-medium {{ border-color: rgba(152, 97, 26, 0.28); background: rgba(255, 247, 233, 0.82); color: #8a4f08; }}
-.theme-btn {{
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  border: 1px solid var(--btn-border);
-  background: var(--btn-bg);
-  color: var(--btn-ink);
-  box-shadow: var(--shadow-hairline);
-}}
-.theme-btn:hover {{ background: var(--btn-hover); }}
 
 .filter-shell {{
   border: 1px solid var(--line);
@@ -893,9 +874,6 @@ header {{
   box-shadow: var(--shadow-soft), var(--shadow-hairline);
   padding: 14px 16px;
   backdrop-filter: blur(12px);
-}}
-[data-theme="dark"] .filter-shell {{
-  background: linear-gradient(180deg, rgba(22, 36, 52, 0.92) 0%, rgba(17, 29, 43, 0.94) 100%);
 }}
 .filter-shell-body {{
   display: grid;
@@ -1050,9 +1028,6 @@ main {{
   flex-wrap: wrap;
   margin-bottom: 14px;
 }}
-[data-theme="dark"] .tab-nav {{
-  background: linear-gradient(180deg, rgba(22, 36, 52, 0.9) 0%, rgba(16, 28, 42, 0.92) 100%);
-}}
 .tab-btn {{
   border: 1px solid transparent;
   background: transparent;
@@ -1084,7 +1059,7 @@ main {{
   display: none;
   background: linear-gradient(180deg, rgba(255, 252, 247, 0.88) 0%, rgba(248, 243, 236, 0.82) 100%);
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: 14px;
   box-shadow: var(--shadow);
   padding: 22px;
   backdrop-filter: blur(12px);
@@ -1096,9 +1071,6 @@ main {{
   width: 100%;
   height: 1px;
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
-}}
-[data-theme="dark"] .section {{
-  background: linear-gradient(180deg, rgba(20, 32, 46, 0.92) 0%, rgba(16, 28, 42, 0.95) 100%);
 }}
 .section.active {{ display: block; }}
 .section-head {{
@@ -1129,9 +1101,6 @@ main {{
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-}}
-[data-theme="dark"] .chart-toolbar {{
-  background: linear-gradient(180deg, rgba(21, 34, 49, 0.9) 0%, rgba(16, 28, 42, 0.92) 100%);
 }}
 .chart-toolbar-copy {{
   display: grid;
@@ -1170,15 +1139,7 @@ main {{
   background: linear-gradient(90deg, var(--accent) 0%, rgba(23, 74, 114, 0.18) 100%);
 }}
 .kpi-card::after {{
-  content: "";
-  position: absolute;
-  top: -20%;
-  right: -8%;
-  width: 42%;
-  height: 55%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 72%);
-  pointer-events: none;
+  display: none;
 }}
 .kpi-card-primary {{ grid-column: span 6; min-height: 152px; }}
 .kpi-card-secondary {{ grid-column: span 3; min-height: 132px; }}
@@ -1227,7 +1188,120 @@ main {{
   color: var(--muted);
   border-top: 1px solid rgba(143, 122, 92, 0.12);
 }}
-[data-theme="dark"] .kpi-foot {{ border-top-color: rgba(133, 157, 182, 0.12); }}
+.kpi-action {{
+  margin-top: 8px;
+  font-size: 0.76rem;
+  color: var(--ink);
+  line-height: 1.45;
+}}
+
+.decision-brief {{
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--accent);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+  padding: 18px;
+  margin-bottom: 14px;
+}}
+.decision-brief-grid {{
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+  gap: 16px;
+  align-items: start;
+}}
+.decision-status {{
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(159, 63, 52, 0.22);
+  background: rgba(255, 243, 241, 0.9);
+  color: #8e2f29;
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}}
+.decision-brief h2 {{
+  margin: 10px 0 8px;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: clamp(1.45rem, 1.35vw + 1rem, 2.15rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}}
+.decision-brief-copy {{
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  max-width: 78ch;
+}}
+.action-grid {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}}
+.action-card {{
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #faf9f6;
+  padding: 13px;
+}}
+.action-label {{
+  font-size: 0.67rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 800;
+}}
+.action-title {{
+  margin-top: 7px;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  font-weight: 800;
+}}
+.action-copy {{
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}}
+.priority-panel {{
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #faf9f6;
+  padding: 13px;
+}}
+.priority-panel h3 {{
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}}
+.priority-list {{
+  display: grid;
+  gap: 8px;
+}}
+.priority-row {{
+  display: grid;
+  grid-template-columns: minmax(110px, 0.75fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid rgba(143, 122, 92, 0.14);
+  font-size: 0.8rem;
+}}
+.priority-row:first-child {{ border-top: 0; padding-top: 0; }}
+.priority-account {{ font-weight: 800; color: var(--ink); }}
+.priority-action {{
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}}
+.priority-score {{ font-weight: 800; color: var(--red); }}
 
 .decision-grid {{
   display: grid;
@@ -1251,9 +1325,6 @@ main {{
   width: 100%;
   height: 4px;
   background: linear-gradient(90deg, var(--gold) 0%, rgba(154, 115, 65, 0.14) 100%);
-}}
-[data-theme="dark"] .decision-card {{
-  background: linear-gradient(180deg, rgba(25, 40, 57, 0.92) 0%, rgba(18, 31, 45, 0.96) 100%);
 }}
 .decision-label {{
   font-size: 0.72rem;
@@ -1322,10 +1393,6 @@ main {{
 .alert-item.low {{ border-color: rgba(23, 74, 114, 0.18); border-left-color: var(--accent); background: rgba(243, 248, 255, 0.9); }}
 .alert-title {{ font-size: 0.84rem; font-weight: 700; }}
 .alert-detail {{ margin-top: 3px; font-size: 0.82rem; color: #44556a; line-height: 1.45; }}
-[data-theme="dark"] .alert-detail {{ color: #dbe6f6; }}
-[data-theme="dark"] .alert-item.high {{ border-color: #9a4e4a; background: #442724; color: #ffd9d4; }}
-[data-theme="dark"] .alert-item.medium {{ border-color: #8f6c3e; background: #43331e; color: #ffe6c2; }}
-[data-theme="dark"] .alert-item.low {{ border-color: #4b6489; background: #25374f; color: #dbe9ff; }}
 
 .chart-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(540px, 1fr)); gap: 14px; }}
 .chart-card {{
@@ -1347,15 +1414,7 @@ main {{
   background: linear-gradient(90deg, var(--accent) 0%, rgba(23, 74, 114, 0.14) 100%);
 }}
 .chart-card::after {{
-  content: "";
-  position: absolute;
-  top: -24%;
-  right: -10%;
-  width: 38%;
-  height: 54%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0) 74%);
-  pointer-events: none;
+  display: none;
 }}
 .chart-title {{
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
@@ -1366,6 +1425,19 @@ main {{
   letter-spacing: -0.02em;
 }}
 .chart-subtitle {{ font-size: 0.82rem; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }}
+.chart-question {{
+  border: 1px solid rgba(23, 74, 114, 0.14);
+  border-radius: 8px;
+  background: #f3f6f8;
+  padding: 9px 10px;
+  margin-bottom: 10px;
+  font-size: 0.79rem;
+  line-height: 1.45;
+  color: #31485f;
+}}
+.chart-question strong {{
+  color: var(--accent-strong);
+}}
 .chart-actions {{ display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 8px; }}
 .chart-card img {{
   width: 100%;
@@ -1477,15 +1549,7 @@ body.density-presentation .chart-card img {{ min-height: 620px; }}
   background: linear-gradient(90deg, var(--accent) 0%, rgba(23, 74, 114, 0.12) 100%);
 }}
 .svg-chart-card::after {{
-  content: "";
-  position: absolute;
-  top: -26%;
-  right: -12%;
-  width: 40%;
-  height: 56%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 74%);
-  pointer-events: none;
+  display: none;
 }}
 .svg-chart-head {{
   display: flex;
@@ -1644,11 +1708,6 @@ tbody tr:last-child td {{ border-bottom: none; }}
   border: 2px solid transparent;
   background-clip: padding-box;
 }}
-[data-theme="dark"] *::-webkit-scrollbar-thumb {{
-  background: rgba(168, 188, 211, 0.28);
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}}
 
 @media (max-width: 980px) {{
   .header-inner, main {{ padding-left: 12px; padding-right: 12px; }}
@@ -1660,6 +1719,8 @@ tbody tr:last-child td {{ border-bottom: none; }}
   .kpi-card-primary {{ grid-column: span 6; }}
   .kpi-card-secondary {{ grid-column: span 3; }}
   .decision-grid {{ grid-template-columns: 1fr; }}
+  .decision-brief-grid {{ grid-template-columns: 1fr; }}
+  .action-grid {{ grid-template-columns: 1fr; }}
   .interactive-grid {{ grid-template-columns: 1fr; }}
   .interactive-grid .svg-chart-card:last-child {{ grid-column: auto; }}
   .chart-svg {{ height: 280px; }}
@@ -1677,6 +1738,7 @@ tbody tr:last-child td {{ border-bottom: none; }}
 </style>
 </head>
 <body>
+<a class=\"skip-link\" href=\"#main-content\">Skip to main content</a>
 <header>
   <div class=\"header-inner\">
     <div class=\"title-row\">
@@ -1688,9 +1750,6 @@ tbody tr:last-child td {{ border-bottom: none; }}
       <div class=\"header-brief\">
         <div class=\"brief-label\">Decision focus</div>
         <div class=\"brief-copy\">Identify where revenue is durable, where pricing discipline is weakening, and which accounts need intervention first.</div>
-        <div class=\"meta-row\">
-          <button id=\"btn_theme\" class=\"theme-btn\" type=\"button\" aria-pressed=\"false\">Dark mode</button>
-        </div>
       </div>
     </div>
 
@@ -1706,37 +1765,52 @@ tbody tr:last-child td {{ border-bottom: none; }}
             <span class=\"chip info\" id=\"activeFilterChip\">No active filters</span>
           </div>
           <button id=\"filterToggleBtn\" class=\"ghost-btn\" type=\"button\" aria-expanded=\"true\">Hide Filters</button>
-          <button id=\"btn_reset\">Reset Filters</button>
-          <button id=\"btn_method\" class=\"primary\">Methodology</button>
+          <button id=\"btn_reset\" type=\"button\">Reset Filters</button>
+          <button id=\"btn_method\" class=\"primary\" type=\"button\">Methodology</button>
         </div>
       </div>
       <div class=\"filter-shell-body\" id=\"filterShellBody\">
         <div class=\"filters\">
-          <div class=\"filter\"><label>Region</label><select id=\"f_region\"></select></div>
-          <div class=\"filter\"><label>Segment</label><select id=\"f_segment\"></select></div>
-          <div class=\"filter\"><label>Industry</label><select id=\"f_industry\"></select></div>
-          <div class=\"filter\"><label>Plan Tier</label><select id=\"f_plan\"></select></div>
-          <div class=\"filter\"><label>Acquisition Channel</label><select id=\"f_channel\"></select></div>
-          <div class=\"filter\"><label>Account Manager</label><select id=\"f_manager\"></select></div>
-          <div class=\"filter\"><label>Risk Tier</label><select id=\"f_risk\"></select></div>
-          <div class=\"filter\"><label>Signup Start</label><select id=\"f_start\"></select></div>
-          <div class=\"filter\"><label>Signup End</label><select id=\"f_end\"></select></div>
-          <div class=\"filter\"><label>Account Search</label><input id=\"f_search\" type=\"text\" placeholder=\"customer id / industry / action\" /></div>
+          <div class=\"filter\"><label for=\"f_region\">Region</label><select id=\"f_region\"></select></div>
+          <div class=\"filter\"><label for=\"f_segment\">Segment</label><select id=\"f_segment\"></select></div>
+          <div class=\"filter\"><label for=\"f_industry\">Industry</label><select id=\"f_industry\"></select></div>
+          <div class=\"filter\"><label for=\"f_plan\">Plan Tier</label><select id=\"f_plan\"></select></div>
+          <div class=\"filter\"><label for=\"f_channel\">Acquisition Channel</label><select id=\"f_channel\"></select></div>
+          <div class=\"filter\"><label for=\"f_manager\">Account Manager</label><select id=\"f_manager\"></select></div>
+          <div class=\"filter\"><label for=\"f_risk\">Risk Tier</label><select id=\"f_risk\"></select></div>
+          <div class=\"filter\"><label for=\"f_start\">Signup Start</label><select id=\"f_start\"></select></div>
+          <div class=\"filter\"><label for=\"f_end\">Signup End</label><select id=\"f_end\"></select></div>
+          <div class=\"filter\"><label for=\"f_search\">Account Search</label><input id=\"f_search\" type=\"text\" placeholder=\"customer id / industry / action\" /></div>
         </div>
       </div>
     </div>
   </div>
 </header>
 
-<main>
-  <nav class=\"tab-nav\" id=\"tabs\">
-    <button class=\"tab-btn active\" data-tab=\"executive\">Executive Overview</button>
-    <button class=\"tab-btn\" data-tab=\"revenue\">Revenue Quality</button>
-    <button class=\"tab-btn\" data-tab=\"retention\">Retention & Churn</button>
-    <button class=\"tab-btn\" data-tab=\"risk\">Account Risk</button>
-    <button class=\"tab-btn\" data-tab=\"portfolio\">Portfolio / Manager</button>
-    <button class=\"tab-btn\" data-tab=\"scenario\">Scenario & Forecast</button>
-    <button class=\"tab-btn\" data-tab=\"method\">Methodology & Definitions</button>
+<main id=\"main-content\">
+  <section class=\"decision-brief\" aria-labelledby=\"decisionBriefHeadline\">
+    <div class=\"decision-brief-grid\">
+      <div>
+        <div class=\"decision-status\" id=\"decisionStatus\">Decision required</div>
+        <h2 id=\"decisionBriefHeadline\">Loading decision brief</h2>
+        <div class=\"decision-brief-copy\" id=\"decisionBriefBody\"></div>
+        <div class=\"action-grid\" id=\"decisionActionGrid\"></div>
+      </div>
+      <aside class=\"priority-panel\" aria-labelledby=\"priorityQueueTitle\">
+        <h3 id=\"priorityQueueTitle\">Priority queue</h3>
+        <div class=\"priority-list\" id=\"priorityQueue\"></div>
+      </aside>
+    </div>
+  </section>
+
+  <nav class=\"tab-nav\" id=\"tabs\" aria-label=\"Dashboard sections\">
+    <button class=\"tab-btn active\" type=\"button\" data-tab=\"executive\">Executive Overview</button>
+    <button class=\"tab-btn\" type=\"button\" data-tab=\"revenue\">Revenue Quality</button>
+    <button class=\"tab-btn\" type=\"button\" data-tab=\"retention\">Retention & Churn</button>
+    <button class=\"tab-btn\" type=\"button\" data-tab=\"risk\">Account Risk</button>
+    <button class=\"tab-btn\" type=\"button\" data-tab=\"portfolio\">Portfolio / Manager</button>
+    <button class=\"tab-btn\" type=\"button\" data-tab=\"scenario\">Scenario & Forecast</button>
+    <button class=\"tab-btn\" type=\"button\" data-tab=\"method\">Methodology & Definitions</button>
   </nav>
 
   <div class=\"chart-toolbar\">
@@ -1745,9 +1819,9 @@ tbody tr:last-child td {{ border-bottom: none; }}
       <div class=\"section-note\">Switch between compact analysis and presentation layout without changing filters.</div>
     </div>
     <div class=\"chart-density-controls\">
-      <button class=\"chart-density-btn\" data-density=\"compact\" id=\"densityCompact\">Compact</button>
-      <button class=\"chart-density-btn active\" data-density=\"comfortable\" id=\"densityComfortable\">Comfortable</button>
-      <button class=\"chart-density-btn\" data-density=\"presentation\" id=\"densityPresentation\">Presentation</button>
+      <button class=\"chart-density-btn\" type=\"button\" data-density=\"compact\" id=\"densityCompact\">Compact</button>
+      <button class=\"chart-density-btn active\" type=\"button\" data-density=\"comfortable\" id=\"densityComfortable\">Comfortable</button>
+      <button class=\"chart-density-btn\" type=\"button\" data-density=\"presentation\" id=\"densityPresentation\">Presentation</button>
     </div>
   </div>
 
@@ -1884,9 +1958,9 @@ tbody tr:last-child td {{ border-bottom: none; }}
       <div class=\"table-meta\">
         <div id=\"accountsMeta\"></div>
         <div class=\"pager\">
-          <button id=\"acctPrev\">Prev</button>
+          <button id=\"acctPrev\" type=\"button\">Prev</button>
           <span id=\"acctPage\"></span>
-          <button id=\"acctNext\">Next</button>
+          <button id=\"acctNext\" type=\"button\">Next</button>
         </div>
       </div>
     </div>
@@ -1953,7 +2027,7 @@ tbody tr:last-child td {{ border-bottom: none; }}
       <div class=\"section-note\">Definitions, assumptions, and caveats for interpretation.</div>
     </div>
 
-    <button id=\"methodDrawerBtn\" class=\"drawer-btn\">Toggle Methodology Drawer</button>
+    <button id=\"methodDrawerBtn\" class=\"drawer-btn\" type=\"button\">Toggle Methodology Drawer</button>
     <div class=\"methodology-drawer\" id=\"methodDrawer\">
       <div class=\"methodology-grid\" id=\"methodGrid\"></div>
     </div>
@@ -1973,12 +2047,12 @@ tbody tr:last-child td {{ border-bottom: none; }}
     <div class=\"chart-modal-head\">
       <div class=\"chart-modal-title\" id=\"chartModalTitle\">Chart</div>
       <div class=\"chart-modal-controls\">
-        <button id=\"chartPrev\">Prev</button>
-        <button id=\"chartNext\">Next</button>
-        <button id=\"chartZoomOut\">Zoom -</button>
-        <button id=\"chartZoomIn\">Zoom +</button>
-        <button id=\"chartZoomReset\">Reset</button>
-        <button id=\"chartClose\" class=\"primary\">Close</button>
+        <button id=\"chartPrev\" type=\"button\">Prev</button>
+        <button id=\"chartNext\" type=\"button\">Next</button>
+        <button id=\"chartZoomOut\" type=\"button\">Zoom -</button>
+        <button id=\"chartZoomIn\" type=\"button\">Zoom +</button>
+        <button id=\"chartZoomReset\" type=\"button\">Reset</button>
+        <button id=\"chartClose\" class=\"primary\" type=\"button\">Close</button>
       </div>
     </div>
     <div class=\"chart-modal-body\">
@@ -2003,7 +2077,6 @@ const monthlyCompactIndex = payload.monthly_compact_index || {};
 const monthlyCompactRows = payload.monthly_compact_rows || [];
 const MIN_MODAL_ZOOM = 0.45;
 const MAX_MODAL_ZOOM = 4;
-const THEME_STORAGE_KEY = 'executive_dashboard_theme';
 const FILTER_PANEL_STORAGE_KEY = 'executive_dashboard_filters_expanded';
 
 const state = {{
@@ -2014,7 +2087,6 @@ const state = {{
   managerSortBy: 'portfolio_mrr',
   managerSortDir: 'desc',
   chartDensity: 'comfortable',
-  theme: 'light',
 }};
 
 const chartContext = {{}};
@@ -2055,24 +2127,6 @@ function themeVar(name, fallback) {{
   return value || fallback;
 }}
 
-function loadThemePreference() {{
-  try {{
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored === 'dark' || stored === 'light') return stored;
-  }} catch (err) {{
-    return 'light';
-  }}
-  return 'light';
-}}
-
-function saveThemePreference(theme) {{
-  try {{
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }} catch (err) {{
-    return;
-  }}
-}}
-
 function loadFilterPanelPreference() {{
   try {{
     const stored = localStorage.getItem(FILTER_PANEL_STORAGE_KEY);
@@ -2091,17 +2145,6 @@ function saveFilterPanelPreference(mode) {{
   }}
 }}
 
-function applyTheme(theme) {{
-  const resolved = theme === 'dark' ? 'dark' : 'light';
-  state.theme = resolved;
-  document.body.setAttribute('data-theme', resolved);
-  const btn = document.getElementById('btn_theme');
-  if (!btn) return;
-  const isDark = resolved === 'dark';
-  btn.textContent = isDark ? 'Light mode' : 'Dark mode';
-  btn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
-}}
-
 function bySection(section) {{
   return (payload.chart_catalog || []).filter(c => c.section === section);
 }}
@@ -2118,8 +2161,9 @@ function renderCharts(targetId, section) {{
     <article class="chart-card">
       <div class="chart-title">${{esc(c.title)}}</div>
       <div class="chart-subtitle">${{esc(c.subtitle)}}</div>
+      <div class="chart-question"><strong>Question:</strong> ${{esc(c.question || 'What decision does this chart support?')}}<br/><strong>Decision use:</strong> ${{esc(c.decision_use || 'Use this chart to validate the related commercial action.')}}</div>
       <div class="chart-actions">
-        <button class="chart-expand-btn" data-target="${{esc(targetId)}}" data-index="${{idx}}">Expand</button>
+        <button class="chart-expand-btn" type="button" data-target="${{esc(targetId)}}" data-index="${{idx}}" aria-label="Expand ${{esc(c.title)}}">Expand</button>
         <a class="button-link" href="${{c.image_src}}" download="${{esc(c.filename)}}" aria-label="Download chart">Download</a>
       </div>
       <img
@@ -2127,8 +2171,9 @@ function renderCharts(targetId, section) {{
         data-target="${{esc(targetId)}}"
         data-index="${{idx}}"
         src="${{c.image_src}}"
-        alt="${{esc(c.title)}}"
+        alt="${{esc(c.title)}}. ${{esc(c.question || '')}}"
         loading="lazy"
+        decoding="async"
       />
     </article>
   `).join('');
@@ -2162,7 +2207,7 @@ function updateModalContent() {{
   modalState.index = idx;
   const chart = modalState.charts[idx];
   document.getElementById('chartModalTitle').textContent = chart.title || 'Chart';
-  document.getElementById('chartModalSubtitle').textContent = chart.subtitle || '';
+  document.getElementById('chartModalSubtitle').textContent = chart.question || chart.subtitle || '';
   document.getElementById('chartModalPosition').textContent = `${{idx + 1}} / ${{modalState.charts.length}}`;
   const img = document.getElementById('chartModalImage');
   img.src = chart.image_src;
@@ -2622,6 +2667,7 @@ function renderOfficialKpis(k, filteredCount) {{
       meta: isFiltered ? 'Revenue base in current slice' : 'Recurring revenue base',
       state: Number(k.current_mrr || 0) >= Number(baseline.current_mrr || 0) ? 'Above portfolio run-rate' : 'Below portfolio run-rate',
       foot: isFiltered ? deltaSummary(Number(k.current_mrr || 0) - Number(baseline.current_mrr || 0)) : 'Full portfolio scope',
+      action: 'Interpretation: size the protection effort against the recurring revenue base in scope.',
       tone: 'accent',
       emphasis: 'primary',
     }},
@@ -2631,6 +2677,7 @@ function renderOfficialKpis(k, filteredCount) {{
       meta: 'Annualized recurring revenue view',
       state: Number(k.arr || 0) >= Number(baseline.arr || 0) ? 'Higher annualized base' : 'Lower annualized base',
       foot: isFiltered ? deltaSummary(Number(k.arr || 0) - Number(baseline.arr || 0)) : 'Full portfolio scope',
+      action: 'Interpretation: annualize the impact of retention, discount, and risk decisions.',
       tone: 'accent',
       emphasis: 'secondary',
     }},
@@ -2640,6 +2687,7 @@ function renderOfficialKpis(k, filteredCount) {{
       meta: 'Expansion versus contraction and churn',
       state: Number(k.net_retention || 0) >= 1 ? 'Expansion offsets losses' : 'Losses exceed expansion',
       foot: isFiltered ? deltaSummary(Number(k.net_retention || 0) - Number(baseline.net_retention || 0), true) : 'Full portfolio scope',
+      action: Number(k.net_retention || 0) >= 1 ? 'Action: keep expansion quality visible; do not let upsell mask weak accounts.' : 'Action: prioritize renewal saves before incremental expansion targets.',
       tone: Number(k.net_retention || 0) >= 1 ? 'good' : 'risk',
       emphasis: 'primary',
     }},
@@ -2649,6 +2697,7 @@ function renderOfficialKpis(k, filteredCount) {{
       meta: 'Base-book durability before expansion',
       state: Number(k.gross_retention || 0) >= 0.9 ? 'Core book holding' : 'Core book weakening',
       foot: isFiltered ? deltaSummary(Number(k.gross_retention || 0) - Number(baseline.gross_retention || 0), true) : 'Full portfolio scope',
+      action: Number(k.gross_retention || 0) >= 0.9 ? 'Action: maintain base-book cadence and watch segment-level deterioration.' : 'Action: inspect churn and contraction drivers before relying on new sales.',
       tone: Number(k.gross_retention || 0) >= 0.9 ? 'good' : 'warning',
       emphasis: 'secondary',
     }},
@@ -2658,6 +2707,7 @@ function renderOfficialKpis(k, filteredCount) {{
       meta: 'Revenue exposed to pricing concessions',
       state: Number(k.discounted_revenue_share || 0) > 0.15 ? 'Pricing pressure elevated' : 'Pricing discipline contained',
       foot: isFiltered ? deltaSummary(Number(k.discounted_revenue_share || 0) - Number(baseline.discounted_revenue_share || 0), true) : 'Full portfolio scope',
+      action: Number(k.discounted_revenue_share || 0) > 0.15 ? 'Action: require pricing review for renewal concessions and discount-led expansions.' : 'Action: keep discount approvals within governed exception thresholds.',
       tone: Number(k.discounted_revenue_share || 0) > 0.15 ? 'warning' : 'good',
       emphasis: 'secondary',
     }},
@@ -2667,6 +2717,7 @@ function renderOfficialKpis(k, filteredCount) {{
       meta: 'MRR needing active protection',
       state: Number(k.revenue_at_risk_mrr || 0) > Number(baseline.revenue_at_risk_mrr || 0) ? 'Risk above portfolio mix' : 'Risk contained versus portfolio',
       foot: isFiltered ? deltaSummary(Number(k.revenue_at_risk_mrr || 0) - Number(baseline.revenue_at_risk_mrr || 0)) : 'Full portfolio scope',
+      action: Number(k.revenue_at_risk_mrr || 0) > 0 ? 'Action: assign owners to high and critical accounts before the next renewal cycle.' : 'Action: monitor for new risk migration in weekly operating review.',
       tone: Number(k.revenue_at_risk_mrr || 0) > 0 ? 'risk' : 'good',
       emphasis: 'primary',
     }},
@@ -2680,7 +2731,87 @@ function renderOfficialKpis(k, filteredCount) {{
         <span class="kpi-state">${{esc(card.state)}}</span>
       </div>
       <div class="kpi-foot">${{esc(card.foot)}}</div>
+      <div class="kpi-action">${{esc(card.action)}}</div>
     </article>
+  `).join('');
+}}
+
+function renderDecisionBrief(filtered, kpis) {{
+  const statusEl = document.getElementById('decisionStatus');
+  const headlineEl = document.getElementById('decisionBriefHeadline');
+  const bodyEl = document.getElementById('decisionBriefBody');
+  const actionsEl = document.getElementById('decisionActionGrid');
+  const queueEl = document.getElementById('priorityQueue');
+
+  if (!filtered.length) {{
+    statusEl.textContent = 'No scope';
+    headlineEl.textContent = 'No accounts match the current filters';
+    bodyEl.textContent = 'Reset or widen filters before using this view for operating decisions.';
+    actionsEl.innerHTML = '<div class="empty-state">No action queue available.</div>';
+    queueEl.innerHTML = '<div class="empty-state">No priority accounts in scope.</div>';
+    return;
+  }}
+
+  const highCriticalAccounts = filtered.filter(r => ['High', 'Critical'].includes(r.governance_priority_tier));
+  const criticalAccounts = filtered.filter(r => r.governance_priority_tier === 'Critical');
+  const revenueAtRisk = Number(kpis.revenue_at_risk_mrr || 0);
+  const nrr = Number(kpis.net_retention || 0);
+  const grr = Number(kpis.gross_retention || 0);
+  const discountedShare = Number(kpis.discounted_revenue_share || 0);
+  const nrrGap = Math.max(0, 1 - nrr);
+  const discountExcess = Math.max(0, discountedShare - 0.15);
+  const urgent = criticalAccounts.length > 0 || nrr < 1;
+
+  statusEl.textContent = urgent ? 'Decision required' : discountedShare > 0.15 ? 'Governance watch' : 'Monitor';
+  headlineEl.textContent = urgent
+    ? 'Protect retention and at-risk MRR before approving more expansion'
+    : discountedShare > 0.15
+      ? 'Revenue is growing, but discount governance needs attention'
+      : 'Revenue quality is controlled; keep monitoring risk migration';
+  bodyEl.textContent = [
+    `${{filtered.length.toLocaleString()}} accounts are in scope with ${{fmtMoney(kpis.current_mrr)}} current MRR.`,
+    `NRR is ${{fmtPct(nrr)}} and GRR is ${{fmtPct(grr)}}; ${{fmtMoney(revenueAtRisk)}} MRR is tied to high or critical governance priority.`,
+    `Discounted revenue share is ${{fmtPct(discountedShare)}} against a 15.00% governance trigger.`,
+  ].join(' ');
+
+  const actionCards = [
+    {{
+      label: '1. Protect',
+      title: revenueAtRisk > 0 ? `Own ${{fmtMoney(revenueAtRisk)}} at-risk MRR` : 'Keep risk migration visible',
+      copy: highCriticalAccounts.length
+        ? `${{highCriticalAccounts.length}} high/critical accounts need named owner, next action, and renewal checkpoint.`
+        : 'No high/critical accounts in scope; continue weekly risk-tier review.',
+    }},
+    {{
+      label: '2. Recover',
+      title: nrrGap > 0 ? `Close a ${{(nrrGap * 100).toFixed(2)}}pp NRR gap` : 'Do not let expansion hide weak retention',
+      copy: nrr < 1
+        ? 'Prioritize renewal saves and contraction prevention before setting new upsell targets.'
+        : 'Expansion offsets losses; validate that expansion is not discount-led or concentrated in fragile accounts.',
+    }},
+    {{
+      label: '3. Govern',
+      title: discountExcess > 0 ? `Reduce discount exposure by ${{(discountExcess * 100).toFixed(2)}}pp` : 'Maintain discount exception control',
+      copy: discountedShare > 0.15
+        ? 'Review concession-heavy renewals, channels, and managers before approving further price exceptions.'
+        : 'Discount exposure is below the trigger; keep approvals tied to account quality signals.',
+    }},
+  ];
+  actionsEl.innerHTML = actionCards.map(card => `
+    <article class="action-card">
+      <div class="action-label">${{esc(card.label)}}</div>
+      <div class="action-title">${{esc(card.title)}}</div>
+      <div class="action-copy">${{esc(card.copy)}}</div>
+    </article>
+  `).join('');
+
+  const priorityRows = sortedRows(filtered, 'governance_priority_score', 'desc').slice(0, 5);
+  queueEl.innerHTML = priorityRows.map(r => `
+    <div class="priority-row">
+      <div class="priority-account">${{esc(r.customer_id)}}</div>
+      <div class="priority-action" title="${{esc(r.recommended_action_reason)}}">${{esc(r.recommended_action)}} · ${{esc(r.governance_priority_tier)}}</div>
+      <div class="priority-score">${{fmtNum(r.governance_priority_score, 1)}}</div>
+    </div>
   `).join('');
 }}
 
@@ -3071,6 +3202,7 @@ function applyAll() {{
   const filteredKpis = computeFilteredKpis(filtered, monthlyFiltered);
 
   renderOfficialKpis(filteredKpis, filtered.length);
+  renderDecisionBrief(filtered, filteredKpis);
   renderDecisionSignals(filtered, filteredKpis);
   renderAlerts(filteredKpis, filtered.length);
   renderExecutiveNarrative(filteredKpis, filtered.length);
@@ -3126,17 +3258,6 @@ function bindTabs() {{
       const top = document.querySelector('main')?.offsetTop || 0;
       window.scrollTo({{ top: Math.max(0, top - 10), behavior: 'smooth' }});
     }});
-  }});
-}}
-
-function bindTheme() {{
-  const btn = document.getElementById('btn_theme');
-  if (!btn) return;
-  btn.addEventListener('click', () => {{
-    const next = state.theme === 'dark' ? 'light' : 'dark';
-    applyTheme(next);
-    saveThemePreference(next);
-    applyAll();
   }});
 }}
 
@@ -3262,7 +3383,6 @@ function bindFilters() {{
 
 function init() {{
   state.chartDensity = 'comfortable';
-  applyTheme(loadThemePreference());
   applyFilterShellState(loadFilterPanelPreference());
   populateSelect('f_region', filters.regions || []);
   populateSelect('f_segment', filters.segments || []);
@@ -3286,7 +3406,6 @@ function init() {{
   renderMethodology();
 
   applyDensity();
-  bindTheme();
   bindTabs();
   bindChartInteractions();
   bindSorting();

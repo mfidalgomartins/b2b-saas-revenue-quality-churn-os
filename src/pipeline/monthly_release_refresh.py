@@ -4,7 +4,8 @@ import argparse
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List
+
+# (typing imports removed)
 
 
 def parse_args() -> argparse.Namespace:
@@ -17,13 +18,13 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def run_step(cmd: List[str], cwd: Path) -> None:
+def run_step(cmd: list[str], cwd: Path) -> None:
     result = subprocess.run(cmd, cwd=str(cwd))
     if result.returncode != 0:
         raise RuntimeError(f"Command failed ({result.returncode}): {' '.join(cmd)}")
 
 
-def collect_artifacts(base_dir: Path) -> List[Path]:
+def collect_artifacts(base_dir: Path) -> list[Path]:
     patterns = [
         "README.md",
         "docs/core/*.md",
@@ -40,21 +41,20 @@ def collect_artifacts(base_dir: Path) -> List[Path]:
         "sql/staging/*.sql",
         "sql/marts/*.sql",
     ]
-    files: List[Path] = []
+    files: list[Path] = []
     for pattern in patterns:
         files.extend(sorted(base_dir.glob(pattern)))
     return sorted({p for p in files if p.is_file()})
 
 
-def try_create_release_tag(base_dir: Path, release_tag: str) -> Dict[str, str]:
+def try_create_release_tag(base_dir: Path, release_tag: str) -> dict[str, str]:
     if not release_tag:
         return {"status": "skipped", "message": "No release tag requested."}
 
     is_git = subprocess.run(
         ["git", "rev-parse", "--is-inside-work-tree"],
         cwd=str(base_dir),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
     if is_git.returncode != 0 or "true" not in is_git.stdout.lower():
@@ -63,15 +63,14 @@ def try_create_release_tag(base_dir: Path, release_tag: str) -> Dict[str, str]:
     tag_exists = subprocess.run(
         ["git", "tag", "--list", release_tag],
         cwd=str(base_dir),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
     if tag_exists.returncode == 0 and release_tag in tag_exists.stdout.split():
         return {"status": "exists", "message": f"Tag already exists: {release_tag}"}
 
     tag_cmd = ["git", "tag", "-a", release_tag, "-m", f"Monthly analytics release {release_tag}"]
-    created = subprocess.run(tag_cmd, cwd=str(base_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    created = subprocess.run(tag_cmd, cwd=str(base_dir), capture_output=True, text=True)
     if created.returncode != 0:
         return {"status": "failed", "message": created.stderr.strip() or "Failed to create tag."}
     return {"status": "created", "message": f"Created tag {release_tag}"}

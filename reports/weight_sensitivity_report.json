@@ -1,0 +1,16 @@
+{
+  "n_accounts": 4500,
+  "perturbation": 0.2,
+  "baseline_weights": {
+    "churn_risk": 0.32,
+    "revenue_quality_risk": 0.18,
+    "discount_dependency": 0.15,
+    "expansion_fragility": 0.1,
+    "exposure_concentration": 0.2,
+    "renewal_urgency": 0.05
+  },
+  "max_tier_flip_pct": 0.053111,
+  "max_tier_flip_lever": "exposure_concentration (down)",
+  "mean_tier_flip_pct": 0.029259,
+  "all_under_5pct": false
+}

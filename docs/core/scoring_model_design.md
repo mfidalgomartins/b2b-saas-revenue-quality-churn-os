@@ -47,3 +47,4 @@
 - Rule-based design favors explainability over maximum predictive fit.
 - Threshold choices (for example, heavy discount >=25%) are policy choices and should be recalibrated when business context changes.
 - A common 0-100 scale improves comparability but compresses nuance; component tables should always accompany score usage.
+

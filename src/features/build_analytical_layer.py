@@ -2,38 +2,31 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.io.contracts import REQUIRED_RAW_SCHEMAS, validate_schema  # noqa: E402
 
 RAW_FILES = {
-    "customers": "customers.csv",
-    "plans": "plans.csv",
-    "subscriptions": "subscriptions.csv",
-    "monthly_account_metrics": "monthly_account_metrics.csv",
-    "invoices": "invoices.csv",
-    "account_managers": "account_managers.csv",
+    "customers": ("customers.csv", ["signup_date"]),
+    "plans": ("plans.csv", []),
+    "subscriptions": ("subscriptions.csv", ["subscription_start_date", "subscription_end_date"]),
+    "monthly_account_metrics": ("monthly_account_metrics.csv", ["month"]),
+    "invoices": ("invoices.csv", ["invoice_month"]),
+    "account_managers": ("account_managers.csv", []),
 }
 
 
-def load_raw_tables(raw_dir: Path) -> Dict[str, pd.DataFrame]:
-    tables = {
-        "customers": pd.read_csv(raw_dir / RAW_FILES["customers"], parse_dates=["signup_date"]),
-        "plans": pd.read_csv(raw_dir / RAW_FILES["plans"]),
-        "subscriptions": pd.read_csv(
-            raw_dir / RAW_FILES["subscriptions"],
-            parse_dates=["subscription_start_date", "subscription_end_date"],
-        ),
-        "monthly_account_metrics": pd.read_csv(
-            raw_dir / RAW_FILES["monthly_account_metrics"],
-            parse_dates=["month"],
-        ),
-        "invoices": pd.read_csv(raw_dir / RAW_FILES["invoices"], parse_dates=["invoice_month"]),
-        "account_managers": pd.read_csv(raw_dir / RAW_FILES["account_managers"]),
-    }
+def load_raw_tables(raw_dir: Path) -> dict[str, pd.DataFrame]:
+    tables: dict[str, pd.DataFrame] = {}
+    for name, (filename, date_cols) in RAW_FILES.items():
+        df = pd.read_csv(raw_dir / filename, parse_dates=date_cols or None)
+        tables[name] = validate_schema(df, name, REQUIRED_RAW_SCHEMAS[name])
     return tables
 
 
@@ -41,7 +34,7 @@ def _safe_div(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
     return np.where(denominator > 0, numerator / denominator, 0.0)
 
 
-def _compute_trend(values: List[float]) -> float:
+def _compute_trend(values: list[float]) -> float:
     if len(values) < 2:
         return 0.0
     x = np.arange(len(values))
@@ -50,7 +43,7 @@ def _compute_trend(values: List[float]) -> float:
     return float(slope)
 
 
-def build_account_monthly_revenue_quality(tables: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+def build_account_monthly_revenue_quality(tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
     customers = tables["customers"]
     plans = tables["plans"]
     subs = tables["subscriptions"].copy()
@@ -168,7 +161,7 @@ def build_account_monthly_revenue_quality(tables: Dict[str, pd.DataFrame]) -> pd
 
 
 def build_customer_health_features(
-    tables: Dict[str, pd.DataFrame],
+    tables: dict[str, pd.DataFrame],
     account_monthly_revenue_quality: pd.DataFrame,
 ) -> pd.DataFrame:
     customers = tables["customers"].copy()
@@ -274,7 +267,7 @@ def build_customer_health_features(
 
 
 def build_cohort_retention_summary(
-    tables: Dict[str, pd.DataFrame],
+    tables: dict[str, pd.DataFrame],
     account_monthly_revenue_quality: pd.DataFrame,
 ) -> pd.DataFrame:
     customers = tables["customers"][ ["customer_id", "segment", "region"] ].copy()
@@ -339,7 +332,7 @@ def build_cohort_retention_summary(
 
 
 def build_account_risk_base(
-    tables: Dict[str, pd.DataFrame],
+    tables: dict[str, pd.DataFrame],
     account_monthly_revenue_quality: pd.DataFrame,
     customer_health_features: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -385,69 +378,69 @@ def build_account_risk_base(
         1,
     )
 
-    records = []
-    for _, row in risk.iterrows():
-        churn_inputs = {
-            "trailing_3m_usage_trend": float(row["trailing_3m_usage_trend"]),
-            "trailing_3m_nps_avg": float(row["trailing_3m_nps_avg"]),
-            "trailing_3m_support_ticket_avg": float(row["trailing_3m_support_ticket_avg"]),
-            "trailing_3m_payment_delay_avg": float(row["trailing_3m_payment_delay_avg"]),
-            "contraction_frequency": float(row["contraction_frequency"]),
-            "renewal_due_flag": int(row["renewal_due_flag"]),
-        }
+    # Vectorized flag construction — each flag is a boolean Series over `risk`.
+    flag_specs: list[tuple[str, pd.Series]] = [
+        ("usage_declining", risk["trailing_3m_usage_trend"] < -2.5),
+        ("low_nps", risk["trailing_3m_nps_avg"] < 10),
+        ("payment_delay_stress", risk["trailing_3m_payment_delay_avg"] > 20),
+        ("discount_dependency",
+            (risk["trailing_3m_discount_avg"] >= 0.25) | (risk["discount_dependency_flag"] == 1)),
+        ("frequent_contraction", risk["contraction_frequency"] > 0.25),
+        ("renewal_at_risk",
+            (risk["renewal_due_flag"] == 1) & (risk["renewal_risk_proxy"] >= 0.60)),
+        ("high_concentration_exposure", risk["concentration_weight"] > 0.01),
+        ("high_risk_score", risk["account_risk_score"] >= 70),
+    ]
 
-        revenue_inputs = {
-            "current_mrr": float(row["current_mrr"]),
-            "realized_price_index": float(row["realized_price_index"]),
-            "avg_discount_pct": float(row["avg_discount_pct"]),
-            "discount_dependency_flag": int(row["discount_dependency_flag"]),
-            "revenue_quality_flag": str(row["revenue_quality_flag"]),
-        }
+    churn_keys = [
+        "trailing_3m_usage_trend", "trailing_3m_nps_avg",
+        "trailing_3m_support_ticket_avg", "trailing_3m_payment_delay_avg",
+        "contraction_frequency", "renewal_due_flag",
+    ]
+    revenue_keys = [
+        "current_mrr", "realized_price_index", "avg_discount_pct",
+        "discount_dependency_flag", "revenue_quality_flag",
+    ]
+    fragility_keys = [
+        "seat_growth_rate", "expansion_frequency", "contraction_frequency",
+        "concentration_weight", "churn_history_flag", "renewal_risk_proxy",
+    ]
 
-        fragility_inputs = {
-            "seat_growth_rate": float(row["seat_growth_rate"]),
-            "expansion_frequency": float(row["expansion_frequency"]),
-            "contraction_frequency": float(row["contraction_frequency"]),
-            "concentration_weight": float(row["concentration_weight"]),
-            "churn_history_flag": int(row["churn_history_flag"]),
-            "renewal_risk_proxy": float(row["renewal_risk_proxy"]),
-        }
+    int_cols = {"renewal_due_flag", "discount_dependency_flag", "churn_history_flag"}
+    str_cols = {"revenue_quality_flag"}
 
-        flags: List[str] = []
-        if row["trailing_3m_usage_trend"] < -2.5:
-            flags.append("usage_declining")
-        if row["trailing_3m_nps_avg"] < 10:
-            flags.append("low_nps")
-        if row["trailing_3m_payment_delay_avg"] > 20:
-            flags.append("payment_delay_stress")
-        if row["trailing_3m_discount_avg"] >= 0.25 or row["discount_dependency_flag"] == 1:
-            flags.append("discount_dependency")
-        if row["contraction_frequency"] > 0.25:
-            flags.append("frequent_contraction")
-        if row["renewal_due_flag"] == 1 and row["renewal_risk_proxy"] >= 0.60:
-            flags.append("renewal_at_risk")
-        if row["concentration_weight"] > 0.01:
-            flags.append("high_concentration_exposure")
-        if row["account_risk_score"] >= 70:
-            flags.append("high_risk_score")
+    def _row_to_payload(row: pd.Series, keys: list[str]) -> str:
+        payload: dict[str, object] = {}
+        for k in keys:
+            value = row[k]
+            if k in int_cols:
+                payload[k] = int(value)
+            elif k in str_cols:
+                payload[k] = str(value)
+            else:
+                payload[k] = float(value)
+        return json.dumps(payload, sort_keys=True)
 
-        records.append(
-            {
-                "customer_id": row["customer_id"],
-                "current_month": current_month,
-                "churn_risk_inputs": json.dumps(churn_inputs, sort_keys=True),
-                "revenue_quality_inputs": json.dumps(revenue_inputs, sort_keys=True),
-                "account_fragility_inputs": json.dumps(fragility_inputs, sort_keys=True),
-                "forward_risk_flags": json.dumps(flags),
-            }
-        )
+    flags_matrix = pd.concat(
+        [series.rename(name) for name, series in flag_specs], axis=1
+    )
 
-    out = pd.DataFrame(records)
+    out = pd.DataFrame({
+        "customer_id": risk["customer_id"].to_numpy(),
+        "current_month": current_month,
+        "churn_risk_inputs": risk.apply(lambda r: _row_to_payload(r, churn_keys), axis=1),
+        "revenue_quality_inputs": risk.apply(lambda r: _row_to_payload(r, revenue_keys), axis=1),
+        "account_fragility_inputs": risk.apply(lambda r: _row_to_payload(r, fragility_keys), axis=1),
+        "forward_risk_flags": flags_matrix.apply(
+            lambda row: json.dumps([name for name, on in row.items() if bool(on)]),
+            axis=1,
+        ),
+    })
     return out
 
 
 def build_account_manager_summary(
-    tables: Dict[str, pd.DataFrame],
+    tables: dict[str, pd.DataFrame],
     customer_health_features: pd.DataFrame,
     account_monthly_revenue_quality: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -651,7 +644,7 @@ def write_table_purpose_note(output_path: Path) -> None:
     output_path.write_text(note)
 
 
-def save_tables(processed_dir: Path, tables: Dict[str, pd.DataFrame]) -> None:
+def save_tables(processed_dir: Path, tables: dict[str, pd.DataFrame]) -> None:
     processed_dir.mkdir(parents=True, exist_ok=True)
     for name, df in tables.items():
         df.to_csv(processed_dir / f"{name}.csv", index=False)

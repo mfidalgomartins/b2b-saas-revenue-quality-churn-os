@@ -13,29 +13,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set Up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Lint
-        run: |
-          python -m ruff check src tests
+        run: python -m ruff check src tests
 
-      - name: Build End-To-End Pipeline
-        run: |
-          python src/pipeline/run_project_pipeline.py --base-dir . --seed 42
+      - name: Build end-to-end pipeline
+        run: python src/pipeline/run_project_pipeline.py --base-dir . --seed 42
 
-      - name: Run Data Contract Tests
-        run: |
-          python -m unittest discover -s tests -p 'test_*.py'
+      - name: Run data contract tests
+        run: python -m unittest discover -s tests -p 'test_*.py'
 
-      - name: Enforce Validation Gate
+      - name: Enforce validation gate
         run: |
           python src/validation/check_validation_gate.py \
             --summary-path reports/formal_validation_summary.json \
@@ -45,11 +44,11 @@ jobs:
             --max-critical-severity 0 \
             --min-readiness-tier "technically valid"
 
-      - name: Upload Validation Artifacts
+      - name: Upload validation artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: validation-artifacts
           path: |
-            reports/formal_validation_report.md
             reports/formal_validation_findings.csv
             reports/formal_validation_summary.json

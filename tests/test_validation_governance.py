@@ -6,7 +6,6 @@ import sys
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SUMMARY_PATH = ROOT / "reports" / "formal_validation_summary.json"
 
@@ -56,7 +55,7 @@ class TestValidationGovernance(unittest.TestCase):
             "--min-readiness-tier",
             current_tier,
         ]
-        result = subprocess.run(cmd, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, f"Validation gate should pass when using current tier. stderr={result.stderr}")
 
 

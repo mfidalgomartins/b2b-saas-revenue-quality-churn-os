@@ -1,0 +1,24 @@
+{
+  "horizon_months": 3,
+  "evaluation_rows": 88613,
+  "evaluation_accounts": 4343,
+  "overall_forward_churn_rate": 0.024635,
+  "monotonic_violations": [
+    "High>Critical"
+  ],
+  "tier_churn_rate": {
+    "Low": 0.023109,
+    "Moderate": 0.061786,
+    "High": 0.181102,
+    "Critical": 0.0
+  },
+  "weights": {
+    "usage_deterioration": 0.25,
+    "sentiment_support": 0.15,
+    "payment_stress": 0.2,
+    "commercial_contraction": 0.15,
+    "discount_pressure": 0.1,
+    "renewal_exposure": 0.1,
+    "history_tenure": 0.05
+  }
+}

@@ -185,7 +185,6 @@ A formal 20-check QA gate is implemented in:
 20. test suite integrity (unittest discovery/execution)
 
 Validation outputs:
-- `reports/formal_validation_report.md`
 - `reports/formal_validation_findings.csv`
 - `reports/formal_validation_summary.json`
 

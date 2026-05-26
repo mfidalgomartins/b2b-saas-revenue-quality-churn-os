@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -65,7 +65,7 @@ def build_base_panel(t: dict[str, pd.DataFrame]) -> pd.DataFrame:
 def forward_churn_flag(monthly: pd.DataFrame, horizon_months: int = 3) -> pd.DataFrame:
     g = monthly[["customer_id", "month", "churn_flag"]].sort_values(["customer_id", "month"]).copy()
     g["forward_churn_flag"] = 0
-    for cid, idx in g.groupby("customer_id").groups.items():
+    for _cid, idx in g.groupby("customer_id").groups.items():
         s = g.loc[idx].sort_values("month")
         months = s["month"].to_numpy()
         churn = s["churn_flag"].fillna(0).astype(int).to_numpy()
@@ -225,7 +225,7 @@ def compute_metrics(t: dict[str, pd.DataFrame]) -> dict[str, Any]:
 
     metrics: dict[str, Any] = {
         "meta": {
-            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+            "generated_at_utc": datetime.now(UTC).isoformat(),
             "month_start": str(month_start.date()) if pd.notna(month_start) else "",
             "month_end": str(month_end.date()) if pd.notna(month_end) else "",
             "n_months": int(len(monthly_roll)),
@@ -295,80 +295,77 @@ def build_memo(metrics: dict[str, Any], output_path: Path) -> None:
     worst_band_name = worst_discount_band["discount_band"] if worst_discount_band else "n/a"
     worst_band_rate = float(worst_discount_band["future_churn_3m_rate"]) if worst_discount_band else 0.0
 
-    memo = f"""# Main Business Analysis Memo
+    memo = f"""# Main Business Analysis
 
-## Scope and Definitions
-Analysis window: {meta['month_start']} to {meta['month_end']} ({meta['n_months']} months).
+Window: {meta['month_start']} to {meta['month_end']} ({meta['n_months']} months).
+All findings are associative; correlation does not establish causality.
 
-Core metric definitions:
-- `MRR`: sum of `active_mrr` in month.
-- `ARR`: `12 * MRR`.
-- `GRR`: `(starting_mrr - contraction_mrr - churn_mrr) / starting_mrr`.
-- `NRR`: `(starting_mrr + expansion_mrr - contraction_mrr - churn_mrr) / starting_mrr`.
-- `Logo churn rate`: churn events / active account-month rows.
-- `Revenue churn rate`: churned MRR / active MRR.
+## Definitions
 
-## 1) Revenue Quality Overview
-**Key takeaway:** Strong topline growth with non-trivial quality exposure in discounted and at-risk revenue pockets.
+- MRR — sum of `active_mrr` in month.
+- ARR — 12 × MRR.
+- GRR — `(starting_mrr − contraction_mrr − churn_mrr) / starting_mrr`.
+- NRR — `(starting_mrr + expansion_mrr − contraction_mrr − churn_mrr) / starting_mrr`.
+- Logo churn rate — churn events / active account-month rows.
+- Revenue churn rate — churned MRR / active MRR.
 
-- MRR: `${s1['mrr_start']:,.0f}` -> `${s1['mrr_end']:,.0f}` (`{s1['monthly_growth_rate']:.2%}` implied monthly growth).
-- ARR run-rate: `${s1['arr_start']:,.0f}` -> `${s1['arr_end']:,.0f}`.
-- Latest weighted realized price index: `{s1['w_realized_price_end']:.3f}`.
-- Latest weighted discount: `{s1['w_discount_end']:.1%}`.
-- Latest discounted-dependent MRR share: `{s1['share_discounted_mrr_latest']:.1%}`.
-- Latest high-risk MRR share: `{s1['share_at_risk_mrr_latest']:.1%}`.
+## Revenue quality
 
-Interpretation:
-- Growth quality improved on pricing realization, but downside concentration remains material.
+MRR ${s1['mrr_start']:,.0f} → ${s1['mrr_end']:,.0f}
+({s1['monthly_growth_rate']:.2%} implied monthly growth); ARR run-rate
+${s1['arr_start']:,.0f} → ${s1['arr_end']:,.0f}.
 
-Caveat:
-- Realized pricing reflects both commercial pricing and collections quality.
+Latest weighted realized price index {s1['w_realized_price_end']:.3f}, latest
+weighted discount {s1['w_discount_end']:.1%}. Discount-dependent MRR share
+{s1['share_discounted_mrr_latest']:.1%}; High/Critical-priority MRR share
+{s1['share_at_risk_mrr_latest']:.1%}.
 
-## 2) Retention and Churn Diagnostics
-**Key takeaway:** Portfolio retention is stable but expansion buffer remains thin.
+Realized pricing mixes commercial discount and collection-loss effects and is
+not a clean pricing metric on its own.
 
-- Logo churn: `{s2['logo_churn_rate']:.2%}`.
-- Revenue churn: `{s2['revenue_churn_rate']:.2%}`.
-- Latest GRR/NRR: `{s2['latest_grr']:.2%}` / `{s2['latest_nrr']:.2%}`.
+## Retention and churn
 
-Interpretation:
-- NRR near parity indicates limited cushion if churn or contraction rises.
+- Logo churn — {s2['logo_churn_rate']:.2%}
+- Revenue churn — {s2['revenue_churn_rate']:.2%}
+- Latest GRR / NRR — {s2['latest_grr']:.2%} / {s2['latest_nrr']:.2%}
 
-Caveat:
-- Diagnostics are associative; they do not infer causal channel or segment effects.
+NRR near parity leaves little buffer if churn or contraction accelerates.
 
-## 3) Discount and Fragility
-**Key takeaway:** Higher discount intensity is associated with higher forward churn in the highest discount bands.
+## Discount and fragility
 
-- Worst discount-band forward churn (3m): `{worst_band_name}` at `{worst_band_rate:.2%}`.
+Worst discount band on forward 3-month churn: **{worst_band_name}** at
+{worst_band_rate:.2%}. Heavy discounting near renewal is the single
+strongest leading signal in the panel.
 
-Interpretation:
-- Extreme discounting should be treated as a governance signal, especially near renewal.
+## Expansion quality
 
-Caveat:
-- Correlation does not establish causality.
+Fragile expansion share {fragile_exp_share:.1%} of ${exp_total:,.0f} expansion
+MRR in window. Fragile expansion is correlated with elevated churn 3–9 months
+later in the simulated panel.
 
-## 4) Expansion Quality
-**Key takeaway:** Expansion remains positive but fragile expansion share is material.
+## Account-level concentration
 
-- Fragile expansion MRR share: `{fragile_exp_share:.1%}`.
-- Total expansion MRR observed: `${exp_total:,.0f}`.
+- High/Critical-priority accounts — {s5['at_risk_accounts_count']}
+- At-risk MRR — ${s5['at_risk_mrr_total']:,.0f}
+- Top-20 share inside at-risk MRR — {s5['top20_at_risk_share_within_at_risk']:.1%}
 
-Interpretation:
-- Part of growth is potentially less durable and should be monitored post-expansion.
+A small group of accounts carries most of the downside. Account-level
+governance moves the dial more than portfolio-wide policy changes.
 
-## 5) Account Health and Risk Concentration
-**Key takeaway:** Downside risk is concentrated enough to prioritize with account-level governance.
+## What leadership should watch
 
-- At-risk accounts: `{s5['at_risk_accounts_count']}`.
-- At-risk MRR: `${s5['at_risk_mrr_total']:,.0f}`.
-- Top-20 share within at-risk MRR: `{s5['top20_at_risk_share_within_at_risk']:.1%}`.
+Topline MRR is not a sufficient health signal: growth durability degrades in
+discount intensity, expansion quality, and concentration metrics before it
+shows up in headline retention.
 
-## Final Synthesis
-- Healthy: strong recurring scale-up and stable gross retention.
-- Fragile: meaningful discounted and high-risk revenue exposure.
-- Biggest risk: concentrated downside in a small set of accounts with weak forward signals.
-- Leadership blind spot if focused only on topline: growth durability can deteriorate before headline MRR does.
+## Caveats
+
+- Realized price index mixes commercial discount and collection-loss effects.
+- All retention diagnostics are associative; no causal channel or segment
+  effect is inferred. Correlation does not establish causation.
+- Trailing-feature windows use last-active observations and are not strictly
+  contiguous for accounts that churned and returned (no such cases here).
+- Concentration weights are sensitive to current-snapshot timing.
 """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(memo, encoding="utf-8")

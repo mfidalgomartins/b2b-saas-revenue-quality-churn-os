@@ -7,7 +7,7 @@ FEATURE_DICT := $(BASE_DIR)/docs/core/feature_dictionary.md
 ANALYTICAL_NOTES := $(BASE_DIR)/docs/core/analytical_layer_notes.md
 VALIDATION_SUMMARY := $(BASE_DIR)/reports/formal_validation_summary.json
 
-.PHONY: all data profile features scoring analysis forecast viz dashboard validate gate lint test qa release-ready release-refresh docs clean
+.PHONY: all data profile features scoring analysis forecast viz dashboard validate gate lint test qa release-ready release-refresh clean
 
 all: data profile features scoring analysis forecast viz dashboard validate
 
@@ -53,9 +53,6 @@ release-ready: lint test all gate
 
 release-refresh:
 	$(PYTHON) src/pipeline/monthly_release_refresh.py --base-dir $(BASE_DIR) --seed $(SEED)
-
-docs:
-	@echo "Documentation is maintained in README.md and docs/core/"
 
 clean:
 	find . -name '__pycache__' -type d -prune -exec rm -rf {} +

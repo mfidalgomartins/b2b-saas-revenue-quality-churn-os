@@ -4,8 +4,8 @@ import argparse
 import os
 import tempfile
 from pathlib import Path
-from typing import Dict, List
 
+# (typing imports removed)
 import numpy as np
 import pandas as pd
 
@@ -13,11 +13,11 @@ import pandas as pd
 os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "matplotlib-cache"))
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.ticker import FuncFormatter, PercentFormatter
-
 
 # Colorblind-safe palette
 COLORS = {
@@ -74,11 +74,11 @@ def weighted_avg(df: pd.DataFrame, value_col: str, weight_col: str) -> float:
     return float(np.average(df[value_col].astype(float), weights=weights))
 
 
-def load_data(base_dir: Path) -> Dict[str, pd.DataFrame]:
+def load_data(base_dir: Path) -> dict[str, pd.DataFrame]:
     raw = base_dir / "data/raw"
     processed = base_dir / "data/processed"
 
-    data: Dict[str, pd.DataFrame] = {
+    data: dict[str, pd.DataFrame] = {
         "monthly_quality": pd.read_csv(processed / "account_monthly_revenue_quality.csv", parse_dates=["month"]),
         "monthly_raw": pd.read_csv(raw / "monthly_account_metrics.csv", parse_dates=["month"]),
         "customers": pd.read_csv(raw / "customers.csv", parse_dates=["signup_date"]),
@@ -91,7 +91,7 @@ def load_data(base_dir: Path) -> Dict[str, pd.DataFrame]:
     return data
 
 
-def build_core_panel(data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+def build_core_panel(data: dict[str, pd.DataFrame]) -> pd.DataFrame:
     panel = data["monthly_quality"].merge(
         data["monthly_raw"][["customer_id", "month", "active_flag", "churn_flag", "product_usage_score", "payment_delay_days", "nps_score"]],
         on=["customer_id", "month"],
@@ -105,7 +105,7 @@ def build_core_panel(data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     return panel
 
 
-def chart_mrr_arr_trend(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_mrr_arr_trend(panel: pd.DataFrame, out: Path) -> dict[str, str]:
     monthly = panel.groupby("month", as_index=False)["active_mrr"].sum().rename(columns={"active_mrr": "mrr"})
     monthly["arr"] = monthly["mrr"] * 12
 
@@ -129,7 +129,7 @@ def chart_mrr_arr_trend(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
         xy=(monthly.iloc[-1]["month"], end_mrr),
         xytext=(-80, 20),
         textcoords="offset points",
-        arrowprops=dict(arrowstyle="->", color=COLORS["primary"]),
+        arrowprops={"arrowstyle": "->", "color": COLORS["primary"]},
         fontsize=10,
         color=COLORS["primary"],
     )
@@ -147,7 +147,7 @@ def chart_mrr_arr_trend(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
     }
 
 
-def chart_grr_nrr_trend(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_grr_nrr_trend(panel: pd.DataFrame, out: Path) -> dict[str, str]:
     active = panel[panel["active_flag"] == 1].copy()
     monthly = active.groupby("month", as_index=False).agg(
         starting_mrr=("active_mrr", "sum"),
@@ -203,7 +203,7 @@ def chart_grr_nrr_trend(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
     }
 
 
-def chart_churn_by_segment(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_churn_by_segment(panel: pd.DataFrame, out: Path) -> dict[str, str]:
     active = panel[panel["active_flag"] == 1].copy()
     churn = active.groupby("segment", as_index=False).agg(active_rows=("customer_id", "count"), churn_events=("churn_flag", "sum"))
     churn["logo_churn_rate"] = churn["churn_events"] / churn["active_rows"]
@@ -216,7 +216,7 @@ def chart_churn_by_segment(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
     ax.set_xlabel("Logo Churn Rate")
     ax.xaxis.set_major_formatter(PercentFormatter(1.0))
 
-    for bar, rate in zip(bars, churn["logo_churn_rate"]):
+    for bar, rate in zip(bars, churn["logo_churn_rate"], strict=False):
         ax.text(rate + 0.0003, bar.get_y() + bar.get_height() / 2, f"{rate:.2%}", va="center", fontsize=10)
 
     save_fig(fig, out / "03_logo_churn_by_segment.png")
@@ -228,7 +228,7 @@ def chart_churn_by_segment(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
     }
 
 
-def chart_revenue_concentration(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_revenue_concentration(panel: pd.DataFrame, out: Path) -> dict[str, str]:
     latest_month = panel["month"].max()
     latest = panel[(panel["month"] == latest_month) & (panel["active_mrr"] > 0)].copy()
     acc = latest.groupby("customer_id", as_index=False)["active_mrr"].sum().sort_values("active_mrr", ascending=False)
@@ -254,7 +254,7 @@ def chart_revenue_concentration(panel: pd.DataFrame, out: Path) -> Dict[str, str
         f"Top 10 = {top10_share:.1%} of MRR\nTop 50 = {top50_share:.1%}",
         xy=(0.22, 0.25),
         xycoords="axes fraction",
-        bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#DDDDDD"),
+        bbox={"boxstyle": "round,pad=0.3", "fc": "white", "ec": "#DDDDDD"},
         fontsize=10,
     )
 
@@ -267,7 +267,7 @@ def chart_revenue_concentration(panel: pd.DataFrame, out: Path) -> Dict[str, str
     }
 
 
-def chart_avg_discount_views(panel: pd.DataFrame, manager_summary: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_avg_discount_views(panel: pd.DataFrame, manager_summary: pd.DataFrame, out: Path) -> dict[str, str]:
     latest_month = panel["month"].max()
     latest = panel[(panel["month"] == latest_month) & (panel["active_mrr"] > 0)].copy()
 
@@ -316,7 +316,7 @@ def chart_avg_discount_views(panel: pd.DataFrame, manager_summary: pd.DataFrame,
     }
 
 
-def chart_discounted_share_trend(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_discounted_share_trend(panel: pd.DataFrame, out: Path) -> dict[str, str]:
     active = panel[panel["active_mrr"] > 0].copy()
     monthly = active.groupby("month", as_index=False).agg(
         total_mrr=("active_mrr", "sum"),
@@ -351,7 +351,7 @@ def chart_discounted_share_trend(panel: pd.DataFrame, out: Path) -> Dict[str, st
     }
 
 
-def chart_churn_risk_distribution(scoring: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_churn_risk_distribution(scoring: pd.DataFrame, out: Path) -> dict[str, str]:
     fig, ax = plt.subplots(figsize=(11, 6))
     sns.histplot(scoring["churn_risk_score"], bins=30, kde=True, color=COLORS["accent"], ax=ax)
 
@@ -374,7 +374,7 @@ def chart_churn_risk_distribution(scoring: pd.DataFrame, out: Path) -> Dict[str,
     }
 
 
-def chart_revenue_quality_distribution(scoring: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_revenue_quality_distribution(scoring: pd.DataFrame, out: Path) -> dict[str, str]:
     fig, ax = plt.subplots(figsize=(11, 6))
     sns.histplot(scoring["revenue_quality_score"], bins=30, kde=True, color=COLORS["secondary"], ax=ax)
 
@@ -396,7 +396,7 @@ def chart_revenue_quality_distribution(scoring: pd.DataFrame, out: Path) -> Dict
     }
 
 
-def chart_expansion_quality_by_segment(panel: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_expansion_quality_by_segment(panel: pd.DataFrame, out: Path) -> dict[str, str]:
     active = panel[(panel["active_mrr"] > 0) & (panel["expansion_mrr"] > 0)].copy()
     active["expansion_quality"] = np.where(
         (active["product_usage_score"] >= 65)
@@ -447,7 +447,7 @@ def chart_expansion_quality_by_segment(panel: pd.DataFrame, out: Path) -> Dict[s
     }
 
 
-def chart_top_accounts_governance(scoring: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_top_accounts_governance(scoring: pd.DataFrame, out: Path) -> dict[str, str]:
     top = scoring[scoring["current_mrr"] > 0].nlargest(15, "governance_priority_score").copy()
     top = top.sort_values("governance_priority_score", ascending=True)
     tier_colors = {
@@ -463,7 +463,7 @@ def chart_top_accounts_governance(scoring: pd.DataFrame, out: Path) -> Dict[str,
     ax.set_title("A small set of accounts dominates immediate governance attention")
     ax.set_xlabel("Governance Priority Score")
 
-    for bar, mrr in zip(bars, top["current_mrr"]):
+    for bar, mrr in zip(bars, top["current_mrr"], strict=False):
         ax.text(bar.get_width() + 0.5, bar.get_y() + bar.get_height() / 2, f"MRR ${mrr/1000:.1f}k", va="center", fontsize=9)
 
     save_fig(fig, out / "10_top_accounts_governance_priority.png")
@@ -475,7 +475,7 @@ def chart_top_accounts_governance(scoring: pd.DataFrame, out: Path) -> Dict[str,
     }
 
 
-def chart_cohort_heatmap(cohort_summary: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_cohort_heatmap(cohort_summary: pd.DataFrame, out: Path) -> dict[str, str]:
     cohort_summary = cohort_summary.copy()
     agg = (
         cohort_summary.groupby(["cohort_month", "month_number"], as_index=False)
@@ -520,7 +520,7 @@ def chart_cohort_heatmap(cohort_summary: pd.DataFrame, out: Path) -> Dict[str, s
     }
 
 
-def chart_discount_vs_churn_risk(scoring: pd.DataFrame, health: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_discount_vs_churn_risk(scoring: pd.DataFrame, health: pd.DataFrame, out: Path) -> dict[str, str]:
     df = scoring.merge(health[["customer_id", "trailing_3m_discount_avg"]], on="customer_id", how="left")
     df = df[df["current_mrr"] > 0].copy()
 
@@ -551,7 +551,7 @@ def chart_discount_vs_churn_risk(scoring: pd.DataFrame, health: pd.DataFrame, ou
     }
 
 
-def chart_payment_delay_vs_churn_risk(scoring: pd.DataFrame, health: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_payment_delay_vs_churn_risk(scoring: pd.DataFrame, health: pd.DataFrame, out: Path) -> dict[str, str]:
     df = scoring.merge(health[["customer_id", "trailing_3m_payment_delay_avg"]], on="customer_id", how="left")
     df = df[df["current_mrr"] > 0].copy()
 
@@ -581,7 +581,7 @@ def chart_payment_delay_vs_churn_risk(scoring: pd.DataFrame, health: pd.DataFram
     }
 
 
-def chart_usage_decline_vs_churn_risk(scoring: pd.DataFrame, health: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_usage_decline_vs_churn_risk(scoring: pd.DataFrame, health: pd.DataFrame, out: Path) -> dict[str, str]:
     df = scoring.merge(health[["customer_id", "trailing_3m_usage_trend"]], on="customer_id", how="left")
     df = df[df["current_mrr"] > 0].copy()
 
@@ -612,7 +612,7 @@ def chart_usage_decline_vs_churn_risk(scoring: pd.DataFrame, health: pd.DataFram
     }
 
 
-def chart_scenario_comparison(scenarios: pd.DataFrame, out: Path) -> Dict[str, str]:
+def chart_scenario_comparison(scenarios: pd.DataFrame, out: Path) -> dict[str, str]:
     order = [
         "base_case",
         "risk_adjusted_case",
@@ -663,7 +663,7 @@ def chart_scenario_comparison(scenarios: pd.DataFrame, out: Path) -> Dict[str, s
     }
 
 
-def write_chart_brief(entries: List[Dict[str, str]], output_path: Path) -> None:
+def write_chart_brief(entries: list[dict[str, str]], output_path: Path) -> None:
     lines = [
         "# Leadership Chart Brief",
         "",
@@ -694,7 +694,7 @@ def main() -> None:
     data = load_data(base_dir)
     panel = build_core_panel(data)
 
-    entries: List[Dict[str, str]] = []
+    entries: list[dict[str, str]] = []
     entries.append(chart_mrr_arr_trend(panel, charts_dir))
     entries.append(chart_grr_nrr_trend(panel, charts_dir))
     entries.append(chart_churn_by_segment(panel, charts_dir))

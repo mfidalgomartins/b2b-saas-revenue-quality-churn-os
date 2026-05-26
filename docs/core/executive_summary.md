@@ -38,7 +38,7 @@ The central question is whether ARR/MRR expansion is driven by healthy recurring
 - A relatively small set of accounts can drive outsized downside in stress scenarios.
 
 4. QA status is fully green.
-- Latest formal validation reports all controls passing with no warnings or failures.
+- Latest validation summary reports all controls passing with no warnings or failures.
 - No high/critical findings are open.
 
 ## Recommendations

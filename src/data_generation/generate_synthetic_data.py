@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
 
+# (typing imports removed — use builtin generics)
 import numpy as np
 import pandas as pd
 
@@ -71,7 +71,7 @@ def generate_plans() -> pd.DataFrame:
     )
 
 
-def _sample_with_map(rng: np.random.Generator, key: str, options_map: Dict[str, Tuple[List[str], List[float]]]) -> str:
+def _sample_with_map(rng: np.random.Generator, key: str, options_map: dict[str, tuple[list[str], list[float]]]) -> str:
     values, probs = options_map[key]
     return str(rng.choice(values, p=probs))
 
@@ -81,7 +81,7 @@ def generate_customers(
     n_customers: int,
     months: pd.DatetimeIndex,
     account_managers: pd.DataFrame,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     customer_ids = [f"CUST{idx:06d}" for idx in range(1, n_customers + 1)]
 
     regions = rng.choice(["North America", "EMEA", "APAC", "LATAM"], size=n_customers, p=[0.42, 0.3, 0.18, 0.1])
@@ -130,7 +130,7 @@ def generate_customers(
         # Store at month-start so signup chronology is coherent with monthly-grain subscription starts.
         signup_dates.append(pd.Timestamp(dt).replace(day=1).normalize())
 
-    am_region_map: Dict[str, List[str]] = {
+    am_region_map: dict[str, list[str]] = {
         region: account_managers.loc[account_managers["region"] == region, "account_manager_id"].tolist()
         for region in ["North America", "EMEA", "APAC", "LATAM"]
     }
@@ -276,7 +276,7 @@ def simulate_subscription_and_metrics(
     latent: pd.DataFrame,
     plans: pd.DataFrame,
     months: pd.DatetimeIndex,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series]:
     plan_lookup = plans.set_index("plan_id").to_dict("index")
 
     subscriptions_rows = []
@@ -396,10 +396,12 @@ def simulate_subscription_and_metrics(
             if renewal_due_flag:
                 contraction_prob += 0.012
 
-            force_fragile_expansion = False
-            if fragile and fragile_expansion_month is None and 4 <= month_index <= 16:
-                if rng.random() < 0.065:
-                    force_fragile_expansion = True
+            force_fragile_expansion = (
+                bool(fragile)
+                and fragile_expansion_month is None
+                and 4 <= month_index <= 16
+                and rng.random() < 0.065
+            )
 
             expansion_mrr = 0.0
             contraction_mrr = 0.0

@@ -2,54 +2,35 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-def clip01(series: pd.Series | np.ndarray) -> pd.Series:
-    return np.clip(series, 0.0, 1.0)
-
-
-def risk_tier(score: float) -> str:
-    if score < 30:
-        return "Low"
-    if score < 55:
-        return "Moderate"
-    if score < 75:
-        return "High"
-    return "Critical"
-
-
-def quality_to_risk_tier(score: float) -> str:
-    # Higher quality score = lower risk. Convert to risk scale for consistent tier labels.
-    return risk_tier(100.0 - score)
+from src.scoring.scoring_utils import (  # noqa: E402
+    CHURN_WEIGHTS,
+    DISCOUNT_DEPENDENCY_WEIGHTS,
+    EXPANSION_QUALITY_WEIGHTS,
+    GOVERNANCE_WEIGHTS,
+    REVENUE_QUALITY_WEIGHTS,
+    argmax_driver,
+    clip01,
+    component_contributions,
+    compute_churn_components,
+    quality_to_risk_tier,
+    risk_tier,
+    score_from_components,
+)
 
 
-def score_from_components(components: Dict[str, pd.Series], weights: Dict[str, float]) -> pd.Series:
-    weighted = None
-    for key, comp in components.items():
-        contrib = weights[key] * comp
-        weighted = contrib if weighted is None else weighted + contrib
-    return (100.0 * weighted).round(3)
-
-
-def component_contributions(components: Dict[str, pd.Series], weights: Dict[str, float]) -> Dict[str, pd.Series]:
-    return {k: (weights[k] * components[k]) for k in components}
-
-
-def argmax_driver(row: pd.Series, mapping: Dict[str, str], keys: List[str]) -> str:
-    best_key = max(keys, key=lambda k: float(row[k]))
-    return mapping.get(best_key, best_key)
-
-
-def load_inputs(base_dir: Path) -> Dict[str, pd.DataFrame]:
+def load_inputs(base_dir: Path) -> dict[str, pd.DataFrame]:
     raw = base_dir / "data/raw"
     processed = base_dir / "data/processed"
 
-    tables: Dict[str, pd.DataFrame] = {
+    tables: dict[str, pd.DataFrame] = {
         "customers": pd.read_csv(raw / "customers.csv", parse_dates=["signup_date"]),
         "monthly": pd.read_csv(processed / "account_monthly_revenue_quality.csv", parse_dates=["month"]),
         "health": pd.read_csv(processed / "customer_health_features.csv"),
@@ -138,11 +119,11 @@ def build_trailing_12m_features(
     )
 
     # Post-expansion contraction rate within next 3 months.
-    post_contraction_rows: List[Dict[str, object]] = []
+    post_contraction_rows: list[dict[str, object]] = []
     for cid, g in panel.groupby("customer_id"):
         g = g.sort_values("month")
         exp_rows = g[g["is_expansion"] == 1]
-        checks: List[int] = []
+        checks: list[int] = []
         for _, exp_row in exp_rows.iterrows():
             later = g[(g["month"] > exp_row["month"]) & (g["month"] <= exp_row["month"] + pd.DateOffset(months=3))]
             checks.append(int((later["contraction_mrr"] > 0).any()))
@@ -225,7 +206,7 @@ def assign_recommended_action(row: pd.Series) -> str:
     return "monitor only"
 
 
-def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     tables = load_inputs(base_dir)
     customers = tables["customers"]
     health = tables["health"].copy()
@@ -313,32 +294,11 @@ def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
     # -------------------------
     # 1) Churn Risk Score (0-100, higher = riskier)
     # -------------------------
-    churn_components = {
-        "usage_deterioration": 0.65 * clip01((55 - score_df["trailing_3m_usage_avg"]) / 35)
-        + 0.35 * clip01((-score_df["trailing_3m_usage_trend"]) / 4),
-        "sentiment_support": 0.70 * clip01((15 - score_df["trailing_3m_nps_avg"]) / 55)
-        + 0.30 * clip01((score_df["trailing_3m_support_ticket_avg"] - 4) / 8),
-        "payment_stress": clip01(score_df["trailing_3m_payment_delay_avg"] / 35),
-        "commercial_contraction": 0.70 * clip01(score_df["contraction_frequency"] / 0.35)
-        + 0.30 * clip01((-score_df["seat_growth_rate"]) / 0.25),
-        "discount_pressure": 0.60 * clip01((score_df["trailing_3m_discount_avg"] - 0.15) / 0.25)
-        + 0.40 * clip01(score_df["heavy_discount_frequency_12m"] / 0.60),
-        "renewal_exposure": clip01(score_df["renewal_due_flag"] * score_df["renewal_risk_proxy"] + score_df["renewal_due_flag"] * 0.20),
-        "history_tenure": 0.70 * score_df["churn_history_flag"] + 0.30 * clip01((6 - score_df["tenure_months"]) / 6),
-    }
-    churn_weights = {
-        "usage_deterioration": 0.25,
-        "sentiment_support": 0.15,
-        "payment_stress": 0.20,
-        "commercial_contraction": 0.15,
-        "discount_pressure": 0.10,
-        "renewal_exposure": 0.10,
-        "history_tenure": 0.05,
-    }
-    score_df["churn_risk_score"] = score_from_components(churn_components, churn_weights)
+    churn_components = compute_churn_components(score_df)
+    score_df["churn_risk_score"] = score_from_components(churn_components, CHURN_WEIGHTS)
     score_df["churn_risk_tier"] = score_df["churn_risk_score"].apply(risk_tier)
 
-    churn_contrib = component_contributions(churn_components, churn_weights)
+    churn_contrib = component_contributions(churn_components, CHURN_WEIGHTS)
     for key, val in churn_contrib.items():
         score_df[f"churn_contrib_{key}"] = val
 
@@ -375,14 +335,7 @@ def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         + 0.30 * (1 - score_df["churn_history_flag"])
         + 0.20 * score_df["quality_flag_health_factor"],
     }
-    revenue_quality_weights = {
-        "pricing_realization": 0.30,
-        "discount_discipline": 0.20,
-        "retention_momentum": 0.20,
-        "account_health_quality": 0.20,
-        "stability_governance": 0.10,
-    }
-    score_df["revenue_quality_score"] = score_from_components(revenue_quality_components, revenue_quality_weights)
+    score_df["revenue_quality_score"] = score_from_components(revenue_quality_components, REVENUE_QUALITY_WEIGHTS)
 
     # Inactive accounts should not show strong quality scores.
     score_df["revenue_quality_score"] = np.where(
@@ -395,7 +348,7 @@ def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
 
     # Risk contributions for quality score (gap-to-best).
     revenue_quality_risk_contrib = {
-        key: revenue_quality_weights[key] * (1 - revenue_quality_components[key])
+        key: REVENUE_QUALITY_WEIGHTS[key] * (1 - revenue_quality_components[key])
         for key in revenue_quality_components
     }
     for key, val in revenue_quality_risk_contrib.items():
@@ -424,17 +377,10 @@ def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         "price_realization_erosion": clip01((0.90 - score_df["realized_price_index"]) / 0.35),
         "policy_signal": np.maximum(score_df["discount_dependency_flag"], score_df["manager_discount_outlier_flag"]),
     }
-    discount_weights = {
-        "discount_level": 0.40,
-        "discount_persistence": 0.25,
-        "discounted_expansion_pressure": 0.15,
-        "price_realization_erosion": 0.15,
-        "policy_signal": 0.05,
-    }
-    score_df["discount_dependency_score"] = score_from_components(discount_components, discount_weights)
+    score_df["discount_dependency_score"] = score_from_components(discount_components, DISCOUNT_DEPENDENCY_WEIGHTS)
     score_df["discount_dependency_tier"] = score_df["discount_dependency_score"].apply(risk_tier)
 
-    discount_contrib = component_contributions(discount_components, discount_weights)
+    discount_contrib = component_contributions(discount_components, DISCOUNT_DEPENDENCY_WEIGHTS)
     for key, val in discount_contrib.items():
         score_df[f"discount_contrib_{key}"] = val
 
@@ -461,14 +407,7 @@ def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         "expansion_payment_quality": 1 - clip01((score_df["avg_expansion_payment_delay_12m"] - 8) / 25),
         "post_expansion_durability": 1 - clip01(score_df["post_expansion_contraction_rate_3m"] / 0.70),
     }
-    expansion_weights = {
-        "healthy_expansion_mix": 0.35,
-        "fragility_control": 0.20,
-        "expansion_discount_discipline": 0.20,
-        "expansion_payment_quality": 0.10,
-        "post_expansion_durability": 0.15,
-    }
-    score_df["expansion_quality_score"] = score_from_components(expansion_components, expansion_weights)
+    score_df["expansion_quality_score"] = score_from_components(expansion_components, EXPANSION_QUALITY_WEIGHTS)
 
     # No recent expansion: assign a neutral baseline adjusted by general health, not a hard penalty.
     no_expansion_mask = score_df["expansion_events_12"] == 0
@@ -480,7 +419,7 @@ def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
     score_df["expansion_quality_risk_tier"] = score_df["expansion_quality_score"].apply(quality_to_risk_tier)
 
     expansion_risk_contrib = {
-        key: expansion_weights[key] * (1 - expansion_components[key])
+        key: EXPANSION_QUALITY_WEIGHTS[key] * (1 - expansion_components[key])
         for key in expansion_components
     }
     for key, val in expansion_risk_contrib.items():
@@ -517,16 +456,7 @@ def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         "exposure_concentration": exposure_component,
         "renewal_urgency": clip01(score_df["renewal_due_flag"] * score_df["renewal_risk_proxy"] + score_df["renewal_due_flag"] * 0.15),
     }
-    governance_weights = {
-        "churn_risk": 0.32,
-        "revenue_quality_risk": 0.18,
-        "discount_dependency": 0.15,
-        "expansion_fragility": 0.10,
-        "exposure_concentration": 0.20,
-        "renewal_urgency": 0.05,
-    }
-
-    score_df["governance_priority_score"] = score_from_components(governance_components, governance_weights)
+    score_df["governance_priority_score"] = score_from_components(governance_components, GOVERNANCE_WEIGHTS)
 
     # Escalate a limited set of high-exposure/high-churn accounts.
     escalation_mask = (score_df["churn_risk_score"] >= 80) & (exposure_component >= 0.80)
@@ -538,7 +468,7 @@ def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
 
     score_df["governance_priority_tier"] = score_df["governance_priority_score"].apply(risk_tier)
 
-    governance_contrib = component_contributions(governance_components, governance_weights)
+    governance_contrib = component_contributions(governance_components, GOVERNANCE_WEIGHTS)
     for key, val in governance_contrib.items():
         score_df[f"governance_contrib_{key}"] = val
 
@@ -617,22 +547,10 @@ def build_scores(base_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         on="customer_id",
         how="left",
     )
-    shortlist["forward_risk_flags"] = shortlist["forward_risk_flags_list"].apply(lambda x: ", ".join(x) if isinstance(x, list) else "")
+    shortlist["forward_risk_flags"] = shortlist["forward_risk_flags_list"].apply(
+        lambda x: ", ".join(x) if isinstance(x, list) else ""
+    )
     shortlist = shortlist.drop(columns=["forward_risk_flags_list"])
-
-    # Sensitivity analysis for governance priority weighting.
-    def governance_score_variant(weights: Dict[str, float]) -> pd.Series:
-        return (
-            100
-            * (
-                weights["churn_risk"] * governance_components["churn_risk"]
-                + weights["revenue_quality_risk"] * governance_components["revenue_quality_risk"]
-                + weights["discount_dependency"] * governance_components["discount_dependency"]
-                + weights["expansion_fragility"] * governance_components["expansion_fragility"]
-                + weights["exposure_concentration"] * governance_components["exposure_concentration"]
-                + weights["renewal_urgency"] * governance_components["renewal_urgency"]
-            )
-        )
 
     return score_output, components_table, shortlist
 

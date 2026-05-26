@@ -1,74 +1,71 @@
-# Main Business Analysis Memo
+# Main Business Analysis
 
-## Scope and Definitions
-Analysis window: 2023-03-01 to 2026-02-01 (36 months).
+Window: 2023-03-01 to 2026-02-01 (36 months).
+All findings are associative; correlation does not establish causality.
 
-Core metric definitions:
-- `MRR`: sum of `active_mrr` in month.
-- `ARR`: `12 * MRR`.
-- `GRR`: `(starting_mrr - contraction_mrr - churn_mrr) / starting_mrr`.
-- `NRR`: `(starting_mrr + expansion_mrr - contraction_mrr - churn_mrr) / starting_mrr`.
-- `Logo churn rate`: churn events / active account-month rows.
-- `Revenue churn rate`: churned MRR / active MRR.
+## Definitions
 
-## 1) Revenue Quality Overview
-**Key takeaway:** Strong topline growth with non-trivial quality exposure in discounted and at-risk revenue pockets.
+- MRR — sum of `active_mrr` in month.
+- ARR — 12 × MRR.
+- GRR — `(starting_mrr − contraction_mrr − churn_mrr) / starting_mrr`.
+- NRR — `(starting_mrr + expansion_mrr − contraction_mrr − churn_mrr) / starting_mrr`.
+- Logo churn rate — churn events / active account-month rows.
+- Revenue churn rate — churned MRR / active MRR.
 
-- MRR: `$3,749,108` -> `$9,523,590` (`2.70%` implied monthly growth).
-- ARR run-rate: `$44,989,299` -> `$114,283,079`.
-- Latest weighted realized price index: `0.822`.
-- Latest weighted discount: `17.7%`.
-- Latest discounted-dependent MRR share: `15.9%`.
-- Latest high-risk MRR share: `4.0%`.
+## Revenue quality
 
-Interpretation:
-- Growth quality improved on pricing realization, but downside concentration remains material.
+MRR $3,749,108 → $9,523,590
+(2.70% implied monthly growth); ARR run-rate
+$44,989,299 → $114,283,079.
 
-Caveat:
-- Realized pricing reflects both commercial pricing and collections quality.
+Latest weighted realized price index 0.822, latest
+weighted discount 17.7%. Discount-dependent MRR share
+15.9%; High/Critical-priority MRR share
+4.0%.
 
-## 2) Retention and Churn Diagnostics
-**Key takeaway:** Portfolio retention is stable but expansion buffer remains thin.
+Realized pricing mixes commercial discount and collection-loss effects and is
+not a clean pricing metric on its own.
 
-- Logo churn: `0.82%`.
-- Revenue churn: `0.58%`.
-- Latest GRR/NRR: `99.17%` / `99.83%`.
+## Retention and churn
 
-Interpretation:
-- NRR near parity indicates limited cushion if churn or contraction rises.
+- Logo churn — 0.82%
+- Revenue churn — 0.58%
+- Latest GRR / NRR — 99.17% / 99.83%
 
-Caveat:
-- Diagnostics are associative; they do not infer causal channel or segment effects.
+NRR near parity leaves little buffer if churn or contraction accelerates.
 
-## 3) Discount and Fragility
-**Key takeaway:** Higher discount intensity is associated with higher forward churn in the highest discount bands.
+## Discount and fragility
 
-- Worst discount-band forward churn (3m): `>30%` at `4.31%`.
+Worst discount band on forward 3-month churn: **>30%** at
+4.31%. Heavy discounting near renewal is the single
+strongest leading signal in the panel.
 
-Interpretation:
-- Extreme discounting should be treated as a governance signal, especially near renewal.
+## Expansion quality
 
-Caveat:
-- Correlation does not establish causality.
+Fragile expansion share 28.0% of $1,631,578 expansion
+MRR in window. Fragile expansion is correlated with elevated churn 3–9 months
+later in the simulated panel.
 
-## 4) Expansion Quality
-**Key takeaway:** Expansion remains positive but fragile expansion share is material.
+## Account-level concentration
 
-- Fragile expansion MRR share: `28.0%`.
-- Total expansion MRR observed: `$1,631,578`.
+- High/Critical-priority accounts — 80
+- At-risk MRR — $380,663
+- Top-20 share inside at-risk MRR — 80.5%
 
-Interpretation:
-- Part of growth is potentially less durable and should be monitored post-expansion.
+A small group of accounts carries most of the downside. Account-level
+governance moves the dial more than portfolio-wide policy changes.
 
-## 5) Account Health and Risk Concentration
-**Key takeaway:** Downside risk is concentrated enough to prioritize with account-level governance.
+## What leadership should watch
 
-- At-risk accounts: `80`.
-- At-risk MRR: `$380,663`.
-- Top-20 share within at-risk MRR: `80.5%`.
+Topline MRR is not a sufficient health signal: growth durability degrades in
+discount intensity, expansion quality, and concentration metrics before it
+shows up in headline retention.
 
-## Final Synthesis
-- Healthy: strong recurring scale-up and stable gross retention.
-- Fragile: meaningful discounted and high-risk revenue exposure.
-- Biggest risk: concentrated downside in a small set of accounts with weak forward signals.
-- Leadership blind spot if focused only on topline: growth durability can deteriorate before headline MRR does.
+## Caveats
+
+- Realized price index mixes commercial discount and collection-loss effects.
+- All retention diagnostics are associative; no causal channel or segment
+  effect is inferred. Correlation does not establish causation.
+- Trailing-feature windows use last-active observations and are not strictly
+  contiguous for accounts that churned and returned (no such cases here).
+- Concentration weights are sensitive to current-snapshot timing.

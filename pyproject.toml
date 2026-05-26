@@ -1,0 +1,37 @@
+[project]
+name = "b2b-saas-revenue-quality-os"
+version = "0.1.0"
+description = "B2B SaaS revenue quality, churn early-warning, and scenario forecasting pipeline"
+readme = "README.md"
+requires-python = ">=3.12"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = [
+  ".venv",
+  "data",
+  "outputs",
+  "reports",
+  "notebooks",
+]
+
+[tool.ruff.lint]
+# E/F: pycodestyle errors + pyflakes
+# I:   import ordering (isort)
+# B:   common bugbear pitfalls
+# UP:  pyupgrade (use modern Python idioms)
+# SIM: flake8-simplify
+# C4:  flake8-comprehensions
+select = ["E", "F", "I", "B", "UP", "SIM", "C4"]
+ignore = [
+  "E501",   # line length handled by formatter
+  "B008",   # function calls in argument defaults — argparse pattern
+  "SIM108", # ternary vs if/else readability call
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]  # asserts are fine in tests

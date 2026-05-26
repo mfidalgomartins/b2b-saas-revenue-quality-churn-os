@@ -3,13 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
-
 
 RAW_FILE_CONFIG = {
     "customers": {"file": "customers.csv", "parse_dates": ["signup_date"], "grain": "one row per customer", "pk": ["customer_id"]},
@@ -355,7 +354,7 @@ def main() -> None:
 
     payload = {
         "meta": {
-            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+            "generated_at_utc": datetime.now(UTC).isoformat(),
             "base_dir": str(base_dir),
             "table_count": len(profile_summary),
         },
