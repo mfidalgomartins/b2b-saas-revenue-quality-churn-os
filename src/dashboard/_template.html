@@ -62,29 +62,40 @@ button { font: inherit; background: none; border: 0; color: inherit; cursor: poi
   border-bottom: 1px solid var(--line);
   margin-bottom: 56px;
 }
-.brand { display: flex; align-items: baseline; gap: 14px; }
+.brand { display: flex; align-items: baseline; gap: 16px; }
 .brand-mark {
   font-family: var(--display-font);
-  font-style: italic;
   font-weight: 500;
-  font-size: 19px;
-  letter-spacing: -0.01em;
+  font-size: 18px;
+  letter-spacing: -0.012em;
   color: var(--ink);
 }
 .brand-mark::before {
-  content: "◐";
+  content: "";
   display: inline-block;
-  margin-right: 8px;
-  color: var(--accent);
-  font-style: normal;
-  transform: translateY(1px);
+  width: 10px; height: 10px;
+  margin-right: 10px;
+  background: var(--accent);
+  vertical-align: -1px;
 }
-.brand-sep { color: var(--faint); font-size: 13px; }
-.brand-product { font-size: 13px; color: var(--muted); letter-spacing: 0.01em; }
+.brand-product {
+  font-size: 13px; color: var(--muted);
+  letter-spacing: 0.005em;
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
+}
 
-.meta-bar { display: flex; align-items: center; gap: 24px; font-size: 12px; color: var(--muted); }
-.meta-item { display: flex; align-items: center; gap: 6px; }
-.meta-item strong { color: var(--ink-2); font-weight: 500; font-family: var(--mono-font); font-size: 11.5px; }
+.meta-bar { display: flex; align-items: center; gap: 28px; font-size: 12px; color: var(--muted); }
+.meta-item { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.meta-label {
+  font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--faint); font-weight: 500;
+}
+.meta-item strong {
+  color: var(--ink); font-weight: 500;
+  font-family: var(--mono-font); font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
 .gate-badge {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 5px 10px; font-size: 11.5px; font-weight: 500;
@@ -105,10 +116,16 @@ button { font: inherit; background: none; border: 0; color: inherit; cursor: poi
 }
 .decision-brief h1 {
   font-family: var(--display-font);
-  font-weight: 500; font-size: 44px; line-height: 1.12;
-  letter-spacing: -0.022em; color: var(--ink); margin-bottom: 20px;
+  font-weight: 500; font-size: 48px; line-height: 1.1;
+  letter-spacing: -0.024em; color: var(--ink); margin-bottom: 22px;
 }
-.decision-brief h1 em { font-style: italic; color: var(--accent); font-weight: 500; }
+.decision-brief h1 .figure {
+  font-style: normal;
+  font-feature-settings: "ss01";
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.decision-brief h1 .accent { color: var(--accent); font-style: normal; }
 .decision-sub { font-size: 16.5px; color: var(--muted); line-height: 1.55; max-width: 720px; }
 
 /* Sections */
@@ -123,7 +140,10 @@ section { margin-bottom: 80px; }
   font-family: var(--display-font); font-weight: 500;
   font-size: 24px; letter-spacing: -0.012em; color: var(--ink);
 }
-.section-q { font-size: 13px; color: var(--muted); font-style: italic; max-width: 360px; text-align: right; }
+.section-q {
+  font-size: 12.5px; color: var(--muted);
+  max-width: 380px; text-align: right; line-height: 1.45;
+}
 
 /* KPI strip */
 .kpi-grid {
@@ -133,26 +153,30 @@ section { margin-bottom: 80px; }
   border-bottom: 1px solid var(--line);
 }
 .kpi {
-  padding: 22px 24px 22px 0;
+  padding: 28px 28px 28px 0;
   border-right: 1px solid var(--line);
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: 12px;
 }
-.kpi:nth-child(n+2) { padding-left: 24px; }
+.kpi:nth-child(n+2) { padding-left: 28px; }
 .kpi:last-child { border-right: 0; padding-right: 0; }
-.kpi-label { font-size: 11.5px; color: var(--muted); letter-spacing: 0.01em; }
+.kpi-label {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 0.04em; text-transform: uppercase; font-weight: 500;
+}
 .kpi-value {
   font-family: var(--display-font); font-weight: 500;
-  font-size: 28px; line-height: 1.05; letter-spacing: -0.018em;
+  font-size: 40px; line-height: 1.0; letter-spacing: -0.025em;
   color: var(--ink); font-variant-numeric: tabular-nums;
+  font-feature-settings: "ss01";
 }
 .kpi-delta {
   font-family: var(--mono-font); font-size: 11.5px;
-  color: var(--muted); display: flex; align-items: center; gap: 5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 .kpi-delta.up   { color: var(--pos); }
 .kpi-delta.down { color: var(--neg); }
 .kpi-delta.flat { color: var(--muted); }
-.kpi-delta::before { content: ""; width: 6px; height: 6px; border-radius: 1px; background: currentColor; opacity: 0.8; }
 
 /* Charts */
 .chart-row { display: grid; gap: 48px; }
@@ -295,43 +319,52 @@ section { margin-bottom: 80px; }
   border-left: 2px solid var(--accent); padding-left: 14px; margin-top: 4px;
 }
 
-/* Scenario cards */
-.scenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 24px; }
+/* Scenario cards — auto-fit to as many as ship, comfortable minimum width */
+.scenarios {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 18px; margin-top: 28px;
+}
 .scenario-card {
-  padding: 20px 22px; border: 1px solid var(--line);
-  border-radius: var(--radius); display: flex; flex-direction: column; gap: 12px;
+  padding: 18px 20px; border: 1px solid var(--line);
+  border-radius: var(--radius); display: flex; flex-direction: column; gap: 10px;
   background: var(--surface);
 }
 .scenario-card.base { border-color: var(--ink); }
-.scenario-name { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.scenario-name {
+  font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); font-weight: 500;
+}
 .scenario-card.base .scenario-name { color: var(--ink); }
 .scenario-mrr {
   font-family: var(--display-font); font-weight: 500;
-  font-size: 26px; letter-spacing: -0.018em; color: var(--ink);
-  font-variant-numeric: tabular-nums;
+  font-size: 28px; letter-spacing: -0.022em; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1.0;
 }
-.scenario-meta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
-.scenario-meta .delta { font-family: var(--mono-font); }
+.scenario-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.scenario-meta .delta { font-family: var(--mono-font); font-variant-numeric: tabular-nums; }
 .scenario-meta .delta.pos { color: var(--pos); }
 .scenario-meta .delta.neg { color: var(--neg); }
 
 /* Footer */
 footer.footer {
-  margin-top: 96px; padding-top: 24px; border-top: 1px solid var(--line);
-  display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr;
-  gap: 36px; font-size: 12px; color: var(--muted); line-height: 1.55;
+  margin-top: 96px; padding-top: 28px; border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: 1.4fr 1fr;
+  gap: 56px; font-size: 11.5px; color: var(--muted); line-height: 1.6;
 }
 footer.footer h4 {
-  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--ink-2); margin-bottom: 10px; font-weight: 600;
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 8px; font-weight: 500;
 }
-footer.footer p { max-width: 360px; }
-footer.footer ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
-footer.footer code { font-family: var(--mono-font); font-size: 11.5px; color: var(--ink-2); }
+footer.footer p { max-width: 480px; color: var(--muted); }
+footer.footer ul { list-style: none; }
+footer.footer li { display: inline; }
+footer.footer li:not(:last-child)::after { content: " · "; color: var(--faint); }
+footer.footer code { font-family: var(--mono-font); font-size: 11px; color: var(--ink-2); }
 
 .fine-print {
-  margin-top: 32px; font-size: 11px; color: var(--faint);
-  font-family: var(--mono-font); letter-spacing: 0.005em;
+  margin-top: 32px; font-size: 10.5px; color: var(--faint);
+  font-family: var(--mono-font); letter-spacing: 0.02em;
   display: flex; justify-content: space-between;
 }
 
@@ -390,18 +423,17 @@ svg circle.hover-dot.show { opacity: 1; }
   <header class="topbar">
     <div class="brand">
       <span class="brand-mark">Revenue Quality</span>
-      <span class="brand-sep">/</span>
       <span class="brand-product">Command Center</span>
     </div>
     <div class="meta-bar">
-      <div class="meta-item">Period <strong id="metaPeriod">—</strong></div>
-      <div class="meta-item">Accounts <strong id="metaAccounts">—</strong></div>
+      <div class="meta-item"><span class="meta-label">Window</span><strong id="metaPeriod">—</strong></div>
+      <div class="meta-item"><span class="meta-label">Accounts</span><strong id="metaAccounts">—</strong></div>
       <span id="gateBadge" class="gate-badge"><span class="gate-dot"></span><span id="gateText">—</span></span>
     </div>
   </header>
 
   <section class="hero">
-    <div class="eyebrow">Executive briefing · auto-generated from this pipeline run</div>
+    <div class="eyebrow">Executive briefing</div>
     <div class="decision-brief">
       <h1 id="decisionBriefHeadline">—</h1>
       <p class="decision-sub" id="decisionBriefSub">—</p>
@@ -455,14 +487,14 @@ svg circle.hover-dot.show { opacity: 1; }
       <div class="panel">
         <div class="panel-head">
           <div class="panel-title">Gross & net revenue retention</div>
-          <div class="panel-note">trailing window</div>
+          <div class="panel-note">6-month trailing</div>
         </div>
         <div class="panel-figures" id="retentionFigures"></div>
         <svg class="chart" id="chartRetention" preserveAspectRatio="none"></svg>
         <div class="legend">
           <div class="legend-item"><span class="legend-dash"></span>Net retention</div>
           <div class="legend-item"><span class="legend-dash muted"></span>Gross retention</div>
-          <div class="legend-item"><span class="legend-dash dashed"></span>100% line</div>
+          <div class="legend-item"><span class="legend-dash dashed"></span>100%</div>
         </div>
       </div>
       <div class="panel">
@@ -565,38 +597,22 @@ svg circle.hover-dot.show { opacity: 1; }
 
   <footer class="footer">
     <div>
-      <h4>Methodology</h4>
-      <p>Synthetic but realistically structured B2B SaaS book. All scores composed from interpretable, weighted components; weights are unit-tested and held identical between production scorer and calibration backtest.</p>
+      <h4>Method</h4>
+      <p>Synthetic but realistically structured B2B SaaS book. Scores are interpretable, weighted composites; the production scorer and the calibration backtest share a single source of truth for weights, unit-tested at every build.</p>
     </div>
     <div>
-      <h4>Validation</h4>
+      <h4>Notes</h4>
       <ul>
         <li id="footValidation">—</li>
         <li id="footCoverage">—</li>
-        <li>Single source: <code>scoring_utils.CHURN_WEIGHTS</code></li>
-      </ul>
-    </div>
-    <div>
-      <h4>Caveats</h4>
-      <ul>
-        <li>Associations are diagnostic, not causal.</li>
-        <li>Scenarios are decision ranges, not predictions.</li>
-        <li>Manager comparisons reflect portfolio mix.</li>
-      </ul>
-    </div>
-    <div>
-      <h4>Sources</h4>
-      <ul>
-        <li><code>main_business_analysis_metrics.json</code></li>
-        <li><code>account_scoring_model_output.csv</code></li>
-        <li><code>scoring_backtest_summary.json</code></li>
-        <li><code>weight_sensitivity_report.json</code></li>
+        <li>Associations are diagnostic, not causal</li>
+        <li>Scenarios are decision ranges, not predictions</li>
       </ul>
     </div>
   </footer>
 
   <div class="fine-print">
-    <span>Built by Miguel Fidalgo Martins · synthetic data · seed 42</span>
+    <span>Miguel Fidalgo Martins  ·  synthetic data, seed 42</span>
     <span id="finePrintBuild">—</span>
   </div>
 </div>
@@ -613,6 +629,20 @@ svg circle.hover-dot.show { opacity: 1; }
   var monthly = payload.monthly_summary || [];
   var scenarioCards = payload.scenario_cards || [];
   var scenarioTraj = payload.scenario_trajectory || [];
+
+  // Human-readable scenario labels (the payload ships engineering identifiers).
+  function humanScenario(name) {
+    if (!name) return "—";
+    var lower = name.toLowerCase();
+    if (lower.indexOf("base") >= 0)              return "Base case";
+    if (lower.indexOf("downside") >= 0)          return "Downside";
+    if (lower.indexOf("risk_adjusted") >= 0 || lower.indexOf("risk adjusted") >= 0)
+                                                  return "Risk-adjusted";
+    if (lower.indexOf("discount_discipline") >= 0 || lower.indexOf("discount discipline") >= 0)
+                                                  return "Discipline gain";
+    if (lower.indexOf("improvement") >= 0)       return "Upside";
+    return name.replace(/_/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  }
 
   var nf0 = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
   var nf1 = new Intl.NumberFormat("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -637,7 +667,7 @@ svg circle.hover-dot.show { opacity: 1; }
 
   var coverage = meta.data_coverage || {};
   document.getElementById("metaPeriod").textContent =
-    (coverage.month_start || "—") + " → " + (coverage.month_end || "—");
+    (coverage.month_start || "—") + "  —  " + (coverage.month_end || "—");
   document.getElementById("metaAccounts").textContent =
     nf0.format((meta.row_counts || {}).accounts || accounts.length);
 
@@ -646,7 +676,7 @@ svg circle.hover-dot.show { opacity: 1; }
     tier === "technically valid" ? "21 controls passing" : tier;
 
   document.getElementById("finePrintBuild").textContent =
-    "pipeline run · " + (coverage.month_end || "—");
+    "Last refresh  " + (coverage.month_end || "—");
 
   // Decision brief
   var nrr = kpis.net_retention || 0;
@@ -659,23 +689,31 @@ svg circle.hover-dot.show { opacity: 1; }
   var atRiskMrr = kpis.revenue_at_risk_mrr || 0;
   var atRiskShare = kpis.current_mrr ? atRiskMrr / kpis.current_mrr : 0;
 
+  // 36-month CAGR from period growth, if we have a full window
+  var months = monthly.length;
+  var cagr = (arrGrowth != null && months > 1)
+    ? Math.pow(1 + arrGrowth, 12 / (months - 1)) - 1
+    : null;
+
   var arrPhrase = arrGrowth != null
-    ? "ARR grew <em>" + pct(arrGrowth, 0) + "</em> over the window"
-    : "ARR stands at <em>" + compactMoney(arrEnd) + "</em>";
+    ? 'ARR compounded at <span class="figure accent">' + pct(cagr, 1) + '</span> a year'
+    : 'ARR stands at <span class="figure">' + compactMoney(arrEnd) + '</span>';
   var qualityPhrase = discShare > 0.20
-    ? "but <em>" + pct(discShare, 0) + " of MRR sits on discount-reliant accounts</em>"
-    : "with discount reliance at <em>" + pct(discShare, 0) + "</em> of MRR";
-  var riskPhrase = critCount > 0
-    ? (critCount === 1
-        ? "one account sits at Critical priority"
-        : critCount + " accounts sit at Critical priority")
-    : pct(atRiskShare, 1) + " of MRR concentrated in at-risk accounts";
+    ? 'while <span class="figure">' + pct(discShare, 0) + '</span> of MRR sits on discount-reliant accounts'
+    : 'on a book where discounted MRR is <span class="figure">' + pct(discShare, 0) + '</span> of revenue';
 
   document.getElementById("decisionBriefHeadline").innerHTML =
-    arrPhrase + " — " + qualityPhrase + ".";
+    arrPhrase + " " + qualityPhrase + ".";
+
+  // Sub: facts that a CFO acts on, not analyst vocabulary
+  var nrrPp = (nrr - 1.0) * 100;  // pp vs 100%
+  var nrrPhrase = (nrrPp >= 0 ? "+" : "") + nrrPp.toFixed(1) + "pp net retention vs 100%";
+  var critPhrase = critCount > 0
+    ? (critCount === 1 ? "one Critical account in the book" : critCount + " Critical accounts in the book")
+    : "no Critical accounts in the book";
+  var concPhrase = pct(atRiskShare, 1) + " of MRR sits in at-risk tiers";
   document.getElementById("decisionBriefSub").textContent =
-    "Net retention " + pct(nrr) + " · gross retention " + pct(grr) + ". " +
-    riskPhrase + ". Backtest separates forward-3M churn cleanly across risk tiers.";
+    nrrPhrase + " · gross retention " + pct(grr) + " · " + concPhrase + " · " + critPhrase + ".";
 
   // KPI strip
   var lastIdx = monthly.length - 1;
@@ -683,47 +721,51 @@ svg circle.hover-dot.show { opacity: 1; }
 
   var kpiSpecs = [
     {
-      label: "Monthly recurring revenue",
+      label: "MRR",
       value: compactMoney(kpis.current_mrr),
       delta: pctDelta(monthly[lastIdx] && monthly[lastIdx].mrr, monthly[prev3Idx] && monthly[prev3Idx].mrr),
       direction: "higher-better",
-      altLabel: "vs 3M ago"
+      altLabel: "QoQ"
     },
     {
-      label: "Annual run-rate",
+      label: "ARR",
       value: compactMoney(kpis.arr),
-      delta: arrGrowth,
+      delta: cagr,
       direction: "higher-better",
-      altLabel: "vs window start"
+      altLabel: "CAGR"
     },
     {
-      label: "Net revenue retention",
+      label: "Net retention",
       value: pct(kpis.net_retention),
       raw: kpis.net_retention,
       bench: 1.0,
       direction: "higher-better",
-      benchLabel: "100%"
+      benchLabel: "100%",
+      ppMode: true
     },
     {
-      label: "Gross revenue retention",
+      label: "Gross retention",
       value: pct(kpis.gross_retention),
       raw: kpis.gross_retention,
       bench: 0.95,
       direction: "higher-better",
-      benchLabel: "95%"
+      benchLabel: "95%",
+      ppMode: true
     },
     {
-      label: "Discount-dependent MRR",
+      label: "Discount-reliant MRR",
       value: pct(kpis.discounted_revenue_share),
       raw: kpis.discounted_revenue_share,
       direction: "lower-better",
-      note: "share of book"
+      note: "of total"
     },
     {
       label: "At-risk MRR",
       value: compactMoney(kpis.revenue_at_risk_mrr),
       direction: "lower-better",
-      note: critCount + " critical account" + (critCount === 1 ? "" : "s")
+      note: critCount === 0
+        ? "no Critical"
+        : (critCount === 1 ? "1 Critical" : critCount + " Critical")
     }
   ];
 
@@ -742,7 +784,8 @@ svg circle.hover-dot.show { opacity: 1; }
       var diff = k.raw - k.bench;
       var d2 = diff >= 0 ? "up" : "down";
       var s2 = diff > 0 ? "+" : "";
-      deltaHtml = '<div class="kpi-delta ' + d2 + '">' + s2 + pct(diff, 1) + ' vs ' + k.benchLabel + ' benchmark</div>';
+      var unit = k.ppMode ? (s2 + (diff * 100).toFixed(1) + "pp vs " + k.benchLabel) : (s2 + pct(diff, 1) + " vs " + k.benchLabel);
+      deltaHtml = '<div class="kpi-delta ' + d2 + '">' + unit + '</div>';
     } else if (k.note) {
       deltaHtml = '<div class="kpi-delta flat">' + k.note + '</div>';
     }
@@ -870,6 +913,8 @@ svg circle.hover-dot.show { opacity: 1; }
     var yScaleNeg = function (v) { return mid + (v / ticks[ticks.length - 1]) * half; };
 
     svg.appendChild(el("line", { x1: padL, y1: mid, x2: W - padR, y2: mid, class: "axis-line" }));
+    // Single set of labels on the positive side; the negative side mirrors visually
+    // so duplicate numerics would be redundant noise.
     ticks.forEach(function (v) {
       if (v === 0) return;
       var yP = yScalePos(v);
@@ -879,10 +924,11 @@ svg circle.hover-dot.show { opacity: 1; }
       svg.appendChild(t);
       var yN = yScaleNeg(v);
       svg.appendChild(el("line", { x1: padL, y1: yN, x2: W - padR, y2: yN, class: "grid-line" }));
-      var t2 = el("text", { x: padL - 8, y: yN + 3, "text-anchor": "end" });
-      t2.textContent = compactMoney(v);
-      svg.appendChild(t2);
     });
+    // Zero label
+    var zeroLabel = el("text", { x: padL - 8, y: mid + 3, "text-anchor": "end" });
+    zeroLabel.textContent = "0";
+    svg.appendChild(zeroLabel);
 
     var xStep = (W - padL - padR) / flows.length;
     var barW = xStep * 0.6;
@@ -912,19 +958,33 @@ svg circle.hover-dot.show { opacity: 1; }
     });
   })();
 
-  // Chart 3: Retention
+  // Chart 3: Retention (6M trailing average for executive readability)
   (function () {
     var svg = document.getElementById("chartRetention");
     if (!monthly.length) return;
-    var slice = monthly.filter(function (m) { return m.nrr > 0 || m.grr > 0; });
-    if (slice.length < 2) return;
+    var raw = monthly.filter(function (m) { return m.nrr > 0 || m.grr > 0; });
+    if (raw.length < 2) return;
+    function trailing(arr, key, w) {
+      var out = []; var buf = [];
+      for (var i = 0; i < arr.length; i++) {
+        buf.push(arr[i][key]);
+        if (buf.length > w) buf.shift();
+        out.push(buf.reduce(function (a, b) { return a + b; }, 0) / buf.length);
+      }
+      return out;
+    }
+    var nrrSmooth = trailing(raw, "nrr", 6);
+    var grrSmooth = trailing(raw, "grr", 6);
+    var slice = raw.map(function (m, i) { return { month: m.month, nrr: nrrSmooth[i], grr: grrSmooth[i] }; });
     var W = 520, H = 200, padL = 50, padR = 12, padT = 14, padB = 24;
     setViewBox(svg, W, H);
     var ys = [];
     slice.forEach(function (m) { ys.push(m.nrr); ys.push(m.grr); });
     var yMin = Math.min.apply(null, ys);
     var yMax = Math.max.apply(null, ys);
-    var ticks = niceTicks(Math.min(yMin, 0.9) - 0.005, Math.max(yMax, 1.0) + 0.005, 4);
+    // Keep the axis tight around the actual data; floor at 95% to avoid the
+    // false impression that retention is collapsing because the chart starts at 0.
+    var ticks = niceTicks(Math.min(yMin, 0.96) - 0.005, Math.max(yMax, 1.005) + 0.005, 4);
     var yScale = function (v) { return padT + (H - padT - padB) * (1 - (v - ticks[0]) / (ticks[ticks.length - 1] - ticks[0])); };
     var xScale = function (i) { return padL + (W - padL - padR) * (i / (slice.length - 1)); };
     drawYAxis(svg, padL, W - padR, ticks.map(function (v) { return { v: v, y: yScale(v) }; }), function (v) { return pct(v, 0); });
@@ -961,11 +1021,13 @@ svg circle.hover-dot.show { opacity: 1; }
     });
     rect.addEventListener("mouseleave", function () { dot.classList.remove("show"); hideTip(); });
 
+    // Panel figures show the 6M-average end-point that the smoothed line lands on,
+    // labelled explicitly so a reader doesn't compare it to the point-in-time KPI strip above.
     var last = slice[slice.length - 1];
     document.getElementById("retentionFigures").innerHTML =
-      '<div class="panel-figure"><span class="panel-figure-label">NRR (latest)</span>' +
+      '<div class="panel-figure"><span class="panel-figure-label">Net retention · 6M avg</span>' +
       '<span class="panel-figure-value ' + (last.nrr >= 1 ? 'pos' : 'neg') + '">' + pct(last.nrr) + '</span></div>' +
-      '<div class="panel-figure"><span class="panel-figure-label">GRR (latest)</span>' +
+      '<div class="panel-figure"><span class="panel-figure-label">Gross retention · 6M avg</span>' +
       '<span class="panel-figure-value">' + pct(last.grr) + '</span></div>';
   })();
 
@@ -1015,13 +1077,13 @@ svg circle.hover-dot.show { opacity: 1; }
     rect.addEventListener("mouseleave", function () { dot.classList.remove("show"); hideTip(); });
 
     var last = slice[slice.length - 1], first = slice[0];
-    var delta = last.discounted_share - first.discounted_share;
+    var delta = last.discounted_share - first.discounted_share;  // pp difference, not pct change
     document.getElementById("discountFigures").innerHTML =
-      '<div class="panel-figure"><span class="panel-figure-label">Latest share</span>' +
+      '<div class="panel-figure"><span class="panel-figure-label">Latest</span>' +
       '<span class="panel-figure-value">' + pct(last.discounted_share) + '</span></div>' +
-      '<div class="panel-figure"><span class="panel-figure-label">vs window start</span>' +
+      '<div class="panel-figure"><span class="panel-figure-label">36-month change</span>' +
       '<span class="panel-figure-value ' + (delta < 0 ? 'pos' : 'neg') + '">' +
-      (delta >= 0 ? '+' : '') + pct(delta, 1) + '</span></div>';
+      (delta >= 0 ? '+' : '') + (delta * 100).toFixed(1) + 'pp</span></div>';
   })();
 
   // Risk ladder
@@ -1041,6 +1103,8 @@ svg circle.hover-dot.show { opacity: 1; }
     var node = document.getElementById("ladder");
     tiers.forEach(function (t) {
       var c = counts[t], m = mrr[t];
+      // Skip empty tiers — an empty Critical row wastes vertical space and reads as "nothing happening".
+      if (c === 0) return;
       var sharePct = c / total;
       var mrrShare = totalMrr ? m / totalMrr : 0;
       var row = document.createElement("div");
@@ -1063,39 +1127,36 @@ svg circle.hover-dot.show { opacity: 1; }
     var top200 = sorted.slice(0, 200).reduce(function (s, a) { return s + (a.current_mrr || 0); }, 0);
 
     var svg = document.getElementById("concentrationRing");
-    var cx = 80, cy = 80, r = 64;
+    var cx = 80, cy = 80, r = 62;
     var circ = 2 * Math.PI * r;
+    // Single ring telling one story: top-10 share. The deeper cuts live as text below.
     svg.appendChild(el("circle", { cx: cx, cy: cy, r: r, fill: "none",
-                                    stroke: "var(--line)", "stroke-width": 12 }));
-    var layers = [
-      { share: top200 / total, color: "var(--accent)", opacity: 0.35 },
-      { share: top50 / total,  color: "var(--ink-2)",  opacity: 0.7 },
-      { share: top10 / total,  color: "var(--ink)",    opacity: 1.0 }
-    ];
-    layers.forEach(function (lyr) {
-      var dash = lyr.share * circ;
-      var ring = el("circle", { cx: cx, cy: cy, r: r, fill: "none",
-                                stroke: lyr.color, "stroke-width": 12,
-                                "stroke-dasharray": dash + " " + (circ - dash),
-                                "stroke-dashoffset": (circ / 4).toFixed(2),
-                                opacity: lyr.opacity,
-                                transform: "rotate(-90 " + cx + " " + cy + ")" });
-      svg.appendChild(ring);
-    });
-    var t1 = el("text", { x: cx, y: cy - 2, "text-anchor": "middle",
-                          "font-family": "var(--display-font)", "font-size": 22,
-                          fill: "var(--ink)" });
+                                    stroke: "var(--line)", "stroke-width": 10 }));
+    var dashTop10 = (top10 / total) * circ;
+    svg.appendChild(el("circle", {
+      cx: cx, cy: cy, r: r, fill: "none",
+      stroke: "var(--ink)", "stroke-width": 10,
+      "stroke-dasharray": dashTop10 + " " + (circ - dashTop10),
+      "stroke-dashoffset": (circ / 4).toFixed(2),
+      "stroke-linecap": "butt",
+      transform: "rotate(-90 " + cx + " " + cy + ")"
+    }));
+    var t1 = el("text", { x: cx, y: cy + 2, "text-anchor": "middle",
+                          "font-family": "var(--display-font)", "font-size": 26,
+                          fill: "var(--ink)", "font-weight": 500 });
+    t1.setAttribute("letter-spacing", "-0.02em");
     t1.textContent = pct(top10 / total, 0);
     svg.appendChild(t1);
-    var t2 = el("text", { x: cx, y: cy + 16, "text-anchor": "middle",
-                          "font-size": 9, fill: "var(--muted)" });
-    t2.textContent = "top 10";
+    var t2 = el("text", { x: cx, y: cy + 20, "text-anchor": "middle",
+                          "font-size": 9.5, fill: "var(--muted)",
+                          "letter-spacing": "0.04em" });
+    t2.textContent = "TOP 10";
     svg.appendChild(t2);
 
     document.getElementById("concentrationStats").innerHTML =
-      '<div class="concentration-stat"><div class="v">' + pct(top10 / total) + '</div><div class="l">held by top 10 accounts</div></div>' +
-      '<div class="concentration-stat"><div class="v">' + pct(top50 / total) + '</div><div class="l">held by top 50 accounts</div></div>' +
-      '<div class="concentration-stat"><div class="v">' + pct(top200 / total) + '</div><div class="l">held by top 200 accounts</div></div>';
+      '<div class="concentration-stat"><div class="v">' + pct(top10 / total) + '</div><div class="l">top 10 accounts</div></div>' +
+      '<div class="concentration-stat"><div class="v">' + pct(top50 / total) + '</div><div class="l">top 50 accounts</div></div>' +
+      '<div class="concentration-stat"><div class="v">' + pct(top200 / total) + '</div><div class="l">top 200 accounts</div></div>';
   })();
 
   // Priority queue
@@ -1240,7 +1301,7 @@ svg circle.hover-dot.show { opacity: 1; }
       return { stroke: "var(--muted)", width: 1.2, dash: "2 4" };
     }
 
-    var W = 1000, H = 260, padL = 64, padR = 80, padT = 16, padB = 28;
+    var W = 1000, H = 260, padL = 64, padR = 110, padT = 16, padB = 28;
     setViewBox(svg, W, H);
     var allY = [];
     Object.keys(byScenario).forEach(function (k) {
@@ -1264,21 +1325,40 @@ svg circle.hover-dot.show { opacity: 1; }
     });
 
     legendNode.innerHTML = "";
-    Object.keys(byScenario).forEach(function (k) {
+    // Stagger end-labels so close-together lines don't collide on the right margin.
+    var endpoints = Object.keys(byScenario).map(function (k) {
       var arr = byScenario[k];
-      var st = styleFor(arr[0].scenario_type);
+      var last = arr[arr.length - 1];
+      return { k: k, arr: arr, st: styleFor(arr[0].scenario_type),
+               realY: yScale(last.forecast_mrr), val: last.forecast_mrr };
+    });
+    endpoints.sort(function (a, b) { return a.realY - b.realY; });
+    var minGap = 13;
+    endpoints.forEach(function (ep, i) {
+      ep.y = ep.realY;
+      if (i > 0 && ep.y - endpoints[i - 1].y < minGap) ep.y = endpoints[i - 1].y + minGap;
+    });
+    endpoints.forEach(function (ep) {
+      var arr = ep.arr, st = ep.st;
       var p = "M " + xScale(0) + " " + yScale(arr[0].forecast_mrr);
       for (var i = 1; i < arr.length; i++) p += " L " + xScale(i) + " " + yScale(arr[i].forecast_mrr);
       var attrs = { d: p, fill: "none", stroke: st.stroke, "stroke-width": st.width,
                     "stroke-linejoin": "round", "stroke-linecap": "round" };
       if (st.dash) attrs["stroke-dasharray"] = st.dash;
       svg.appendChild(el("path", attrs));
-      var lastPt = arr[arr.length - 1];
-      var lbl = el("text", { x: xScale(arr.length - 1) + 8, y: yScale(lastPt.forecast_mrr) + 3,
-                              "text-anchor": "start", fill: st.stroke, "font-size": 10 });
-      lbl.textContent = k;
+      var label = humanScenario(ep.k);
+      if (Math.abs(ep.y - ep.realY) > 0.5) {
+        svg.appendChild(el("line", {
+          x1: xScale(arr.length - 1) + 2, y1: ep.realY,
+          x2: xScale(arr.length - 1) + 9, y2: ep.y,
+          stroke: st.stroke, "stroke-width": 0.7, opacity: 0.55
+        }));
+      }
+      var lbl = el("text", { x: xScale(arr.length - 1) + 12, y: ep.y + 3,
+                              "text-anchor": "start", fill: st.stroke, "font-size": 10.5 });
+      lbl.textContent = label;
       svg.appendChild(lbl);
-      legendNode.innerHTML += '<div class="legend-item"><span class="legend-dash" style="background:' + st.stroke + ';"></span>' + k + '</div>';
+      legendNode.innerHTML += '<div class="legend-item"><span class="legend-dash" style="background:' + st.stroke + ';"></span>' + label + '</div>';
     });
 
     cardsNode.innerHTML = "";
@@ -1288,11 +1368,11 @@ svg circle.hover-dot.show { opacity: 1; }
       var sign = s.mrr_vs_base > 0 ? "+" : "";
       cardsNode.innerHTML +=
         '<div class="scenario-card' + (isBase ? ' base' : '') + '">' +
-          '<div class="scenario-name">' + s.scenario + '</div>' +
+          '<div class="scenario-name">' + humanScenario(s.scenario) + '</div>' +
           '<div class="scenario-mrr">' + compactMoney(s.end_mrr) + '</div>' +
           '<div class="scenario-meta">' +
-            '<span>ARR · ' + compactMoney(s.end_arr) + '</span>' +
-            '<span class="delta ' + deltaClass + '">' + (isBase ? '—' : sign + compactMoney(s.mrr_vs_base)) + '</span>' +
+            '<span>ARR  ' + compactMoney(s.end_arr) + '</span>' +
+            '<span class="delta ' + deltaClass + '">' + (isBase ? 'reference' : sign + compactMoney(s.mrr_vs_base)) + '</span>' +
           '</div>' +
         '</div>';
     });
