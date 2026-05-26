@@ -48,17 +48,18 @@ class TestArtifactContracts(unittest.TestCase):
         self.assertIsNotNone(match, "Embedded dashboard JSON payload is missing")
 
         payload = json.loads(match.group(1))  # type: ignore[arg-type]
+        # The visible dashboard renders inline SVG from the embedded JSON, so the
+        # payload only needs the fields that drive the surface. Heavier auxiliary
+        # tables (manager_panel, cohort_slice, monthly_compact_rows, …) used to
+        # ship as JSON bloat — they live on disk in data/processed/ instead.
         required_keys = {
             "meta",
             "official_kpis",
-            "filters",
             "accounts",
-            "manager_panel",
+            "monthly_summary",
             "scenario_cards",
-            "risk_impact",
+            "scenario_trajectory",
             "chart_catalog",
-            "methodology",
-            "source_map",
         }
         self.assertTrue(required_keys.issubset(set(payload.keys())), f"Missing dashboard payload keys: {required_keys}")
         self.assertGreaterEqual(len(payload.get("chart_catalog", [])), 15, "Dashboard chart catalog is incomplete")

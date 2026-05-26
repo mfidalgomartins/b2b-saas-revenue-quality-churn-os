@@ -640,14 +640,11 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
         required_keys = {
             "meta",
             "official_kpis",
-            "filters",
             "accounts",
-            "manager_panel",
+            "monthly_summary",
             "scenario_cards",
-            "risk_impact",
+            "scenario_trajectory",
             "chart_catalog",
-            "methodology",
-            "source_map",
             "dashboard_contract",
         }
         dashboard_ok = (

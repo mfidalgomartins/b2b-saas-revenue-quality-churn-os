@@ -60,17 +60,33 @@ class TestCanonicalDashboardContract(unittest.TestCase):
         payload_kpis = set(payload.get("official_kpis", {}).keys())  # type: ignore[union-attr]
         self.assertTrue(expected_keys.issubset(payload_kpis), f"Missing KPI keys: {expected_keys - payload_kpis}")
 
-    def test_chart_images_are_embedded_for_self_contained_rendering(self) -> None:
+    def test_chart_catalog_carries_decision_metadata(self) -> None:
+        """The chart catalog stays in the payload as decision metadata.
+
+        Each entry must describe the question it answers and how a decision-maker
+        should use it. The dashboard itself renders inline SVG from the underlying
+        data, so the catalog no longer carries base64 image bytes — that bloat
+        was 12MB+ of dead weight in the previous design.
+        """
         payload = _embedded_payload(ROOT / CANONICAL_DASHBOARD_PATH)
         self.assertIsNotNone(payload)
 
         chart_catalog = payload.get("chart_catalog", [])  # type: ignore[union-attr]
         self.assertGreaterEqual(len(chart_catalog), 15)
         for chart in chart_catalog:
-            self.assertTrue(chart.get("image_src", "").startswith("data:image/png;base64,"))
             self.assertIn("image_path", chart)
             self.assertNotEqual(chart.get("question", ""), "")
             self.assertNotEqual(chart.get("decision_use", ""), "")
+
+    def test_dashboard_is_self_contained_inline_svg(self) -> None:
+        """No external image hosts; charts are drawn inline as SVG from JSON."""
+        html = (ROOT / CANONICAL_DASHBOARD_PATH).read_text(encoding="utf-8")
+        # The page must not depend on remote image assets.
+        self.assertNotIn("<img ", html)
+        # And it must actually render charts inline.
+        self.assertIn("<svg", html)
+        # Embedded JSON payload must be present and parseable.
+        self.assertIn('<script id="dashboard-data"', html)
 
     def test_dashboard_has_decision_brief_and_no_dark_mode_toggle(self) -> None:
         html = (ROOT / CANONICAL_DASHBOARD_PATH).read_text(encoding="utf-8")

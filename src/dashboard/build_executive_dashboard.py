@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 from pathlib import Path
 from typing import Any
@@ -42,10 +41,6 @@ def _safe_float(value: Any, digits: int = 4) -> float:
     return round(float(value), digits)
 
 
-def _fmt_pct(value: float) -> str:
-    return f"{value * 100:.2f}%"
-
-
 def _load_latest_plan(customers: pd.DataFrame, subscriptions: pd.DataFrame, plans: pd.DataFrame) -> pd.DataFrame:
     latest_sub = (
         subscriptions.sort_values(["customer_id", "subscription_start_date"]).drop_duplicates("customer_id", keep="last")
@@ -66,11 +61,6 @@ def _load_latest_plan(customers: pd.DataFrame, subscriptions: pd.DataFrame, plan
     for col in ["plan_tier", "plan_name", "billing_cycle"]:
         latest_sub[col] = latest_sub[col].fillna("Unknown")
     return customers[["customer_id"]].merge(latest_sub, on="customer_id", how="left")
-
-
-def _png_data_uri(path: Path) -> str:
-    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
-    return f"data:image/png;base64,{encoded}"
 
 
 def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
@@ -228,7 +218,6 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
                 "section": section,
                 "filename": filename,
                 "image_path": f"../charts/{filename}",
-                "image_src": _png_data_uri(path),
             }
         )
     return catalog
@@ -242,17 +231,13 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
     customers = pd.read_csv(raw_dir / "customers.csv", parse_dates=["signup_date"])
     subscriptions = pd.read_csv(raw_dir / "subscriptions.csv", parse_dates=["subscription_start_date"])
     plans = pd.read_csv(raw_dir / "plans.csv")
-    account_managers = pd.read_csv(raw_dir / "account_managers.csv")
     monthly_metrics = pd.read_csv(raw_dir / "monthly_account_metrics.csv", parse_dates=["month"])
     monthly_quality = pd.read_csv(processed_dir / "account_monthly_revenue_quality.csv", parse_dates=["month"])
 
     scoring = pd.read_csv(processed_dir / "account_scoring_model_output.csv")
     health = pd.read_csv(processed_dir / "customer_health_features.csv")
-    manager_summary = pd.read_csv(processed_dir / "account_manager_summary.csv")
     scenario_table = pd.read_csv(processed_dir / "mrr_scenario_table.csv")
     scenario_traj = pd.read_csv(processed_dir / "scenario_mrr_trajectories.csv", parse_dates=["forecast_month"])
-    risk_impact = pd.read_csv(processed_dir / "commercial_risk_impact_estimates.csv")
-    cohort = pd.read_csv(processed_dir / "cohort_retention_summary.csv", parse_dates=["cohort_month"])
 
     analysis_metrics = json.loads((reports_dir / "main_business_analysis_metrics.json").read_text(encoding="utf-8"))
     validation_summary = json.loads((reports_dir / "formal_validation_summary.json").read_text(encoding="utf-8"))
@@ -316,8 +301,6 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
     ]:
         accounts[col] = accounts[col].fillna("Unknown")
 
-    manager_panel = manager_summary.merge(account_managers, on="account_manager_id", how="left").fillna("Unknown")
-
     sec1 = analysis_metrics.get("section1", {})
     sec2 = analysis_metrics.get("section2", {})
     sec5 = analysis_metrics.get("section5", {})
@@ -335,46 +318,6 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
         "revenue_at_risk_mrr": _safe_float(sec5.get("at_risk_mrr_total", 0.0), 2),
         "critical_risk_account_count": critical_count,
     }
-
-    alerts: list[dict[str, str]] = []
-    if official_kpis["net_retention"] < 1.0:
-        alerts.append(
-            {
-                "severity": "high",
-                "label": "NRR Below 100%",
-                "detail": f"Latest NRR is {_fmt_pct(official_kpis['net_retention'])}; expansion is not fully outpacing losses.",
-            }
-        )
-    if official_kpis["discounted_revenue_share"] > 0.15:
-        alerts.append(
-            {
-                "severity": "medium",
-                "label": "High Discount Reliance",
-                "detail": (
-                    f"Discount-dependent revenue share is {_fmt_pct(official_kpis['discounted_revenue_share'])}; "
-                    "review renewal pricing discipline."
-                ),
-            }
-        )
-    if official_kpis["critical_risk_account_count"] > 0:
-        alerts.append(
-            {
-                "severity": "high",
-                "label": "Critical Accounts In Portfolio",
-                "detail": (
-                    f"{official_kpis['critical_risk_account_count']} accounts are marked Critical governance priority "
-                    "and require intervention ownership."
-                ),
-            }
-        )
-    if not alerts:
-        alerts.append(
-            {
-                "severity": "low",
-                "label": "No Immediate Alert Threshold Breaches",
-                "detail": "Current governed thresholds show no critical breach, continue weekly monitoring discipline.",
-            }
-        )
 
     scenario_cards: list[dict[str, Any]] = []
     for _, row in scenario_table.sort_values("scenario").iterrows():
@@ -395,12 +338,6 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
     scenario_trajectory = scenario_traj[
         ["scenario", "scenario_type", "forecast_month", "forecast_mrr"]
     ].to_dict(orient="records")
-
-    risk_impact_rows = risk_impact[["metric", "value", "unit", "definition"]].copy()
-    risk_impact_rows["value"] = risk_impact_rows["value"].apply(lambda x: _safe_float(x, 2))
-
-    cohort_slice = cohort[["cohort_month", "segment", "region", "month_number", "net_retention_rate"]].copy()
-    cohort_slice["cohort_month"] = _to_month(cohort_slice["cohort_month"])
 
     monthly_min = monthly_metrics["month"].min()
     monthly_max = monthly_metrics["month"].max()
@@ -458,153 +395,7 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
         }
         for r in monthly_rollup.itertuples(index=False)
     ]
-    monthly_compact_index = {
-        "customer_id": 0,
-        "month": 1,
-        "active_mrr": 2,
-        "expansion_mrr": 3,
-        "contraction_mrr": 4,
-        "discount_dependency_flag": 5,
-        "churn_flag": 6,
-    }
-    monthly_compact_rows: list[list[Any]] = []
-    monthly_panel_copy = monthly_panel.copy()
-    monthly_panel_copy["month_label"] = _to_month(monthly_panel_copy["month"])
-    for row in monthly_panel_copy[
-        [
-            "customer_id",
-            "month_label",
-            "active_mrr",
-            "expansion_mrr",
-            "contraction_mrr",
-            "discount_dependency_flag",
-            "churn_flag",
-        ]
-    ].itertuples(index=False, name=None):
-        (
-            customer_id,
-            month_label,
-            active_mrr,
-            expansion_mrr,
-            contraction_mrr,
-            discount_dependency_flag,
-            churn_flag,
-        ) = row
-        monthly_compact_rows.append(
-            [
-                str(customer_id),
-                str(month_label),
-                _safe_float(active_mrr, 2),
-                _safe_float(expansion_mrr, 2),
-                _safe_float(contraction_mrr, 2),
-                int(discount_dependency_flag) if not pd.isna(discount_dependency_flag) else 0,
-                int(churn_flag) if not pd.isna(churn_flag) else 0,
-            ]
-        )
-
-    filter_options = {
-        "regions": sorted(accounts["region"].dropna().astype(str).unique().tolist()),
-        "segments": sorted(accounts["segment"].dropna().astype(str).unique().tolist()),
-        "industries": sorted(accounts["industry"].dropna().astype(str).unique().tolist()),
-        "plan_tiers": sorted(accounts["plan_tier"].dropna().astype(str).unique().tolist()),
-        "channels": sorted(accounts["acquisition_channel"].dropna().astype(str).unique().tolist()),
-        "account_managers": sorted(accounts["account_manager_id"].dropna().astype(str).unique().tolist()),
-        "risk_tiers": ["Low", "Moderate", "High", "Critical", "Unknown"],
-        "signup_months": sorted(accounts["signup_month"].dropna().astype(str).unique().tolist()),
-    }
-
-    methodology = {
-        "glossary": [
-            {
-                "term": "MRR",
-                "definition": "Monthly recurring revenue recognized from active subscriptions in each month.",
-            },
-            {
-                "term": "ARR",
-                "definition": "Annualized recurring run-rate, computed as MRR multiplied by 12.",
-            },
-            {
-                "term": "Gross Retention (GRR)",
-                "definition": "Retention excluding expansion impact.",
-            },
-            {
-                "term": "Net Retention (NRR)",
-                "definition": "Retention including expansion and contraction impact.",
-            },
-            {
-                "term": "Governance Priority",
-                "definition": "Composite urgency signal blending churn risk, quality weakness, and exposure concentration.",
-            },
-        ],
-        "scoring_logic": [
-            "churn_risk_score (0-100): higher means higher forward churn exposure.",
-            "revenue_quality_score (0-100): higher means healthier pricing/retention quality.",
-            "discount_dependency_score (0-100): higher means greater discount-driven fragility.",
-            "expansion_quality_score (0-100): higher means more sustainable expansion pattern.",
-            "governance_priority_score (0-100): higher means stronger intervention urgency.",
-        ],
-        "assumptions": [
-            "Trend visuals are refreshed from the latest monthly pipeline run.",
-            "Interactive filters update current account diagnostics, not historical restatements.",
-            "Scenario outputs are decision-support ranges and should not be interpreted as deterministic forecasts.",
-        ],
-        "validation_notes": [
-            "Quality checks reconcile revenue, retention, discount, scoring, and scenario outputs before publication.",
-            "Results are intended for prioritization and decision support, not causal proof.",
-        ],
-        "caveats": [
-            "Associations shown are correlational diagnostics, not causal proof.",
-            "Manager comparisons can reflect portfolio mix effects.",
-            "Data is synthetic and intended to emulate commercial behavior patterns.",
-        ],
-    }
-
-    source_map = {
-        "executive_overview": [
-            "reports/main_business_analysis_metrics.json",
-            "data/processed/account_scoring_model_output.csv",
-            "reports/formal_validation_summary.json",
-        ],
-        "revenue_quality": [
-            "outputs/charts/01_mrr_arr_growth_trend.png",
-            "outputs/charts/04_revenue_concentration_curve.png",
-            "outputs/charts/05_average_discount_segment_channel_manager.png",
-            "outputs/charts/06_discounted_revenue_share_trend.png",
-            "outputs/charts/09_expansion_quality_by_segment.png",
-        ],
-        "retention_churn": [
-            "outputs/charts/02_grr_nrr_retention_trend.png",
-            "outputs/charts/03_logo_churn_by_segment.png",
-            "outputs/charts/11_cohort_retention_heatmap.png",
-        ],
-        "account_risk": [
-            "data/processed/account_scoring_model_output.csv",
-            "outputs/charts/07_churn_risk_score_distribution.png",
-            "outputs/charts/08_revenue_quality_score_distribution.png",
-            "outputs/charts/10_top_accounts_governance_priority.png",
-            "outputs/charts/12_discount_vs_churn_risk.png",
-            "outputs/charts/13_payment_delay_vs_churn_risk.png",
-            "outputs/charts/14_usage_decline_vs_churn_risk.png",
-        ],
-        "portfolio_manager": [
-            "data/processed/account_manager_summary.csv",
-            "data/raw/account_managers.csv",
-        ],
-        "scenario_forecast": [
-            "data/processed/mrr_scenario_table.csv",
-            "data/processed/scenario_mrr_trajectories.csv",
-            "data/processed/commercial_risk_impact_estimates.csv",
-            "outputs/charts/15_scenario_mrr_comparison.png",
-        ],
-    }
-
     chart_catalog = _build_chart_catalog(base_dir)
-
-    executive_narrative = (
-        "Topline recurring revenue is growing, but governance-relevant quality signals indicate selective fragility. "
-        "Discount-reliant expansion and concentrated high-risk exposure should be managed as first-order risks, "
-        "not secondary analytics concerns."
-    )
 
     data_coverage = {
         "month_start": monthly_min.strftime("%Y-%m") if pd.notna(monthly_min) else "",
@@ -620,15 +411,11 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
             "data_coverage": data_coverage,
             "row_counts": {
                 "accounts": int(accounts.shape[0]),
-                "manager_rows": int(manager_panel.shape[0]),
                 "scenario_rows": int(scenario_table.shape[0]),
                 "charts_embedded": int(len(chart_catalog)),
             },
         },
         "official_kpis": official_kpis,
-        "alerts": alerts,
-        "executive_narrative": executive_narrative,
-        "filters": filter_options,
         "accounts": accounts[
             [
                 "customer_id",
@@ -660,17 +447,10 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
                 "seats_purchased",
             ]
         ].to_dict(orient="records"),
-        "manager_panel": manager_panel.to_dict(orient="records"),
         "scenario_cards": scenario_cards,
         "scenario_trajectory": scenario_trajectory,
-        "risk_impact": risk_impact_rows.to_dict(orient="records"),
-        "cohort_slice": cohort_slice.to_dict(orient="records"),
         "monthly_summary": monthly_summary,
-        "monthly_compact_index": monthly_compact_index,
-        "monthly_compact_rows": monthly_compact_rows,
         "chart_catalog": chart_catalog,
-        "methodology": methodology,
-        "source_map": source_map,
         "dashboard_contract": {
             "canonical_dashboard_path": CANONICAL_DASHBOARD_PATH,
             "redirect_entrypoints": list(REDIRECT_ENTRYPOINTS),
