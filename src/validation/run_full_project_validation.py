@@ -118,8 +118,16 @@ def validate_dashboard_payload(base_dir: Path, tables: dict[str, pd.DataFrame]) 
     payload_files = []
     for path in html_files:
         html_text = path.read_text(encoding="utf-8")
-        if re.search(r'<script id="dashboard-data" type="application/json">', html_text):
-            payload_files.append(str(path.relative_to(base_dir)))
+        m = re.search(r'<script id="dashboard-data" type="application/json">(.*?)</script>', html_text, flags=re.S)
+        if not m:
+            continue
+        # Source-side templates carry the script tag with a sentinel placeholder
+        # (not real JSON). Only count files that actually embed parseable JSON.
+        try:
+            json.loads(m.group(1))
+        except json.JSONDecodeError:
+            continue
+        payload_files.append(str(path.relative_to(base_dir)))
 
     if not html_path.exists():
         return {"exists": False, "payload_files": payload_files}

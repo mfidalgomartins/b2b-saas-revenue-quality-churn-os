@@ -19,7 +19,14 @@ from src.dashboard.dashboard_contract import (  # noqa: E402
 def _embedded_payload(html_path: Path) -> dict | None:
     html = html_path.read_text(encoding="utf-8")
     match = re.search(r'<script id="dashboard-data" type="application/json">(.*?)</script>', html, flags=re.S)
-    return json.loads(match.group(1)) if match else None
+    if not match:
+        return None
+    try:
+        return json.loads(match.group(1))
+    except json.JSONDecodeError:
+        # File contains the dashboard-data script tag but with a non-JSON
+        # placeholder — e.g. the source-side template's __PAYLOAD_JSON__ sentinel.
+        return None
 
 
 class TestCanonicalDashboardContract(unittest.TestCase):
