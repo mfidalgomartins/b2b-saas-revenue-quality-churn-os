@@ -471,7 +471,7 @@ def chart_top_accounts_governance(scoring: pd.DataFrame, out: Path) -> dict[str,
         "file": "10_top_accounts_governance_priority.png",
         "objective": "Prioritize account-level interventions by urgency and exposure.",
         "chart_type": "Ranked horizontal bar chart with tier coloring and MRR annotation.",
-        "takeaway": f"Top priority account score is {top.iloc[-1]['governance_priority_score']:.1f} with MRR ${top.iloc[-1]['current_mrr']/1000:.1f}k, indicating concentrated intervention leverage.",
+        "takeaway": f"Top priority account scores {top.iloc[-1]['governance_priority_score']:.1f} with MRR ${top.iloc[-1]['current_mrr']/1000:.1f}k — a small set of accounts carries most of the intervention value.",
     }
 
 
