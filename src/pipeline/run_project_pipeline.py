@@ -1,8 +1,8 @@
 """End-to-end orchestrator for the revenue-quality analytics pipeline.
 
-Runs nine stages (generate → profile → features → score → backtest → analyze
-→ forecast → visualize → dashboard) and a two-step release gate (validate →
-enforce).
+Runs twelve stages (generate → profile → features → score → backtest →
+sensitivity → analyze → forecast → visualize → graphs → dashboard) and a
+two-step release gate (validate → gate).
 Each stage is invoked as a subprocess so module-level state cannot leak between
 steps; timings are logged for monthly performance tracking.
 """
@@ -67,6 +67,7 @@ def build_steps(args: argparse.Namespace, py: str) -> list[tuple[str, list[str]]
         ("analysis", [py, "src/analysis/build_main_business_analysis.py", "--base-dir", "."]),
         ("forecast", [py, "src/forecasting/build_forecasting_scenarios.py", "--base-dir", "."]),
         ("visualization", [py, "src/visualization/build_leadership_charts.py", "--base-dir", "."]),
+        ("graphs", [py, "src/visualization/build_executive_graphs.py", "--base-dir", "."]),
         ("dashboard", [
             py, "src/dashboard/build_executive_dashboard.py",
             "--base-dir", ".",
