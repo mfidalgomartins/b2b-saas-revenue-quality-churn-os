@@ -4,17 +4,34 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Revenue Quality · Command Center</title>
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0c0e0d" media="(prefers-color-scheme: dark)" />
+<!-- Resolve theme before first paint so there is never a flash of the wrong palette. -->
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem("rq-theme");
+    var theme = stored || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  } catch (e) {
+    document.documentElement.setAttribute("data-theme", "light");
+  }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root {
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
   --bg: #fafaf7;
   --surface: #ffffff;
   --ink: #0c0d0e;
   --ink-2: #2a2c30;
   --muted: #6b6f76;
-  --faint: #9aa0a8;
+  --faint: #878d95;
   --line: #ececea;
   --line-strong: #d9d8d4;
   --accent: #1f3b2d;
@@ -25,10 +42,65 @@
   --warn: #6b4f10;
   --warn-soft: #f3ecd6;
   --grid: rgba(12, 13, 14, 0.06);
+
+  /* Theme-dependent surfaces that used to be hard-coded inline. */
+  --row-hover: rgba(12, 13, 14, 0.025);
+  --drawer-bg: rgba(31, 59, 45, 0.025);
+  --series-fill-op: 0.07;
+  --accent-glow: rgba(31, 59, 45, 0.12);
+
+  /* Risk hues — single source of truth, overridden for dark. */
+  --tier-low: #94a39a;
+  --tier-moderate: #c9a35d;
+  --tier-high: #b15a47;
+  --tier-critical: #7a1c1c;
+  --pill-low-bg: #eef1ef;     --pill-low-fg: #4a5450;
+  --pill-moderate-bg: #f5ecd9; --pill-moderate-fg: #6b4f10;
+  --pill-high-bg: #f4e0d8;    --pill-high-fg: #8a2c1b;
+  --pill-critical-bg: #efd6d1; --pill-critical-fg: #6b1818;
+
   --radius: 6px;
   --display-font: "Fraunces", "Iowan Old Style", Georgia, serif;
   --body-font: "Inter Tight", -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   --mono-font: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+}
+
+/* Dark theme — a warm-neutral charcoal that echoes the warm-paper light mode,
+   with a brighter sage accent and clay negative so emphasis still reads on a
+   near-black surface. Every chart restyles for free: the SVGs reference these
+   CSS variables, so changing the palette repaints them with no JS. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0c0e0d;
+  --surface: #141716;
+  --ink: #f3f4f0;
+  --ink-2: #cdd0cb;
+  --muted: #8a908a;
+  --faint: #646a64;
+  --line: #232624;
+  --line-strong: #353a37;
+  --accent: #74b196;
+  --accent-soft: #182722;
+  --neg: #d77a64;
+  --neg-soft: #2a1916;
+  --pos: #74b196;
+  --warn: #cda86a;
+  --warn-soft: #2a2414;
+  --grid: rgba(243, 244, 240, 0.055);
+
+  --row-hover: rgba(243, 244, 240, 0.04);
+  --drawer-bg: rgba(116, 177, 150, 0.055);
+  --series-fill-op: 0.12;
+  --accent-glow: rgba(116, 177, 150, 0.22);
+
+  --tier-low: #8fa39a;
+  --tier-moderate: #cda86a;
+  --tier-high: #d4886f;
+  --tier-critical: #d05b4f;
+  --pill-low-bg: #1d2320;     --pill-low-fg: #a9b4ac;
+  --pill-moderate-bg: #2a2414; --pill-moderate-fg: #d6b577;
+  --pill-high-bg: #2e1d18;    --pill-high-fg: #e0997f;
+  --pill-critical-bg: #331814; --pill-critical-fg: #ea7a68;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -42,6 +114,7 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
+  transition: background-color 0.32s ease, color 0.32s ease;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -105,8 +178,22 @@ button { font: inherit; background: none; border: 0; color: inherit; cursor: poi
 .gate-dot {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(31, 59, 45, 0.12);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
+
+/* Theme toggle */
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid var(--line-strong); color: var(--muted);
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.theme-toggle:hover { color: var(--ink); border-color: var(--ink); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.theme-toggle svg { width: 15px; height: 15px; display: block; }
+.theme-toggle .icon-moon { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
 
 /* Hero */
 .hero { margin-bottom: 72px; max-width: 880px; }
@@ -221,16 +308,16 @@ section { margin-bottom: 80px; }
   display: inline-block; width: 6px; height: 6px;
   border-radius: 50%; margin-right: 8px; vertical-align: middle;
 }
-.ladder-tier .dot.low      { background: #94a39a; }
-.ladder-tier .dot.moderate { background: #c9a35d; }
-.ladder-tier .dot.high     { background: #b15a47; }
-.ladder-tier .dot.critical { background: #7a1c1c; }
+.ladder-tier .dot.low      { background: var(--tier-low); }
+.ladder-tier .dot.moderate { background: var(--tier-moderate); }
+.ladder-tier .dot.high     { background: var(--tier-high); }
+.ladder-tier .dot.critical { background: var(--tier-critical); }
 .ladder-bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .ladder-bar-fill { height: 100%; background: var(--ink); opacity: 0.85; border-radius: 3px; transition: width 0.5s ease; }
-.ladder-bar-fill.low      { background: #94a39a; }
-.ladder-bar-fill.moderate { background: #c9a35d; }
-.ladder-bar-fill.high     { background: #b15a47; }
-.ladder-bar-fill.critical { background: #7a1c1c; }
+.ladder-bar-fill.low      { background: var(--tier-low); }
+.ladder-bar-fill.moderate { background: var(--tier-moderate); }
+.ladder-bar-fill.high     { background: var(--tier-high); }
+.ladder-bar-fill.critical { background: var(--tier-critical); }
 .ladder-num {
   font-family: var(--mono-font); font-size: 12px;
   color: var(--ink-2); text-align: right;
@@ -238,12 +325,18 @@ section { margin-bottom: 80px; }
 }
 .ladder-pct { color: var(--muted); margin-left: 4px; }
 
-/* Concentration */
-.concentration { display: grid; grid-template-columns: 200px 1fr; gap: 28px; align-items: center; }
-.concentration-stats { display: flex; flex-direction: column; gap: 14px; }
-.concentration-stat { border-left: 2px solid var(--line-strong); padding-left: 12px; }
-.concentration-stat .v { font-family: var(--display-font); font-weight: 500; font-size: 24px; letter-spacing: -0.012em; font-variant-numeric: tabular-nums; }
-.concentration-stat .l { font-size: 11.5px; color: var(--muted); }
+/* Concentration — headline shares with quiet bars; mirrors the ladder rhythm */
+.conc-stack { display: flex; flex-direction: column; gap: 24px; padding-top: 6px; }
+.conc-item { display: flex; flex-direction: column; gap: 9px; }
+.conc-head { display: flex; align-items: baseline; gap: 14px; }
+.conc-head .v {
+  font-family: var(--display-font); font-weight: 500;
+  font-size: 26px; letter-spacing: -0.014em; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.conc-head .l { font-size: 11.5px; color: var(--muted); }
+.conc-bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.conc-bar-fill { height: 100%; background: var(--ink); opacity: 0.85; border-radius: 2px; transition: width 0.5s ease; }
 
 /* Priority queue */
 .priority-controls { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
@@ -255,6 +348,7 @@ section { margin-bottom: 80px; }
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 .chip:hover { color: var(--ink); border-color: var(--ink); }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .priority-search {
   flex: 0 0 240px; padding: 8px 12px; font: inherit; font-size: 12.5px;
@@ -276,7 +370,7 @@ section { margin-bottom: 80px; }
 .queue thead th .caret { font-size: 9px; color: var(--faint); margin-left: 4px; }
 .queue thead th.numeric { text-align: right; padding-right: 12px; padding-left: 12px; }
 .queue tbody tr { border-bottom: 1px solid var(--line); transition: background 0.12s ease; }
-.queue tbody tr:hover { background: rgba(12, 13, 14, 0.025); cursor: pointer; }
+.queue tbody tr:hover { background: var(--row-hover); cursor: pointer; }
 .queue tbody td { padding: 14px 12px 14px 0; vertical-align: middle; color: var(--ink-2); }
 .queue tbody td.numeric {
   text-align: right; font-family: var(--mono-font);
@@ -288,10 +382,10 @@ section { margin-bottom: 80px; }
   display: inline-block; padding: 2px 8px; font-size: 11px;
   border-radius: 100px; letter-spacing: 0.005em;
 }
-.queue tbody td .pill.low      { background: #eef1ef; color: #4a5450; }
-.queue tbody td .pill.moderate { background: #f5ecd9; color: #6b4f10; }
-.queue tbody td .pill.high     { background: #f4e0d8; color: #8a2c1b; }
-.queue tbody td .pill.critical { background: #efd6d1; color: #6b1818; font-weight: 500; }
+.queue tbody td .pill.low      { background: var(--pill-low-bg); color: var(--pill-low-fg); }
+.queue tbody td .pill.moderate { background: var(--pill-moderate-bg); color: var(--pill-moderate-fg); }
+.queue tbody td .pill.high     { background: var(--pill-high-bg); color: var(--pill-high-fg); }
+.queue tbody td .pill.critical { background: var(--pill-critical-bg); color: var(--pill-critical-fg); font-weight: 500; }
 .queue tbody td.driver { color: var(--muted); font-size: 12.5px; }
 
 .queue-empty { padding: 32px 0; text-align: center; color: var(--muted); font-size: 12.5px; }
@@ -301,9 +395,12 @@ section { margin-bottom: 80px; }
 }
 .queue-load { color: var(--accent); font-size: 12px; font-weight: 500; border-bottom: 1px solid var(--accent-soft); }
 .queue-load:hover { border-bottom-color: var(--accent); }
+.queue-load:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.queue thead th:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.queue tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* Drawer */
-.drawer-row { background: rgba(31, 59, 45, 0.025); }
+.drawer-row { background: var(--drawer-bg); }
 .drawer-cell { padding: 18px 0 22px !important; border-bottom: 1px solid var(--line-strong); }
 .drawer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; padding: 0 12px; }
 .drawer-block { display: flex; flex-direction: column; gap: 4px; }
@@ -371,11 +468,12 @@ footer.footer code { font-family: var(--mono-font); font-size: 11px; color: var(
 /* Tooltip */
 .tooltip {
   position: fixed; pointer-events: none;
-  background: var(--ink); color: #fff; font-family: var(--mono-font);
+  background: var(--ink); color: var(--bg); font-family: var(--mono-font);
   font-size: 11px; padding: 6px 9px; border-radius: 4px;
   opacity: 0; transform: translate(-50%, -120%);
   transition: opacity 0.12s ease; z-index: 100;
   white-space: nowrap; letter-spacing: 0.005em;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 .tooltip.show { opacity: 1; }
 
@@ -385,9 +483,9 @@ svg .grid-line { stroke: var(--grid); stroke-width: 1; }
 svg .axis-line { stroke: var(--line-strong); stroke-width: 1; }
 svg .series-primary { fill: none; stroke: var(--ink); stroke-width: 1.5; }
 svg .series-accent  { fill: none; stroke: var(--accent); stroke-width: 1.6; }
-svg .series-muted   { fill: none; stroke: var(--faint); stroke-width: 1.25; stroke-dasharray: 3 3; }
+svg .series-muted   { fill: none; stroke: var(--faint); stroke-width: 1.25; }
 svg .series-neg     { fill: none; stroke: var(--neg); stroke-width: 1.5; }
-svg .series-fill    { fill: var(--accent); opacity: 0.07; }
+svg .series-fill    { fill: var(--accent); opacity: var(--series-fill-op); }
 svg circle.hover-dot { fill: var(--ink); stroke: var(--bg); stroke-width: 2; opacity: 0; }
 svg circle.hover-dot.show { opacity: 1; }
 
@@ -397,12 +495,18 @@ svg circle.hover-dot.show { opacity: 1; }
   .kpi:nth-child(3) { border-right: 0; }
   .kpi:nth-child(4) { padding-left: 0; }
   .chart-row.split-12, .chart-row.split-21, .chart-row.split-11 { grid-template-columns: 1fr; gap: 56px; }
-  .concentration { grid-template-columns: 1fr; }
   .scenarios { grid-template-columns: 1fr; }
   footer.footer { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 720px) {
   .shell { padding: 24px 20px 64px; }
+  /* The topbar carries identity + one trust signal + the theme control.
+     Window/account counts are secondary here and already live in the footer. */
+  .topbar { margin-bottom: 40px; }
+  .brand-product { display: none; }
+  .meta-bar { gap: 14px; }
+  .meta-bar .meta-item { display: none; }
+  .gate-badge { font-size: 11px; padding: 4px 9px; }
   .decision-brief h1 { font-size: 32px; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .kpi { border-right: 0; padding-left: 0 !important; padding-right: 16px; }
@@ -411,6 +515,13 @@ svg circle.hover-dot.show { opacity: 1; }
   .priority-search { flex: 1; }
   .queue thead th.optional, .queue tbody td.optional { display: none; }
   footer.footer { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 </style>
 </head>
@@ -428,7 +539,11 @@ svg circle.hover-dot.show { opacity: 1; }
     <div class="meta-bar">
       <div class="meta-item"><span class="meta-label">Window</span><strong id="metaPeriod">—</strong></div>
       <div class="meta-item"><span class="meta-label">Accounts</span><strong id="metaAccounts">—</strong></div>
-      <span id="gateBadge" class="gate-badge"><span class="gate-dot"></span><span id="gateText">—</span></span>
+      <span id="gateBadge" class="gate-badge" title="Data-quality gate: automated validation controls this build passed before publication"><span class="gate-dot"></span><span id="gateText">—</span></span>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
     </div>
   </header>
 
@@ -458,17 +573,17 @@ svg circle.hover-dot.show { opacity: 1; }
           <div class="panel-note" id="mrrPeriodNote">—</div>
         </div>
         <div class="panel-figures" id="mrrFigures"></div>
-        <svg class="chart chart-tall" id="chartMRR" preserveAspectRatio="none"></svg>
+        <svg class="chart chart-tall" id="chartMRR"></svg>
       </div>
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">Composition of monthly change</div>
+          <div class="panel-title">Net MRR change by month</div>
           <div class="panel-note">latest 12 months</div>
         </div>
-        <svg class="chart chart-tall" id="chartFlows" preserveAspectRatio="none"></svg>
+        <svg class="chart chart-tall" id="chartFlows"></svg>
         <div class="legend">
-          <div class="legend-item"><span class="legend-dash accent"></span>MRR added</div>
-          <div class="legend-item"><span class="legend-dash neg"></span>MRR lost</div>
+          <div class="legend-item"><span class="legend-dash accent"></span>Net increase</div>
+          <div class="legend-item"><span class="legend-dash neg"></span>Net decline</div>
         </div>
       </div>
     </div>
@@ -490,7 +605,7 @@ svg circle.hover-dot.show { opacity: 1; }
           <div class="panel-note">6-month trailing</div>
         </div>
         <div class="panel-figures" id="retentionFigures"></div>
-        <svg class="chart" id="chartRetention" preserveAspectRatio="none"></svg>
+        <svg class="chart" id="chartRetention"></svg>
         <div class="legend">
           <div class="legend-item"><span class="legend-dash"></span>Net retention</div>
           <div class="legend-item"><span class="legend-dash muted"></span>Gross retention</div>
@@ -503,7 +618,7 @@ svg circle.hover-dot.show { opacity: 1; }
           <div class="panel-note">% of MRR on discount-reliant accounts</div>
         </div>
         <div class="panel-figures" id="discountFigures"></div>
-        <svg class="chart" id="chartDiscount" preserveAspectRatio="none"></svg>
+        <svg class="chart" id="chartDiscount"></svg>
       </div>
     </div>
   </section>
@@ -530,10 +645,7 @@ svg circle.hover-dot.show { opacity: 1; }
           <div class="panel-title">MRR concentration</div>
           <div class="panel-note">share of total MRR</div>
         </div>
-        <div class="concentration">
-          <svg viewBox="0 0 160 160" width="160" height="160" id="concentrationRing" style="overflow: visible;"></svg>
-          <div class="concentration-stats" id="concentrationStats"></div>
-        </div>
+        <div class="conc-stack" id="concentrationStats"></div>
       </div>
     </div>
   </section>
@@ -564,7 +676,7 @@ svg circle.hover-dot.show { opacity: 1; }
           <th data-sort="segment" class="optional">Segment <span class="caret">↕</span></th>
           <th data-sort="region" class="optional">Region <span class="caret">↕</span></th>
           <th data-sort="current_mrr" class="numeric">MRR <span class="caret">↓</span></th>
-          <th data-sort="churn_risk_score" class="numeric">Churn risk <span class="caret">↕</span></th>
+          <th data-sort="churn_risk_score" class="numeric optional">Churn risk <span class="caret">↕</span></th>
           <th data-sort="governance_priority_score" class="numeric">Priority <span class="caret">↓</span></th>
           <th data-sort="governance_priority_tier">Tier <span class="caret">↕</span></th>
           <th data-sort="governance_main_driver" class="optional">Primary driver <span class="caret">↕</span></th>
@@ -588,7 +700,7 @@ svg circle.hover-dot.show { opacity: 1; }
     </div>
 
     <div class="panel">
-      <svg class="chart chart-tall" id="chartScenarios" preserveAspectRatio="none"></svg>
+      <svg class="chart chart-tall" id="chartScenarios"></svg>
       <div class="legend" id="scenarioLegend"></div>
     </div>
 
@@ -621,6 +733,30 @@ svg circle.hover-dot.show { opacity: 1; }
 <script>
 (function () {
   "use strict";
+
+  // Theme toggle — the pre-paint script in <head> already set the initial theme.
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById("themeToggle");
+    if (!btn) return;
+    function apply(theme) {
+      root.setAttribute("data-theme", theme);
+      try { localStorage.setItem("rq-theme", theme); } catch (e) {}
+      btn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+      var bar = document.querySelector('meta[name="theme-color"]:not([media])');
+      if (bar) bar.setAttribute("content", theme === "dark" ? "#0c0e0d" : "#fafaf7");
+    }
+    btn.addEventListener("click", function () {
+      apply(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+    });
+    // Follow the OS only while the user has not made an explicit choice.
+    if (window.matchMedia) {
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function (e) {
+        try { if (localStorage.getItem("rq-theme")) return; } catch (err) {}
+        root.setAttribute("data-theme", e.matches ? "dark" : "light");
+      });
+    }
+  })();
 
   var payload = JSON.parse(document.getElementById("dashboard-data").textContent);
   var kpis = payload.official_kpis || {};
@@ -665,9 +801,26 @@ svg circle.hover-dot.show { opacity: 1; }
     return (curr - prev) / Math.abs(prev);
   }
 
+  // Human month formatting — the payload ships ISO "YYYY-MM" keys.
+  var MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function fmtMonth(ym) {
+    if (!ym) return "—";
+    var parts = String(ym).split("-");
+    var mi = parseInt(parts[1], 10) - 1;
+    if (parts.length < 2 || !(mi >= 0 && mi < 12)) return String(ym);
+    return MONTH_NAMES[mi] + " " + parts[0];
+  }
+  function fmtMonthShort(ym) {
+    if (!ym) return "—";
+    var parts = String(ym).split("-");
+    var mi = parseInt(parts[1], 10) - 1;
+    if (parts.length < 2 || !(mi >= 0 && mi < 12)) return String(ym);
+    return MONTH_NAMES[mi] + " ’" + parts[0].slice(2);
+  }
+
   var coverage = meta.data_coverage || {};
   document.getElementById("metaPeriod").textContent =
-    (coverage.month_start || "—") + "  —  " + (coverage.month_end || "—");
+    fmtMonthShort(coverage.month_start) + " – " + fmtMonthShort(coverage.month_end);
   document.getElementById("metaAccounts").textContent =
     nf0.format((meta.row_counts || {}).accounts || accounts.length);
 
@@ -676,7 +829,7 @@ svg circle.hover-dot.show { opacity: 1; }
     tier === "technically valid" ? "21 controls passing" : tier;
 
   document.getElementById("finePrintBuild").textContent =
-    "Last refresh  " + (coverage.month_end || "—");
+    "Last refresh  " + fmtMonth(coverage.month_end);
 
   // Decision brief
   var nrr = kpis.net_retention || 0;
@@ -709,8 +862,8 @@ svg circle.hover-dot.show { opacity: 1; }
   var nrrPp = (nrr - 1.0) * 100;  // pp vs 100%
   var nrrPhrase = (nrrPp >= 0 ? "+" : "") + nrrPp.toFixed(1) + "pp net retention vs 100%";
   var critPhrase = critCount > 0
-    ? (critCount === 1 ? "one Critical account in the book" : critCount + " Critical accounts in the book")
-    : "no Critical accounts in the book";
+    ? (critCount === 1 ? "1 account at Critical action priority" : critCount + " accounts at Critical action priority")
+    : "no accounts at Critical action priority";
   var concPhrase = pct(atRiskShare, 1) + " of MRR sits in at-risk tiers";
   document.getElementById("decisionBriefSub").textContent =
     nrrPhrase + " · gross retention " + pct(grr) + " · " + concPhrase + " · " + critPhrase + ".";
@@ -835,11 +988,45 @@ svg circle.hover-dot.show { opacity: 1; }
   }
   function hideTip() { tooltip.classList.remove("show"); }
 
+  // Responsive chart engine — each chart draws at its svg's real pixel size,
+  // so the viewBox always matches the rendered box 1:1 and axis text is never
+  // stretched. Charts re-render on resize (debounced); listeners die with the
+  // cleared nodes, so redraws never stack handlers.
+  var chartDraws = [];
+  function registerChart(draw) { chartDraws.push(draw); draw(); }
+  var resizeTimer = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      chartDraws.forEach(function (d) { d(); });
+    }, 150);
+  });
+  function chartSize(svg, fw, fh) {
+    var r = svg.getBoundingClientRect();
+    return {
+      w: r.width > 40 ? Math.round(r.width) : fw,
+      h: r.height > 40 ? Math.round(r.height) : fh
+    };
+  }
+  // First / middle / last x-axis labels; edge labels are anchored inward so
+  // they never clip on narrow screens.
+  function drawXLabels(svg, items, padL, W, padR, y) {
+    items.forEach(function (it, idx) {
+      var anchor = idx === 0 ? "start" : (idx === items.length - 1 ? "end" : "middle");
+      var x = idx === 0 ? padL : (idx === items.length - 1 ? W - padR : it.x);
+      var t = el("text", { x: x, y: y, "text-anchor": anchor });
+      t.textContent = it.label;
+      svg.appendChild(t);
+    });
+  }
+
   // Chart 1: MRR trajectory
-  (function () {
+  registerChart(function () {
     var svg = document.getElementById("chartMRR");
     if (!monthly.length) return;
-    var W = 700, H = 260, padL = 56, padR = 18, padT = 16, padB = 28;
+    svg.innerHTML = "";
+    var size = chartSize(svg, 700, 260);
+    var W = size.w, H = size.h, padL = 56, padR = 18, padT = 16, padB = 28;
     setViewBox(svg, W, H);
     var ys = monthly.map(function (m) { return m.mrr; });
     var yMin = Math.min.apply(null, ys);
@@ -849,11 +1036,9 @@ svg circle.hover-dot.show { opacity: 1; }
     var xScale = function (i) { return padL + (W - padL - padR) * (i / (monthly.length - 1)); };
     drawYAxis(svg, padL, W - padR, ticks.map(function (v) { return { v: v, y: yScale(v) }; }), compactMoney);
     svg.appendChild(el("line", { x1: padL, y1: H - padB, x2: W - padR, y2: H - padB, class: "axis-line" }));
-    [0, Math.floor(monthly.length / 2), monthly.length - 1].forEach(function (i) {
-      var t = el("text", { x: xScale(i), y: H - padB + 16, "text-anchor": "middle" });
-      t.textContent = monthly[i].month;
-      svg.appendChild(t);
-    });
+    drawXLabels(svg, [0, Math.floor(monthly.length / 2), monthly.length - 1].map(function (i) {
+      return { x: xScale(i), label: fmtMonthShort(monthly[i].month) };
+    }), padL, W, padR, H - padB + 16);
     var area = "M " + xScale(0) + " " + yScale(ticks[0]);
     ys.forEach(function (v, i) { area += " L " + xScale(i) + " " + yScale(v); });
     area += " L " + xScale(monthly.length - 1) + " " + yScale(ticks[0]) + " Z";
@@ -875,7 +1060,7 @@ svg circle.hover-dot.show { opacity: 1; }
       dot.setAttribute("cx", xScale(i));
       dot.setAttribute("cy", yScale(m.mrr));
       dot.classList.add("show");
-      showTip(e, m.month + "  ·  " + compactMoney(m.mrr));
+      showTip(e, fmtMonth(m.month) + "  ·  " + compactMoney(m.mrr));
     });
     rect.addEventListener("mouseleave", function () { dot.classList.remove("show"); hideTip(); });
 
@@ -887,15 +1072,18 @@ svg circle.hover-dot.show { opacity: 1; }
       '<div class="panel-figure"><span class="panel-figure-label">' + monthly.length + 'M growth</span>' +
       '<span class="panel-figure-value ' + (g >= 0 ? 'pos' : 'neg') + '">' +
       (g >= 0 ? '+' : '') + pct(g, 0) + '</span></div>';
-    document.getElementById("mrrPeriodNote").textContent = first.month + " → " + last.month;
-  })();
+    document.getElementById("mrrPeriodNote").textContent =
+      fmtMonthShort(first.month) + " → " + fmtMonthShort(last.month);
+  });
 
-  // Chart 2: Composition of monthly change
-  (function () {
+  // Chart 2: Net MRR change by month
+  registerChart(function () {
     var svg = document.getElementById("chartFlows");
     if (!monthly.length) return;
+    svg.innerHTML = "";
     var slice = monthly.slice(-12);
-    var W = 480, H = 260, padL = 56, padR = 14, padT = 16, padB = 32;
+    var size = chartSize(svg, 480, 260);
+    var W = size.w, H = size.h, padL = 56, padR = 14, padT = 16, padB = 32;
     setViewBox(svg, W, H);
     var flows = slice.map(function (m, i) {
       if (i === 0) return { up: 0, down: 0, month: m.month };
@@ -937,31 +1125,30 @@ svg circle.hover-dot.show { opacity: 1; }
       if (f.up > 0) {
         var yU = yScalePos(f.up);
         var r = el("rect", { x: x, y: yU, width: barW, height: mid - yU, fill: "var(--accent)", opacity: 0.82 });
-        r.addEventListener("mouseenter", function (e) { showTip(e, f.month + " · +" + compactMoney(f.up)); });
-        r.addEventListener("mousemove", function (e) { showTip(e, f.month + " · +" + compactMoney(f.up)); });
+        r.addEventListener("mouseenter", function (e) { showTip(e, fmtMonth(f.month) + " · +" + compactMoney(f.up)); });
+        r.addEventListener("mousemove", function (e) { showTip(e, fmtMonth(f.month) + " · +" + compactMoney(f.up)); });
         r.addEventListener("mouseleave", hideTip);
         svg.appendChild(r);
       }
       if (f.down < 0) {
         var h = yScaleNeg(-f.down) - mid;
         var r2 = el("rect", { x: x, y: mid, width: barW, height: h, fill: "var(--neg)", opacity: 0.75 });
-        r2.addEventListener("mouseenter", function (e) { showTip(e, f.month + " · " + compactMoney(f.down)); });
-        r2.addEventListener("mousemove", function (e) { showTip(e, f.month + " · " + compactMoney(f.down)); });
+        r2.addEventListener("mouseenter", function (e) { showTip(e, fmtMonth(f.month) + " · " + compactMoney(f.down)); });
+        r2.addEventListener("mousemove", function (e) { showTip(e, fmtMonth(f.month) + " · " + compactMoney(f.down)); });
         r2.addEventListener("mouseleave", hideTip);
         svg.appendChild(r2);
       }
-      if (i === 0 || i === flows.length - 1 || i === Math.floor(flows.length / 2)) {
-        var t3 = el("text", { x: x + barW / 2, y: H - padB + 16, "text-anchor": "middle" });
-        t3.textContent = f.month;
-        svg.appendChild(t3);
-      }
     });
-  })();
+    drawXLabels(svg, [0, Math.floor(flows.length / 2), flows.length - 1].map(function (i) {
+      return { x: padL + i * xStep + xStep / 2, label: fmtMonthShort(flows[i].month) };
+    }), padL, W, padR, H - padB + 16);
+  });
 
   // Chart 3: Retention (6M trailing average for executive readability)
-  (function () {
+  registerChart(function () {
     var svg = document.getElementById("chartRetention");
     if (!monthly.length) return;
+    svg.innerHTML = "";
     var raw = monthly.filter(function (m) { return m.nrr > 0 || m.grr > 0; });
     if (raw.length < 2) return;
     function trailing(arr, key, w) {
@@ -976,7 +1163,8 @@ svg circle.hover-dot.show { opacity: 1; }
     var nrrSmooth = trailing(raw, "nrr", 6);
     var grrSmooth = trailing(raw, "grr", 6);
     var slice = raw.map(function (m, i) { return { month: m.month, nrr: nrrSmooth[i], grr: grrSmooth[i] }; });
-    var W = 520, H = 200, padL = 50, padR = 12, padT = 14, padB = 24;
+    var size = chartSize(svg, 520, 200);
+    var W = size.w, H = size.h, padL = 50, padR = 12, padT = 14, padB = 24;
     setViewBox(svg, W, H);
     var ys = [];
     slice.forEach(function (m) { ys.push(m.nrr); ys.push(m.grr); });
@@ -992,11 +1180,9 @@ svg circle.hover-dot.show { opacity: 1; }
     var y100 = yScale(1.0);
     svg.appendChild(el("line", { x1: padL, y1: y100, x2: W - padR, y2: y100,
                                   stroke: "var(--faint)", "stroke-width": 1, "stroke-dasharray": "3 3" }));
-    [0, Math.floor(slice.length / 2), slice.length - 1].forEach(function (i) {
-      var t = el("text", { x: xScale(i), y: H - padB + 14, "text-anchor": "middle" });
-      t.textContent = slice[i].month;
-      svg.appendChild(t);
-    });
+    drawXLabels(svg, [0, Math.floor(slice.length / 2), slice.length - 1].map(function (i) {
+      return { x: xScale(i), label: fmtMonthShort(slice[i].month) };
+    }), padL, W, padR, H - padB + 14);
     var p = "M " + xScale(0) + " " + yScale(slice[0].grr);
     for (var i = 1; i < slice.length; i++) p += " L " + xScale(i) + " " + yScale(slice[i].grr);
     svg.appendChild(el("path", { d: p, class: "series-muted" }));
@@ -1017,7 +1203,7 @@ svg circle.hover-dot.show { opacity: 1; }
       dot.setAttribute("cx", xScale(i));
       dot.setAttribute("cy", yScale(m.nrr));
       dot.classList.add("show");
-      showTip(e, m.month + "  ·  NRR " + pct(m.nrr) + "  ·  GRR " + pct(m.grr));
+      showTip(e, fmtMonth(m.month) + "  ·  NRR " + pct(m.nrr) + "  ·  GRR " + pct(m.grr));
     });
     rect.addEventListener("mouseleave", function () { dot.classList.remove("show"); hideTip(); });
 
@@ -1029,15 +1215,17 @@ svg circle.hover-dot.show { opacity: 1; }
       '<span class="panel-figure-value ' + (last.nrr >= 1 ? 'pos' : 'neg') + '">' + pct(last.nrr) + '</span></div>' +
       '<div class="panel-figure"><span class="panel-figure-label">Gross retention · 6M avg</span>' +
       '<span class="panel-figure-value">' + pct(last.grr) + '</span></div>';
-  })();
+  });
 
   // Chart 4: Discount share
-  (function () {
+  registerChart(function () {
     var svg = document.getElementById("chartDiscount");
     if (!monthly.length) return;
+    svg.innerHTML = "";
     var slice = monthly.filter(function (m) { return m.discounted_share > 0; });
     if (slice.length < 2) return;
-    var W = 520, H = 200, padL = 50, padR = 12, padT = 14, padB = 24;
+    var size = chartSize(svg, 520, 200);
+    var W = size.w, H = size.h, padL = 50, padR = 12, padT = 14, padB = 24;
     setViewBox(svg, W, H);
     var ys = slice.map(function (m) { return m.discounted_share; });
     var yMin = Math.min.apply(null, ys);
@@ -1047,11 +1235,9 @@ svg circle.hover-dot.show { opacity: 1; }
     var xScale = function (i) { return padL + (W - padL - padR) * (i / (slice.length - 1)); };
     drawYAxis(svg, padL, W - padR, ticks.map(function (v) { return { v: v, y: yScale(v) }; }), function (v) { return pct(v, 0); });
     svg.appendChild(el("line", { x1: padL, y1: H - padB, x2: W - padR, y2: H - padB, class: "axis-line" }));
-    [0, Math.floor(slice.length / 2), slice.length - 1].forEach(function (i) {
-      var t = el("text", { x: xScale(i), y: H - padB + 14, "text-anchor": "middle" });
-      t.textContent = slice[i].month;
-      svg.appendChild(t);
-    });
+    drawXLabels(svg, [0, Math.floor(slice.length / 2), slice.length - 1].map(function (i) {
+      return { x: xScale(i), label: fmtMonthShort(slice[i].month) };
+    }), padL, W, padR, H - padB + 14);
     var area = "M " + xScale(0) + " " + yScale(ticks[0]);
     ys.forEach(function (v, i) { area += " L " + xScale(i) + " " + yScale(v); });
     area += " L " + xScale(slice.length - 1) + " " + yScale(ticks[0]) + " Z";
@@ -1072,7 +1258,7 @@ svg circle.hover-dot.show { opacity: 1; }
       dot.setAttribute("cx", xScale(i));
       dot.setAttribute("cy", yScale(slice[i].discounted_share));
       dot.classList.add("show");
-      showTip(e, slice[i].month + "  ·  " + pct(slice[i].discounted_share));
+      showTip(e, fmtMonth(slice[i].month) + "  ·  " + pct(slice[i].discounted_share));
     });
     rect.addEventListener("mouseleave", function () { dot.classList.remove("show"); hideTip(); });
 
@@ -1084,7 +1270,7 @@ svg circle.hover-dot.show { opacity: 1; }
       '<div class="panel-figure"><span class="panel-figure-label">36-month change</span>' +
       '<span class="panel-figure-value ' + (delta < 0 ? 'pos' : 'neg') + '">' +
       (delta >= 0 ? '+' : '') + (delta * 100).toFixed(1) + 'pp</span></div>';
-  })();
+  });
 
   // Risk ladder
   (function () {
@@ -1118,45 +1304,26 @@ svg circle.hover-dot.show { opacity: 1; }
     });
   })();
 
-  // Concentration
+  // Concentration — headline shares of the ranked book. A donut would dramatise
+  // a 4% arc into noise; numbers plus quiet bars read instantly and honestly.
   (function () {
     var sorted = accounts.slice().sort(function (a, b) { return (b.current_mrr || 0) - (a.current_mrr || 0); });
     var total = sorted.reduce(function (s, a) { return s + (a.current_mrr || 0); }, 0) || 1;
-    var top10 = sorted.slice(0, 10).reduce(function (s, a) { return s + (a.current_mrr || 0); }, 0);
-    var top50 = sorted.slice(0, 50).reduce(function (s, a) { return s + (a.current_mrr || 0); }, 0);
-    var top200 = sorted.slice(0, 200).reduce(function (s, a) { return s + (a.current_mrr || 0); }, 0);
-
-    var svg = document.getElementById("concentrationRing");
-    var cx = 80, cy = 80, r = 62;
-    var circ = 2 * Math.PI * r;
-    // Single ring telling one story: top-10 share. The deeper cuts live as text below.
-    svg.appendChild(el("circle", { cx: cx, cy: cy, r: r, fill: "none",
-                                    stroke: "var(--line)", "stroke-width": 10 }));
-    var dashTop10 = (top10 / total) * circ;
-    svg.appendChild(el("circle", {
-      cx: cx, cy: cy, r: r, fill: "none",
-      stroke: "var(--ink)", "stroke-width": 10,
-      "stroke-dasharray": dashTop10 + " " + (circ - dashTop10),
-      "stroke-dashoffset": (circ / 4).toFixed(2),
-      "stroke-linecap": "butt",
-      transform: "rotate(-90 " + cx + " " + cy + ")"
-    }));
-    var t1 = el("text", { x: cx, y: cy + 2, "text-anchor": "middle",
-                          "font-family": "var(--display-font)", "font-size": 26,
-                          fill: "var(--ink)", "font-weight": 500 });
-    t1.setAttribute("letter-spacing", "-0.02em");
-    t1.textContent = pct(top10 / total, 0);
-    svg.appendChild(t1);
-    var t2 = el("text", { x: cx, y: cy + 20, "text-anchor": "middle",
-                          "font-size": 9.5, fill: "var(--muted)",
-                          "letter-spacing": "0.04em" });
-    t2.textContent = "TOP 10";
-    svg.appendChild(t2);
-
-    document.getElementById("concentrationStats").innerHTML =
-      '<div class="concentration-stat"><div class="v">' + pct(top10 / total) + '</div><div class="l">top 10 accounts</div></div>' +
-      '<div class="concentration-stat"><div class="v">' + pct(top50 / total) + '</div><div class="l">top 50 accounts</div></div>' +
-      '<div class="concentration-stat"><div class="v">' + pct(top200 / total) + '</div><div class="l">top 200 accounts</div></div>';
+    function shareOfTop(n) {
+      return sorted.slice(0, n).reduce(function (s, a) { return s + (a.current_mrr || 0); }, 0) / total;
+    }
+    var cuts = [
+      { n: 10, share: shareOfTop(10) },
+      { n: 50, share: shareOfTop(50) },
+      { n: 200, share: shareOfTop(200) }
+    ];
+    document.getElementById("concentrationStats").innerHTML = cuts.map(function (c) {
+      return '<div class="conc-item">' +
+        '<div class="conc-head"><span class="v">' + pct(c.share) + '</span>' +
+        '<span class="l">top ' + c.n + ' of ' + nf0.format(sorted.length) + ' accounts</span></div>' +
+        '<div class="conc-bar"><div class="conc-bar-fill" style="width:' + (c.share * 100).toFixed(1) + '%"></div></div>' +
+      '</div>';
+    }).join("");
   })();
 
   // Priority queue
@@ -1194,12 +1361,12 @@ svg circle.hover-dot.show { opacity: 1; }
     function pillClass(tier) { return (tier || "").toLowerCase(); }
 
     function rowHtml(a) {
-      return '<tr data-cid="' + a.customer_id + '">' +
+      return '<tr data-cid="' + a.customer_id + '" tabindex="0">' +
         '<td class="id">' + a.customer_id + '</td>' +
         '<td class="optional">' + a.segment + '</td>' +
         '<td class="optional">' + a.region + '</td>' +
         '<td class="numeric">' + compactMoney(a.current_mrr) + '</td>' +
-        '<td class="numeric">' + nf0.format(a.churn_risk_score) + '</td>' +
+        '<td class="numeric optional">' + nf0.format(a.churn_risk_score) + '</td>' +
         '<td class="numeric">' + nf0.format(a.governance_priority_score) + '</td>' +
         '<td class="tier"><span class="pill ' + pillClass(a.governance_priority_tier) + '">' +
           (a.governance_priority_tier || "—") + '</span></td>' +
@@ -1240,13 +1407,23 @@ svg circle.hover-dot.show { opacity: 1; }
     }
 
     document.querySelectorAll(".queue thead th[data-sort]").forEach(function (th) {
-      th.addEventListener("click", function () {
+      th.tabIndex = 0;  // the focus style already exists; make it reachable
+      function applySort() {
         var key = th.dataset.sort;
         if (key === sortKey) sortDir = -sortDir;
         else { sortKey = key; sortDir = (["current_mrr","governance_priority_score","churn_risk_score"].indexOf(key) >= 0) ? -1 : 1; }
-        document.querySelectorAll(".queue thead th .caret").forEach(function (c) { c.textContent = "↕"; });
+        document.querySelectorAll(".queue thead th").forEach(function (h) {
+          h.removeAttribute("aria-sort");
+          var c = h.querySelector(".caret");
+          if (c) c.textContent = "↕";
+        });
+        th.setAttribute("aria-sort", sortDir > 0 ? "ascending" : "descending");
         th.querySelector(".caret").textContent = sortDir > 0 ? "↑" : "↓";
         render();
+      }
+      th.addEventListener("click", applySort);
+      th.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); applySort(); }
       });
     });
     document.querySelectorAll(".priority-filters .chip").forEach(function (chip) {
@@ -1273,16 +1450,24 @@ svg circle.hover-dot.show { opacity: 1; }
       if (!acc) return;
       tr.insertAdjacentHTML("afterend", drawerHtml(acc));
     });
+    body.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      var tr = e.target.closest("tr[data-cid]");
+      if (!tr) return;
+      e.preventDefault();
+      tr.click();
+    });
 
     render();
   })();
 
-  // Scenario chart + cards
-  (function () {
+  // Scenario chart — direct end-labels on wide screens (no legend round-trip);
+  // on narrow screens the labels would not fit, so the HTML legend takes over.
+  registerChart(function () {
     var svg = document.getElementById("chartScenarios");
-    var cardsNode = document.getElementById("scenarioCards");
     var legendNode = document.getElementById("scenarioLegend");
     if (!scenarioTraj.length) return;
+    svg.innerHTML = "";
 
     var byScenario = {};
     scenarioTraj.forEach(function (r) {
@@ -1301,7 +1486,9 @@ svg circle.hover-dot.show { opacity: 1; }
       return { stroke: "var(--muted)", width: 1.2, dash: "2 4" };
     }
 
-    var W = 1000, H = 260, padL = 64, padR = 110, padT = 16, padB = 28;
+    var size = chartSize(svg, 1000, 260);
+    var isNarrow = size.w < 620;
+    var W = size.w, H = size.h, padL = 56, padR = isNarrow ? 16 : 116, padT = 16, padB = 28;
     setViewBox(svg, W, H);
     var allY = [];
     Object.keys(byScenario).forEach(function (k) {
@@ -1318,13 +1505,12 @@ svg circle.hover-dot.show { opacity: 1; }
     var xScale = function (i) { return padL + (W - padL - padR) * (i / (months.length - 1)); };
     drawYAxis(svg, padL, W - padR, ticks.map(function (v) { return { v: v, y: yScale(v) }; }), compactMoney);
     svg.appendChild(el("line", { x1: padL, y1: H - padB, x2: W - padR, y2: H - padB, class: "axis-line" }));
-    [0, Math.floor(months.length / 2), months.length - 1].forEach(function (i) {
-      var t = el("text", { x: xScale(i), y: H - padB + 16, "text-anchor": "middle" });
-      t.textContent = months[i];
-      svg.appendChild(t);
-    });
+    drawXLabels(svg, [0, Math.floor(months.length / 2), months.length - 1].map(function (i) {
+      return { x: xScale(i), label: fmtMonthShort(months[i]) };
+    }), padL, W, padR, H - padB + 16);
 
     legendNode.innerHTML = "";
+    legendNode.style.display = isNarrow ? "" : "none";
     // Stagger end-labels so close-together lines don't collide on the right margin.
     var endpoints = Object.keys(byScenario).map(function (k) {
       var arr = byScenario[k];
@@ -1347,6 +1533,10 @@ svg circle.hover-dot.show { opacity: 1; }
       if (st.dash) attrs["stroke-dasharray"] = st.dash;
       svg.appendChild(el("path", attrs));
       var label = humanScenario(ep.k);
+      if (isNarrow) {
+        legendNode.innerHTML += '<div class="legend-item"><span class="legend-dash" style="background:' + st.stroke + ';"></span>' + label + '</div>';
+        return;
+      }
       if (Math.abs(ep.y - ep.realY) > 0.5) {
         svg.appendChild(el("line", {
           x1: xScale(arr.length - 1) + 2, y1: ep.realY,
@@ -1358,21 +1548,32 @@ svg circle.hover-dot.show { opacity: 1; }
                               "text-anchor": "start", fill: st.stroke, "font-size": 10.5 });
       lbl.textContent = label;
       svg.appendChild(lbl);
-      legendNode.innerHTML += '<div class="legend-item"><span class="legend-dash" style="background:' + st.stroke + ';"></span>' + label + '</div>';
     });
+  });
 
+  // Scenario cards
+  (function () {
+    var cardsNode = document.getElementById("scenarioCards");
     cardsNode.innerHTML = "";
+    var baseEnd = null;
+    scenarioCards.forEach(function (s) {
+      if ((s.scenario_type || "").toLowerCase().indexOf("base") >= 0) baseEnd = s.end_mrr;
+    });
     scenarioCards.forEach(function (s) {
       var isBase = (s.scenario_type || "").toLowerCase().indexOf("base") >= 0;
-      var deltaClass = s.mrr_vs_base > 0 ? "pos" : s.mrr_vs_base < 0 ? "neg" : "";
+      // Deltas under 0.1% of base are within model noise — claiming "+$255"
+      // on a $10M book is false precision, so say what it means: ≈ base.
+      var tiny = baseEnd && Math.abs(s.mrr_vs_base) / baseEnd < 0.001;
+      var deltaClass = tiny ? "" : s.mrr_vs_base > 0 ? "pos" : s.mrr_vs_base < 0 ? "neg" : "";
       var sign = s.mrr_vs_base > 0 ? "+" : "";
+      var deltaText = isBase ? "reference" : tiny ? "≈ base" : sign + compactMoney(s.mrr_vs_base);
       cardsNode.innerHTML +=
         '<div class="scenario-card' + (isBase ? ' base' : '') + '">' +
           '<div class="scenario-name">' + humanScenario(s.scenario) + '</div>' +
           '<div class="scenario-mrr">' + compactMoney(s.end_mrr) + '</div>' +
           '<div class="scenario-meta">' +
             '<span>ARR  ' + compactMoney(s.end_arr) + '</span>' +
-            '<span class="delta ' + deltaClass + '">' + (isBase ? 'reference' : sign + compactMoney(s.mrr_vs_base)) + '</span>' +
+            '<span class="delta ' + deltaClass + '">' + deltaText + '</span>' +
           '</div>' +
         '</div>';
     });
@@ -1382,8 +1583,8 @@ svg circle.hover-dot.show { opacity: 1; }
   document.getElementById("footValidation").textContent =
     meta.validation_overall || meta.validation_readiness_tier || "—";
   document.getElementById("footCoverage").textContent =
-    "Window: " + (coverage.month_start || "—") + " → " + (coverage.month_end || "—") +
-    " · " + ((meta.row_counts || {}).accounts || accounts.length) + " accounts";
+    "Window: " + fmtMonth(coverage.month_start) + " – " + fmtMonth(coverage.month_end) +
+    " · " + nf0.format((meta.row_counts || {}).accounts || accounts.length) + " accounts";
 
 })();
 </script>
