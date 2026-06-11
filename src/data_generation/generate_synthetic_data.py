@@ -4,7 +4,6 @@ import argparse
 from dataclasses import dataclass
 from pathlib import Path
 
-# (typing imports removed — use builtin generics)
 import numpy as np
 import pandas as pd
 
@@ -352,7 +351,9 @@ def simulate_subscription_and_metrics(
             if hidden_risk and month_index > 10:
                 usage -= 1.1 * (month_index - 10)
             if fragile_expansion_month is not None:
-                since_fragile = int((month.year - fragile_expansion_month.year) * 12 + (month.month - fragile_expansion_month.month))
+                since_fragile = int(
+                    (month.year - fragile_expansion_month.year) * 12 + (month.month - fragile_expansion_month.month)
+                )
                 if since_fragile >= 2:
                     usage -= 2.3 * since_fragile
 
@@ -397,10 +398,7 @@ def simulate_subscription_and_metrics(
                 contraction_prob += 0.012
 
             force_fragile_expansion = (
-                bool(fragile)
-                and fragile_expansion_month is None
-                and 4 <= month_index <= 16
-                and rng.random() < 0.065
+                bool(fragile) and fragile_expansion_month is None and 4 <= month_index <= 16 and rng.random() < 0.065
             )
 
             expansion_mrr = 0.0
@@ -476,7 +474,9 @@ def simulate_subscription_and_metrics(
                 churn_prob += 0.011
 
             if fragile_expansion_month is not None:
-                since_fragile = int((month.year - fragile_expansion_month.year) * 12 + (month.month - fragile_expansion_month.month))
+                since_fragile = int(
+                    (month.year - fragile_expansion_month.year) * 12 + (month.month - fragile_expansion_month.month)
+                )
                 if 3 <= since_fragile <= 9:
                     churn_prob += 0.03
 
@@ -629,12 +629,13 @@ def build_generation_note(
     monthly_metrics: pd.DataFrame,
     invoices: pd.DataFrame,
 ) -> None:
-    churned_customers = int(
-        monthly_metrics.loc[monthly_metrics["churn_flag"] == 1, "customer_id"].nunique()
-    )
+    churned_customers = int(monthly_metrics.loc[monthly_metrics["churn_flag"] == 1, "customer_id"].nunique())
     avg_discount = float(subscriptions["discount_pct"].mean())
     top10_share = float(
-        subscriptions.groupby("customer_id", as_index=False)["contracted_mrr"].max().nlargest(10, "contracted_mrr")["contracted_mrr"].sum()
+        subscriptions.groupby("customer_id", as_index=False)["contracted_mrr"]
+        .max()
+        .nlargest(10, "contracted_mrr")["contracted_mrr"]
+        .sum()
         / subscriptions.groupby("customer_id", as_index=False)["contracted_mrr"].max()["contracted_mrr"].sum()
     )
     paid_mix = invoices["payment_status"].value_counts(normalize=True).round(3).to_dict()

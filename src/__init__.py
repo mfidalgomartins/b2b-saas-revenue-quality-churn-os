@@ -1,1 +1,1 @@
-"""B2B SaaS Revenue Quality OS — analytical pipeline package."""
+"""B2B SaaS revenue-quality analytical pipeline."""

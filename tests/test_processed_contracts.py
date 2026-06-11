@@ -52,8 +52,8 @@ class TestProcessedContracts(unittest.TestCase):
         amrq = read_rows(PROCESSED / "account_monthly_revenue_quality.csv")
         monthly = read_rows(RAW / "monthly_account_metrics.csv")
 
-        amrq_keys = [f'{r["customer_id"]}|{r["month"][:10]}' for r in amrq]
-        mm_keys = [f'{r["customer_id"]}|{r["month"][:10]}' for r in monthly]
+        amrq_keys = [f"{r['customer_id']}|{r['month'][:10]}" for r in amrq]
+        mm_keys = [f"{r['customer_id']}|{r['month'][:10]}" for r in monthly]
         self.assertEqual(len(amrq_keys), len(set(amrq_keys)), "Duplicate account_monthly_revenue_quality keys")
         self.assertEqual(set(amrq_keys), set(mm_keys), "Monthly key universe mismatch between processed and raw")
 

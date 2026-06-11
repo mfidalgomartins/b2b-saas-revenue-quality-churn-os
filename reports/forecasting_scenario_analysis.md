@@ -11,34 +11,34 @@ Provide near-term, decision-useful commercial intelligence for MRR trajectory an
 
 ## Baseline MRR Forecast
 - Starting MRR: $9,523,590
-- Baseline forecast end-MRR (6m): $10,184,529
-- Baseline MRR growth over horizon: 6.9%
+- Baseline forecast end-MRR (6m): $10,647,476
+- Baseline MRR growth over horizon: 11.8%
 
 Baseline assumptions (monthly rates):
-- Expansion rate: 0.67%
+- Expansion rate: 0.68%
 - Contraction rate: 0.30%
-- Churn rate: 0.66%
-- Net-new rate (residual): 1.41%
+- Churn rate: 0.62%
+- Net-new rate (residual): 2.12%
 
 ## Risk-Adjusted Forecast
-- Risk-adjusted end-MRR: $9,825,796
-- Difference vs base case: $-358,733 MRR
+- Risk-adjusted end-MRR: $10,277,564
+- Difference vs base case: $-369,912 MRR
 
 Risk-adjusted assumptions incorporate:
 - Higher churn/contraction from high-risk concentration.
 - Lower expansion and net-new rates due to fragility drag.
 
 Risk-adjusted rates (monthly):
-- Expansion rate: 0.67%
+- Expansion rate: 0.68%
 - Contraction rate: 0.51%
-- Churn rate: 0.97%
-- Net-new rate: 1.33%
+- Churn rate: 0.93%
+- Net-new rate: 2.04%
 
 ## Scenario Comparison
-- Base case (reference): end-MRR $10,184,529
-- Downside / fragile-growth: end-MRR $9,598,067 (-586,462 vs base)
-- Improvement / healthy-growth: end-MRR $10,484,501 (299,972 vs base)
-- Discount-discipline improvement: end-MRR $10,200,634 (16,105 vs base)
+- Base case (reference): end-MRR $10,647,476
+- Downside / fragile-growth: end-MRR $9,923,687 (-723,790 vs base)
+- Improvement / healthy-growth: end-MRR $11,022,495 (375,019 vs base)
+- Discount-discipline improvement: end-MRR $10,647,732 (255 vs base)
 
 Interpretation:
 - The fragile-growth downside quantifies sensitivity to churn/contraction concentration.
@@ -46,12 +46,12 @@ Interpretation:
 - Discount-discipline improvement may slightly moderate short-term expansion but improves realized ARR quality.
 
 ## Business Impact Estimates
-- ARR at risk: $4,567,961
+- ARR at risk: $4,514,312
 - Expected contraction exposure (6m): $124,165 MRR
-- Concentration-adjusted downside (6m): $100,608 MRR
-- Stress test: top-20 high-risk full churn impact: $3,679,462 ARR
-- Stress test: top-20 high-risk 20% contraction impact: $735,892 ARR
-- Retention improvement opportunity (improvement vs base): $3,599,668 ARR
+- Concentration-adjusted downside (6m): $100,198 MRR
+- Stress test: top-20 high-risk full churn impact: $3,672,017 ARR
+- Stress test: top-20 high-risk 20% contraction impact: $734,403 ARR
+- Improvement scenario uplift vs base: $4,500,227 ARR
 
 ## Assumptions by Scenario
 - Base case: continuation of recent rate regime.

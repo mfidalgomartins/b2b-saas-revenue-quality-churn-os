@@ -4,6 +4,7 @@ Not part of the build. Run from repo root:
     python scripts/shoot_dashboard.py
 Writes PNGs to /tmp/dash/.
 """
+
 import pathlib
 
 from playwright.sync_api import sync_playwright

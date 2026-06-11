@@ -79,8 +79,8 @@ OFFICIAL_KPI_SPECS = (
         "key": "logo_churn",
         "label": "Logo Churn",
         "unit": "percentage",
-        "source": "reports/main_business_analysis_metrics.json:section2.logo_churn_rate",
-        "definition": "Churn events divided by active account rows.",
+        "source": "reports/main_business_analysis_metrics.json:section2.latest_logo_churn_rate",
+        "definition": "Latest-month churned logos divided by beginning-of-month active logos.",
     },
     {
         "key": "avg_discount",
@@ -111,4 +111,3 @@ OFFICIAL_KPI_SPECS = (
         "definition": "Count of accounts with Critical governance-priority tier.",
     },
 )
-

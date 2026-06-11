@@ -132,8 +132,10 @@ def build_trailing_12m_features(
 
     post_contraction = pd.DataFrame(post_contraction_rows)
 
-    out = grouped.merge(exp_discount, on="customer_id", how="left").merge(exp_delay, on="customer_id", how="left").merge(
-        post_contraction, on="customer_id", how="left"
+    out = (
+        grouped.merge(exp_discount, on="customer_id", how="left")
+        .merge(exp_delay, on="customer_id", how="left")
+        .merge(post_contraction, on="customer_id", how="left")
     )
 
     out["heavy_discount_frequency_12m"] = np.where(
@@ -236,9 +238,15 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
     score_df = (
         health.merge(latest_quality, on="customer_id", how="left")
         .merge(trailing, on="customer_id", how="left")
-        .merge(customers[["customer_id", "segment", "region", "industry", "acquisition_channel", "account_manager_id"]], on="customer_id", how="left")
         .merge(
-            manager_summary[["account_manager_id", "avg_discount", "retention_rate", "churn_rate", "risk_weighted_portfolio_score"]].rename(
+            customers[["customer_id", "segment", "region", "industry", "acquisition_channel", "account_manager_id"]],
+            on="customer_id",
+            how="left",
+        )
+        .merge(
+            manager_summary[
+                ["account_manager_id", "avg_discount", "retention_rate", "churn_rate", "risk_weighted_portfolio_score"]
+            ].rename(
                 columns={
                     "avg_discount": "manager_avg_discount",
                     "retention_rate": "manager_retention_rate",
@@ -251,10 +259,10 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         )
     )
 
-    # Parse existing forward risk flags for shortlist context.
-    risk_base = risk_base[["customer_id", "forward_risk_flags"]].copy()
-    risk_base["forward_risk_flags_list"] = risk_base["forward_risk_flags"].apply(json.loads)
-    score_df = score_df.merge(risk_base[["customer_id", "forward_risk_flags_list"]], on="customer_id", how="left")
+    # Parse existing operational risk flags for shortlist context.
+    risk_base = risk_base[["customer_id", "operational_risk_flags"]].copy()
+    risk_base["operational_risk_flags_list"] = risk_base["operational_risk_flags"].apply(json.loads)
+    score_df = score_df.merge(risk_base[["customer_id", "operational_risk_flags_list"]], on="customer_id", how="left")
 
     num_fill_cols = [
         "active_mrr",
@@ -286,7 +294,9 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         if col in score_df.columns:
             score_df[col] = score_df[col].fillna(0.0)
 
-    score_df["forward_risk_flags_list"] = score_df["forward_risk_flags_list"].apply(lambda x: x if isinstance(x, list) else [])
+    score_df["operational_risk_flags_list"] = score_df["operational_risk_flags_list"].apply(
+        lambda x: x if isinstance(x, list) else []
+    )
 
     manager_discount_p90 = float(score_df["manager_avg_discount"].quantile(0.90))
     score_df["manager_discount_outlier_flag"] = (score_df["manager_avg_discount"] >= manager_discount_p90).astype(int)
@@ -348,8 +358,7 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
 
     # Risk contributions for quality score (gap-to-best).
     revenue_quality_risk_contrib = {
-        key: REVENUE_QUALITY_WEIGHTS[key] * (1 - revenue_quality_components[key])
-        for key in revenue_quality_components
+        key: REVENUE_QUALITY_WEIGHTS[key] * (1 - revenue_quality_components[key]) for key in revenue_quality_components
     }
     for key, val in revenue_quality_risk_contrib.items():
         score_df[f"revenue_quality_risk_contrib_{key}"] = val
@@ -411,16 +420,19 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
 
     # No recent expansion: assign a neutral baseline adjusted by general health, not a hard penalty.
     no_expansion_mask = score_df["expansion_events_12"] == 0
-    neutral_expansion_score = 45 + 10 * (clip01((score_df["trailing_3m_usage_avg"] - 50) / 30) - 0.5) + 10 * (
-        0.5 - clip01(score_df["contraction_frequency"] / 0.35)
+    neutral_expansion_score = (
+        45
+        + 10 * (clip01((score_df["trailing_3m_usage_avg"] - 50) / 30) - 0.5)
+        + 10 * (0.5 - clip01(score_df["contraction_frequency"] / 0.35))
     )
-    score_df.loc[no_expansion_mask, "expansion_quality_score"] = np.clip(neutral_expansion_score[no_expansion_mask], 20, 60)
+    score_df.loc[no_expansion_mask, "expansion_quality_score"] = np.clip(
+        neutral_expansion_score[no_expansion_mask], 20, 60
+    )
 
     score_df["expansion_quality_risk_tier"] = score_df["expansion_quality_score"].apply(quality_to_risk_tier)
 
     expansion_risk_contrib = {
-        key: EXPANSION_QUALITY_WEIGHTS[key] * (1 - expansion_components[key])
-        for key in expansion_components
+        key: EXPANSION_QUALITY_WEIGHTS[key] * (1 - expansion_components[key]) for key in expansion_components
     }
     for key, val in expansion_risk_contrib.items():
         score_df[f"expansion_risk_contrib_{key}"] = val
@@ -454,7 +466,9 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         "discount_dependency": score_df["discount_dependency_score"] / 100.0,
         "expansion_fragility": (100.0 - score_df["expansion_quality_score"]) / 100.0,
         "exposure_concentration": exposure_component,
-        "renewal_urgency": clip01(score_df["renewal_due_flag"] * score_df["renewal_risk_proxy"] + score_df["renewal_due_flag"] * 0.15),
+        "renewal_urgency": clip01(
+            score_df["renewal_due_flag"] * score_df["renewal_risk_proxy"] + score_df["renewal_due_flag"] * 0.15
+        ),
     }
     score_df["governance_priority_score"] = score_from_components(governance_components, GOVERNANCE_WEIGHTS)
 
@@ -502,7 +516,15 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
     )
 
     # Component output for traceability.
-    component_cols = [c for c in score_df.columns if c.startswith("churn_contrib_") or c.startswith("revenue_quality_risk_contrib_") or c.startswith("discount_contrib_") or c.startswith("expansion_risk_contrib_") or c.startswith("governance_contrib_")]
+    component_cols = [
+        c
+        for c in score_df.columns
+        if c.startswith("churn_contrib_")
+        or c.startswith("revenue_quality_risk_contrib_")
+        or c.startswith("discount_contrib_")
+        or c.startswith("expansion_risk_contrib_")
+        or c.startswith("governance_contrib_")
+    ]
 
     components_table = score_df[["customer_id"] + component_cols].copy()
 
@@ -535,22 +557,26 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         "recommended_action",
         "recommended_action_reason",
     ]
-    score_output = score_df[score_columns].copy().sort_values(
-        ["governance_priority_score", "current_mrr"],
-        ascending=[False, False],
+    score_output = (
+        score_df[score_columns]
+        .copy()
+        .sort_values(
+            ["governance_priority_score", "current_mrr"],
+            ascending=[False, False],
+        )
     )
 
     # Highest-priority shortlist.
     shortlist = score_output[score_output["current_mrr"] > 0].head(30).copy()
     shortlist = shortlist.merge(
-        score_df[["customer_id", "forward_risk_flags_list"]],
+        score_df[["customer_id", "operational_risk_flags_list"]],
         on="customer_id",
         how="left",
     )
-    shortlist["forward_risk_flags"] = shortlist["forward_risk_flags_list"].apply(
+    shortlist["operational_risk_flags"] = shortlist["operational_risk_flags_list"].apply(
         lambda x: ", ".join(x) if isinstance(x, list) else ""
     )
-    shortlist = shortlist.drop(columns=["forward_risk_flags_list"])
+    shortlist = shortlist.drop(columns=["operational_risk_flags_list"])
 
     return score_output, components_table, shortlist
 
@@ -607,6 +633,12 @@ def write_scoring_docs(base_dir: Path) -> None:
 - Rule-based design favors explainability over maximum predictive fit.
 - Threshold choices (for example, heavy discount >=25%) are policy choices and should be recalibrated when business context changes.
 - A common 0-100 scale improves comparability but compresses nuance; component tables should always accompany score usage.
+
+## Temporal Integrity and Calibration
+- Production features use information available at the scoring month; current-month churn is excluded from churn history.
+- The forward-outcome backtest reconstructs historical scores with the production formulas, then measures churn in the next three months.
+- A parity test compares the latest reconstructed score with the production score to detect implementation drift.
+- Calibration on synthetic data demonstrates internal ranking behavior, not external predictive validity.
 
 """
     methodology_path.write_text(methodology)

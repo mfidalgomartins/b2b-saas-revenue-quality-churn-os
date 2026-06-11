@@ -5,11 +5,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-# (typing imports removed)
-
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run monthly refresh pipeline for the SaaS analytics OS.")
+    parser = argparse.ArgumentParser(description="Run the monthly revenue-quality refresh pipeline.")
     parser.add_argument("--base-dir", type=str, default=".")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--skip-data-generation", action="store_true")
@@ -28,14 +26,15 @@ def collect_artifacts(base_dir: Path) -> list[Path]:
     patterns = [
         "README.md",
         "docs/core/*.md",
-        "requirements.txt",
+        "pyproject.toml",
         "data/raw/*.csv",
         "data/processed/*.csv",
         "notebooks/*.ipynb",
         "reports/*.md",
         "reports/*.json",
         "reports/*.csv",
-        "outputs/charts/*.png",
+        "outputs/graphs/*.png",
+        "outputs/reports/*.pdf",
         "outputs/dashboard/*.html",
         "sql/*.md",
         "sql/staging/*.sql",

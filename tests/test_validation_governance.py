@@ -56,7 +56,9 @@ class TestValidationGovernance(unittest.TestCase):
             current_tier,
         ]
         result = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
-        self.assertEqual(result.returncode, 0, f"Validation gate should pass when using current tier. stderr={result.stderr}")
+        self.assertEqual(
+            result.returncode, 0, f"Validation gate should pass when using current tier. stderr={result.stderr}"
+        )
 
 
 if __name__ == "__main__":

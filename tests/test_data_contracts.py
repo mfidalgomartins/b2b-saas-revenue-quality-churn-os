@@ -42,8 +42,10 @@ class TestRawDataContracts(unittest.TestCase):
         self.assertEqual(len(subs), len({r["subscription_id"] for r in subs}), "Duplicate subscription_id detected")
         self.assertEqual(len(invoices), len({r["invoice_id"] for r in invoices}), "Duplicate invoice_id detected")
 
-        monthly_keys = [f'{r["customer_id"]}|{r["month"][:10]}' for r in monthly]
-        self.assertEqual(len(monthly_keys), len(set(monthly_keys)), "Duplicate monthly (customer_id, month) rows detected")
+        monthly_keys = [f"{r['customer_id']}|{r['month'][:10]}" for r in monthly]
+        self.assertEqual(
+            len(monthly_keys), len(set(monthly_keys)), "Duplicate monthly (customer_id, month) rows detected"
+        )
 
     def test_signup_not_after_first_subscription(self) -> None:
         customers = read_rows(RAW / "customers.csv")
@@ -87,7 +89,9 @@ class TestRawDataContracts(unittest.TestCase):
                 bad_rows.append((r["invoice_id"], billed, collection_loss, realized, "collection_loss_out_of_range"))
                 continue
             if effective_adjustment < 0 or effective_adjustment > billed + 1e-6:
-                bad_rows.append((r["invoice_id"], billed, effective_adjustment, realized, "effective_adjustment_out_of_range"))
+                bad_rows.append(
+                    (r["invoice_id"], billed, effective_adjustment, realized, "effective_adjustment_out_of_range")
+                )
                 continue
             implied_adjustment = round(discount + collection_loss, 2)
             if abs(effective_adjustment - implied_adjustment) > 0.02:

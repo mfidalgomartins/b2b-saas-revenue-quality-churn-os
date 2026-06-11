@@ -96,5 +96,5 @@
       "fail": 0
     }
   ],
-  "findings_csv_path": "/Users/miguelfidalgo/Documents/b2b-saas-revenue-quality-os/reports/formal_validation_findings.csv"
+  "findings_csv_path": "reports/formal_validation_findings.csv"
 }

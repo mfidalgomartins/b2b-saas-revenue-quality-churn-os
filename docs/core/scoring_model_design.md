@@ -48,3 +48,9 @@
 - Threshold choices (for example, heavy discount >=25%) are policy choices and should be recalibrated when business context changes.
 - A common 0-100 scale improves comparability but compresses nuance; component tables should always accompany score usage.
 
+## Temporal Integrity and Calibration
+- Production features use information available at the scoring month; current-month churn is excluded from churn history.
+- The forward-outcome backtest reconstructs historical scores with the production formulas, then measures churn in the next three months.
+- A parity test compares the latest reconstructed score with the production score to detect implementation drift.
+- Calibration on synthetic data demonstrates internal ranking behavior, not external predictive validity.
+

@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import UTC, datetime
+import sys
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.metrics import build_monthly_retention, build_retention_panel  # noqa: E402
 
 
 def load_tables(base_dir: Path) -> dict[str, pd.DataFrame]:
@@ -37,17 +41,18 @@ def _safe_weighted_avg(df: pd.DataFrame, value_col: str, weight_col: str) -> flo
 
 
 def build_base_panel(t: dict[str, pd.DataFrame]) -> pd.DataFrame:
-    customers = t["customers"][["customer_id", "region", "segment", "industry", "acquisition_channel", "account_manager_id"]]
-    subscriptions = t["subscriptions"][["customer_id", "subscription_start_date", "plan_id", "status", "discount_pct"]].rename(
-        columns={"subscription_start_date": "month"}
-    )
-    monthly = t["monthly_quality"].merge(
+    customers = t["customers"][
+        ["customer_id", "region", "segment", "industry", "acquisition_channel", "account_manager_id"]
+    ]
+    subscriptions = t["subscriptions"][
+        ["customer_id", "subscription_start_date", "plan_id", "status", "discount_pct"]
+    ].rename(columns={"subscription_start_date": "month"})
+    monthly = build_retention_panel(t["monthly_quality"], t["monthly_raw"])
+    monthly = monthly.merge(
         t["monthly_raw"][
             [
                 "customer_id",
                 "month",
-                "active_flag",
-                "churn_flag",
                 "renewal_due_flag",
                 "product_usage_score",
                 "nps_score",
@@ -56,9 +61,16 @@ def build_base_panel(t: dict[str, pd.DataFrame]) -> pd.DataFrame:
         ],
         on=["customer_id", "month"],
         how="left",
+        validate="one_to_one",
     )
-    monthly = monthly.merge(customers, on="customer_id", how="left")
-    monthly = monthly.merge(subscriptions, on=["customer_id", "month"], how="left", suffixes=("", "_sub"))
+    monthly = monthly.merge(customers, on="customer_id", how="left", validate="many_to_one")
+    monthly = monthly.merge(
+        subscriptions,
+        on=["customer_id", "month"],
+        how="left",
+        suffixes=("", "_sub"),
+        validate="one_to_one",
+    )
     return monthly
 
 
@@ -85,44 +97,27 @@ def compute_metrics(t: dict[str, pd.DataFrame]) -> dict[str, Any]:
     month_start = pd.Timestamp(months[0]) if len(months) else pd.NaT
     month_end = pd.Timestamp(months[-1]) if len(months) else pd.NaT
 
-    active = panel[panel["active_flag"] == 1].copy()
-    monthly_roll = active.groupby("month", as_index=False).agg(
-        mrr=("active_mrr", "sum"),
-        expansion_mrr=("expansion_mrr", "sum"),
-        contraction_mrr=("contraction_mrr", "sum"),
-    )
-    churn_mrr = (
-        active[active["churn_flag"] == 1]
-        .groupby("month", as_index=False)["active_mrr"]
-        .sum()
-        .rename(columns={"active_mrr": "churn_mrr"})
-    )
-    monthly_roll = monthly_roll.merge(churn_mrr, on="month", how="left").fillna({"churn_mrr": 0.0})
-    monthly_roll = monthly_roll.sort_values("month")
-
-    monthly_roll["grr"] = np.where(
-        monthly_roll["mrr"] > 0,
-        (monthly_roll["mrr"] - monthly_roll["contraction_mrr"] - monthly_roll["churn_mrr"]) / monthly_roll["mrr"],
-        np.nan,
-    )
-    monthly_roll["nrr"] = np.where(
-        monthly_roll["mrr"] > 0,
-        (monthly_roll["mrr"] + monthly_roll["expansion_mrr"] - monthly_roll["contraction_mrr"] - monthly_roll["churn_mrr"]) / monthly_roll["mrr"],
-        np.nan,
-    )
+    eligible = panel[panel["retention_eligible"]].copy()
+    monthly_roll = build_monthly_retention(t["monthly_quality"], t["monthly_raw"])
 
     if len(monthly_roll) > 0:
         mrr_start = float(monthly_roll.iloc[0]["mrr"])
         mrr_end = float(monthly_roll.iloc[-1]["mrr"])
-        monthly_growth_rate = float((mrr_end / mrr_start) ** (1 / max(len(monthly_roll) - 1, 1)) - 1) if mrr_start > 0 else 0.0
+        monthly_growth_rate = (
+            float((mrr_end / mrr_start) ** (1 / max(len(monthly_roll) - 1, 1)) - 1) if mrr_start > 0 else 0.0
+        )
         latest_grr = float(monthly_roll.iloc[-1]["grr"])
         latest_nrr = float(monthly_roll.iloc[-1]["nrr"])
+        latest_logo_churn_rate = float(monthly_roll.iloc[-1]["logo_churn_rate"])
+        latest_revenue_churn_rate = float(monthly_roll.iloc[-1]["revenue_churn_rate"])
     else:
         mrr_start = 0.0
         mrr_end = 0.0
         monthly_growth_rate = 0.0
         latest_grr = 0.0
         latest_nrr = 0.0
+        latest_logo_churn_rate = 0.0
+        latest_revenue_churn_rate = 0.0
 
     latest_month = panel["month"].max()
     first_month = panel["month"].min()
@@ -131,47 +126,64 @@ def compute_metrics(t: dict[str, pd.DataFrame]) -> dict[str, Any]:
     latest_active = latest[latest["active_mrr"] > 0].copy()
     first_active = first[first["active_mrr"] > 0].copy()
 
-    top10_share = float(latest_active.nlargest(10, "active_mrr")["active_mrr"].sum() / latest_active["active_mrr"].sum()) if len(latest_active) else 0.0
-    top50_share = float(latest_active.nlargest(50, "active_mrr")["active_mrr"].sum() / latest_active["active_mrr"].sum()) if len(latest_active) else 0.0
+    top10_share = (
+        float(latest_active.nlargest(10, "active_mrr")["active_mrr"].sum() / latest_active["active_mrr"].sum())
+        if len(latest_active)
+        else 0.0
+    )
+    top50_share = (
+        float(latest_active.nlargest(50, "active_mrr")["active_mrr"].sum() / latest_active["active_mrr"].sum())
+        if len(latest_active)
+        else 0.0
+    )
 
-    discounted_share_latest = float(
-        latest_active.loc[latest_active["discount_dependency_flag"] == 1, "active_mrr"].sum() / latest_active["active_mrr"].sum()
-    ) if len(latest_active) else 0.0
+    discounted_share_latest = (
+        float(
+            latest_active.loc[latest_active["discount_dependency_flag"] == 1, "active_mrr"].sum()
+            / latest_active["active_mrr"].sum()
+        )
+        if len(latest_active)
+        else 0.0
+    )
 
     scoring = t["scoring"].copy()
     scoring_active = scoring[scoring["current_mrr"] > 0].copy()
     high_risk_active = scoring_active[scoring_active["governance_priority_tier"].isin(["High", "Critical"])].copy()
-    at_risk_share_latest = float(high_risk_active["current_mrr"].sum() / scoring_active["current_mrr"].sum()) if len(scoring_active) else 0.0
+    at_risk_share_latest = (
+        float(high_risk_active["current_mrr"].sum() / scoring_active["current_mrr"].sum())
+        if len(scoring_active)
+        else 0.0
+    )
 
     segment_churn = (
-        active.groupby("segment", as_index=False)
-        .agg(active_rows=("customer_id", "count"), churn_events=("churn_flag", "sum"))
+        eligible.groupby("segment", as_index=False)
+        .agg(active_rows=("customer_id", "count"), churn_events=("eligible_churn_flag", "sum"))
         .assign(logo_churn_rate=lambda d: np.where(d["active_rows"] > 0, d["churn_events"] / d["active_rows"], 0.0))
         .sort_values("logo_churn_rate", ascending=False)
     )
 
     plan_churn = (
-        active.groupby("plan_id", as_index=False)
-        .agg(active_rows=("customer_id", "count"), churn_events=("churn_flag", "sum"))
+        eligible.groupby("plan_id", as_index=False)
+        .agg(active_rows=("customer_id", "count"), churn_events=("eligible_churn_flag", "sum"))
         .assign(logo_churn_rate=lambda d: np.where(d["active_rows"] > 0, d["churn_events"] / d["active_rows"], 0.0))
     )
 
     channel_churn = (
-        active.groupby("acquisition_channel", as_index=False)
-        .agg(active_rows=("customer_id", "count"), churn_events=("churn_flag", "sum"))
+        eligible.groupby("acquisition_channel", as_index=False)
+        .agg(active_rows=("customer_id", "count"), churn_events=("eligible_churn_flag", "sum"))
         .assign(logo_churn_rate=lambda d: np.where(d["active_rows"] > 0, d["churn_events"] / d["active_rows"], 0.0))
         .sort_values("logo_churn_rate", ascending=False)
     )
 
     renewal_churn = (
-        active.groupby("renewal_due_flag", as_index=False)
-        .agg(active_rows=("customer_id", "count"), churn_events=("churn_flag", "sum"))
+        eligible.groupby("renewal_due_flag", as_index=False)
+        .agg(active_rows=("customer_id", "count"), churn_events=("eligible_churn_flag", "sum"))
         .assign(logo_churn_rate=lambda d: np.where(d["active_rows"] > 0, d["churn_events"] / d["active_rows"], 0.0))
     )
 
-    logo_churn_rate = float(active["churn_flag"].sum() / len(active)) if len(active) else 0.0
-    churn_mrr_total = float(active.loc[active["churn_flag"] == 1, "active_mrr"].sum())
-    revenue_churn_rate = churn_mrr_total / float(active["active_mrr"].sum()) if len(active) and float(active["active_mrr"].sum()) > 0 else 0.0
+    overall_logo_churn_rate = float(eligible["eligible_churn_flag"].sum() / len(eligible)) if len(eligible) else 0.0
+    starting_mrr_total = float(panel["starting_mrr"].sum())
+    overall_revenue_churn_rate = float(panel["churn_mrr"].sum() / starting_mrr_total) if starting_mrr_total > 0 else 0.0
 
     fw = forward_churn_flag(panel, horizon_months=3)
     discount_panel = panel.merge(fw, on=["customer_id", "month"], how="left")
@@ -212,7 +224,9 @@ def compute_metrics(t: dict[str, pd.DataFrame]) -> dict[str, Any]:
     at_risk_mrr_total = float(at_risk_accounts["current_mrr"].sum())
     at_risk_count = int(at_risk_accounts["customer_id"].nunique())
     top20_at_risk_share = (
-        float(at_risk_accounts.nlargest(20, "current_mrr")["current_mrr"].sum() / at_risk_mrr_total) if at_risk_mrr_total > 0 else 0.0
+        float(at_risk_accounts.nlargest(20, "current_mrr")["current_mrr"].sum() / at_risk_mrr_total)
+        if at_risk_mrr_total > 0
+        else 0.0
     )
 
     manager_summary = t["manager_summary"].copy()
@@ -225,7 +239,6 @@ def compute_metrics(t: dict[str, pd.DataFrame]) -> dict[str, Any]:
 
     metrics: dict[str, Any] = {
         "meta": {
-            "generated_at_utc": datetime.now(UTC).isoformat(),
             "month_start": str(month_start.date()) if pd.notna(month_start) else "",
             "month_end": str(month_end.date()) if pd.notna(month_end) else "",
             "n_months": int(len(monthly_roll)),
@@ -247,10 +260,12 @@ def compute_metrics(t: dict[str, pd.DataFrame]) -> dict[str, Any]:
             "share_at_risk_mrr_latest": round(at_risk_share_latest, 6),
         },
         "section2": {
-            "logo_churn_rate": round(logo_churn_rate, 6),
-            "revenue_churn_rate": round(revenue_churn_rate, 6),
+            "overall_logo_churn_rate": round(overall_logo_churn_rate, 6),
+            "overall_revenue_churn_rate": round(overall_revenue_churn_rate, 6),
             "overall_grr": round(float(monthly_roll["grr"].mean()), 6) if len(monthly_roll) else 0.0,
             "overall_nrr": round(float(monthly_roll["nrr"].mean()), 6) if len(monthly_roll) else 0.0,
+            "latest_logo_churn_rate": round(latest_logo_churn_rate, 6),
+            "latest_revenue_churn_rate": round(latest_revenue_churn_rate, 6),
             "latest_grr": round(latest_grr, 6),
             "latest_nrr": round(latest_nrr, 6),
             "churn_segment": segment_churn.to_dict(orient="records"),
@@ -289,7 +304,9 @@ def build_memo(metrics: dict[str, Any], output_path: Path) -> None:
     exp_rows = s4["expansion_quality_summary"]
     exp_total = sum(float(r.get("expansion_mrr", 0)) for r in exp_rows)
     fragile_exp_share = (
-        sum(float(r.get("expansion_mrr", 0)) for r in exp_rows if r.get("expansion_quality") == "fragile") / exp_total if exp_total > 0 else 0.0
+        sum(float(r.get("expansion_mrr", 0)) for r in exp_rows if r.get("expansion_quality") == "fragile") / exp_total
+        if exp_total > 0
+        else 0.0
     )
 
     worst_band_name = worst_discount_band["discount_band"] if worst_discount_band else "n/a"
@@ -297,7 +314,7 @@ def build_memo(metrics: dict[str, Any], output_path: Path) -> None:
 
     memo = f"""# Main Business Analysis
 
-Window: {meta['month_start']} to {meta['month_end']} ({meta['n_months']} months).
+Window: {meta["month_start"]} to {meta["month_end"]} ({meta["n_months"]} months).
 All findings are associative; correlation does not establish causality.
 
 ## Definitions
@@ -306,36 +323,36 @@ All findings are associative; correlation does not establish causality.
 - ARR — 12 × MRR.
 - GRR — `(starting_mrr − contraction_mrr − churn_mrr) / starting_mrr`.
 - NRR — `(starting_mrr + expansion_mrr − contraction_mrr − churn_mrr) / starting_mrr`.
-- Logo churn rate — churn events / active account-month rows.
-- Revenue churn rate — churned MRR / active MRR.
+- Logo churn rate — churned logos / beginning-of-month active logos.
+- Revenue churn rate — churned MRR / beginning MRR.
 
 ## Revenue quality
 
-MRR ${s1['mrr_start']:,.0f} → ${s1['mrr_end']:,.0f}
-({s1['monthly_growth_rate']:.2%} implied monthly growth); ARR run-rate
-${s1['arr_start']:,.0f} → ${s1['arr_end']:,.0f}.
+MRR ${s1["mrr_start"]:,.0f} → ${s1["mrr_end"]:,.0f}
+({s1["monthly_growth_rate"]:.2%} implied monthly growth); ARR run-rate
+${s1["arr_start"]:,.0f} → ${s1["arr_end"]:,.0f}.
 
-Latest weighted realized price index {s1['w_realized_price_end']:.3f}, latest
-weighted discount {s1['w_discount_end']:.1%}. Discount-dependent MRR share
-{s1['share_discounted_mrr_latest']:.1%}; High/Critical-priority MRR share
-{s1['share_at_risk_mrr_latest']:.1%}.
+Latest weighted realized price index {s1["w_realized_price_end"]:.3f}, latest
+weighted discount {s1["w_discount_end"]:.1%}. Discount-dependent MRR share
+{s1["share_discounted_mrr_latest"]:.1%}; High/Critical-priority MRR share
+{s1["share_at_risk_mrr_latest"]:.1%}.
 
 Realized pricing mixes commercial discount and collection-loss effects and is
 not a clean pricing metric on its own.
 
 ## Retention and churn
 
-- Logo churn — {s2['logo_churn_rate']:.2%}
-- Revenue churn — {s2['revenue_churn_rate']:.2%}
-- Latest GRR / NRR — {s2['latest_grr']:.2%} / {s2['latest_nrr']:.2%}
+- Latest logo churn — {s2["latest_logo_churn_rate"]:.2%}
+- Latest revenue churn — {s2["latest_revenue_churn_rate"]:.2%}
+- Latest GRR / NRR — {s2["latest_grr"]:.2%} / {s2["latest_nrr"]:.2%}
 
 NRR near parity leaves little buffer if churn or contraction accelerates.
 
 ## Discount and fragility
 
 Worst discount band on forward 3-month churn: **{worst_band_name}** at
-{worst_band_rate:.2%}. Heavy discounting near renewal is the single
-strongest leading signal in the panel.
+{worst_band_rate:.2%}. This makes discount intensity near renewal a useful
+prioritisation signal in the simulated panel.
 
 ## Expansion quality
 
@@ -345,12 +362,12 @@ later in the simulated panel.
 
 ## Account-level concentration
 
-- High/Critical-priority accounts — {s5['at_risk_accounts_count']}
-- At-risk MRR — ${s5['at_risk_mrr_total']:,.0f}
-- Top-20 share inside at-risk MRR — {s5['top20_at_risk_share_within_at_risk']:.1%}
+- High/Critical-priority accounts — {s5["at_risk_accounts_count"]}
+- At-risk MRR — ${s5["at_risk_mrr_total"]:,.0f}
+- Top-20 share inside at-risk MRR — {s5["top20_at_risk_share_within_at_risk"]:.1%}
 
 A small group of accounts carries most of the downside. Account-level
-governance moves the dial more than portfolio-wide policy changes.
+prioritisation should complement portfolio-wide commercial policy.
 
 ## What leadership should watch
 

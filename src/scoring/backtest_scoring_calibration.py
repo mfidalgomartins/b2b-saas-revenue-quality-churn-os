@@ -1,4 +1,4 @@
-"""Out-of-sample calibration backtest for the production churn-risk score.
+"""Forward-outcome calibration backtest for the production churn-risk score.
 
 Reconstructs the churn-risk score at every historical month using the SAME
 component formulas and weights as `build_scoring_system.py`, then evaluates
@@ -8,6 +8,7 @@ The result is a like-for-like calibration check on the production model.
 Any drift between the production weights and what is evaluated here will
 fail the unit test in `tests/test_scoring_utils.py`.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -96,25 +97,25 @@ def build_trailing_panel(base_dir: Path) -> pd.DataFrame:
     panel["trailing_3m_discount_avg"] = trailing_mean("avg_discount_pct", 3)
 
     panel["contraction_event"] = (panel["contraction_mrr"].fillna(0) > 0).astype(int)
-    panel["contraction_frequency"] = (
-        grp["contraction_event"].apply(lambda s: s.rolling(window=12, min_periods=1).mean())
+    panel["contraction_frequency"] = grp["contraction_event"].apply(
+        lambda s: s.rolling(window=12, min_periods=1).mean()
     )
 
     panel["heavy_discount_event"] = (panel["avg_discount_pct"].fillna(0) >= 0.25).astype(int)
-    panel["heavy_discount_frequency_12m"] = (
-        grp["heavy_discount_event"].apply(lambda s: s.rolling(window=12, min_periods=1).mean())
+    panel["heavy_discount_frequency_12m"] = grp["heavy_discount_event"].apply(
+        lambda s: s.rolling(window=12, min_periods=1).mean()
     )
 
-    panel["seats_active_lag3"] = grp["seats_active"].shift(3)
+    panel["seats_active_lag1"] = grp["seats_active"].shift(1)
+    panel["seats_active_lag2"] = grp["seats_active"].shift(2)
+    panel["seats_active_window_start"] = panel["seats_active_lag2"].fillna(panel["seats_active_lag1"])
     panel["seat_growth_rate"] = np.where(
-        panel["seats_active_lag3"].fillna(0) > 0,
-        (panel["seats_active"] - panel["seats_active_lag3"]) / panel["seats_active_lag3"],
+        panel["seats_active_window_start"].fillna(0) > 0,
+        (panel["seats_active"] - panel["seats_active_window_start"]) / panel["seats_active_window_start"],
         0.0,
     )
 
-    panel["churn_history_flag"] = grp["churn_flag"].apply(
-        lambda s: s.shift(1).fillna(0).cummax()
-    ).astype(int)
+    panel["churn_history_flag"] = grp["churn_flag"].apply(lambda s: s.shift(1).fillna(0).cummax()).astype(int)
 
     panel["tenure_months"] = (
         (panel["month"].dt.year - panel["signup_date"].dt.year) * 12
@@ -123,10 +124,16 @@ def build_trailing_panel(base_dir: Path) -> pd.DataFrame:
     ).clip(lower=0)
 
     fill_zero = [
-        "trailing_3m_usage_avg", "trailing_3m_usage_trend", "trailing_3m_nps_avg",
-        "trailing_3m_support_ticket_avg", "trailing_3m_payment_delay_avg",
-        "trailing_3m_discount_avg", "contraction_frequency",
-        "heavy_discount_frequency_12m", "seat_growth_rate", "renewal_risk_proxy",
+        "trailing_3m_usage_avg",
+        "trailing_3m_usage_trend",
+        "trailing_3m_nps_avg",
+        "trailing_3m_support_ticket_avg",
+        "trailing_3m_payment_delay_avg",
+        "trailing_3m_discount_avg",
+        "contraction_frequency",
+        "heavy_discount_frequency_12m",
+        "seat_growth_rate",
+        "renewal_risk_proxy",
     ]
     for col in fill_zero:
         panel[col] = panel[col].fillna(0.0)
@@ -177,14 +184,10 @@ def build_calibration_tables(panel: pd.DataFrame) -> dict[str, pd.DataFrame]:
     )
     by_tier["risk_tier"] = pd.Categorical(by_tier["risk_tier"], categories=tier_order, ordered=True)
     by_tier = by_tier.sort_values("risk_tier").reset_index(drop=True)
-    by_tier["lift_vs_overall"] = np.where(
-        overall_rate > 0, by_tier["forward_churn_rate"] / overall_rate, 0.0
-    )
+    by_tier["lift_vs_overall"] = np.where(overall_rate > 0, by_tier["forward_churn_rate"] / overall_rate, 0.0)
 
     panel = panel.copy()
-    panel["score_decile"] = pd.qcut(
-        panel["backtest_churn_risk_score"], 10, labels=False, duplicates="drop"
-    )
+    panel["score_decile"] = pd.qcut(panel["backtest_churn_risk_score"], 10, labels=False, duplicates="drop")
     panel["score_decile"] = panel["score_decile"].astype(float) + 1
 
     by_decile = (
@@ -197,9 +200,7 @@ def build_calibration_tables(panel: pd.DataFrame) -> dict[str, pd.DataFrame]:
         .sort_values("score_decile")
         .reset_index(drop=True)
     )
-    by_decile["lift_vs_overall"] = np.where(
-        overall_rate > 0, by_decile["forward_churn_rate"] / overall_rate, 0.0
-    )
+    by_decile["lift_vs_overall"] = np.where(overall_rate > 0, by_decile["forward_churn_rate"] / overall_rate, 0.0)
 
     return {"by_tier": by_tier, "by_decile": by_decile}
 
@@ -213,15 +214,11 @@ def write_summary(
     summary_json_path.parent.mkdir(parents=True, exist_ok=True)
 
     overall_rate = float(panel["forward_churn_flag"].mean()) if len(panel) else 0.0
-    tier_rates = (
-        by_tier.set_index("risk_tier")["forward_churn_rate"].to_dict() if len(by_tier) else {}
-    )
+    tier_rates = by_tier.set_index("risk_tier")["forward_churn_rate"].to_dict() if len(by_tier) else {}
 
     monotonic_pairs = [("Low", "Moderate"), ("Moderate", "High"), ("High", "Critical")]
     monotonic_violations = [
-        f"{a}>{b}"
-        for a, b in monotonic_pairs
-        if a in tier_rates and b in tier_rates and tier_rates[a] > tier_rates[b]
+        f"{a}>{b}" for a, b in monotonic_pairs if a in tier_rates and b in tier_rates and tier_rates[a] > tier_rates[b]
     ]
 
     summary = {

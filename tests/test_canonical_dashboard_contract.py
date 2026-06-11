@@ -24,18 +24,14 @@ def _embedded_payload(html_path: Path) -> dict | None:
     try:
         return json.loads(match.group(1))
     except json.JSONDecodeError:
-        # File contains the dashboard-data script tag but with a non-JSON
-        # placeholder — e.g. the source-side template's __PAYLOAD_JSON__ sentinel.
+        # File contains the dashboard-data script tag but with the source-side
+        # __PAYLOAD_JSON__ sentinel rather than rendered JSON.
         return None
 
 
 class TestCanonicalDashboardContract(unittest.TestCase):
     def test_only_one_html_dashboard_embeds_payload(self) -> None:
-        html_files = [
-            path
-            for path in ROOT.rglob("*.html")
-            if ".git" not in path.parts and ".venv" not in path.parts
-        ]
+        html_files = [path for path in ROOT.rglob("*.html") if ".git" not in path.parts and ".venv" not in path.parts]
         dashboard_payload_files = [path for path in html_files if _embedded_payload(path) is not None]
 
         expected = ROOT / CANONICAL_DASHBOARD_PATH
@@ -88,14 +84,27 @@ class TestCanonicalDashboardContract(unittest.TestCase):
         # Embedded JSON payload must be present and parseable.
         self.assertIn('<script id="dashboard-data"', html)
 
-    def test_dashboard_has_decision_brief_and_no_dark_mode_toggle(self) -> None:
+    def test_dashboard_has_decision_brief_and_theme_toggle(self) -> None:
+        """The canonical dashboard ships the decision brief, the priority queue,
+        and a fully functional light/dark theme toggle.
+
+        Both palettes must be defined, the toggle must be present, and the user's
+        choice must persist across visits. The theme is also resolved before first
+        paint so there is never a flash of the wrong palette.
+        """
         html = (ROOT / CANONICAL_DASHBOARD_PATH).read_text(encoding="utf-8")
 
         self.assertIn('class="decision-brief"', html)
         self.assertIn('id="decisionBriefHeadline"', html)
         self.assertIn('id="priorityQueue"', html)
-        self.assertNotIn("dark mode", html.lower())
-        self.assertNotIn("data-theme", html)
+
+        # Theme control + both palettes.
+        self.assertIn('id="themeToggle"', html)
+        self.assertIn("data-theme", html)
+        self.assertIn('[data-theme="dark"]', html)
+        # Preference is persisted and the OS default is honoured.
+        self.assertIn("rq-theme", html)
+        self.assertIn("prefers-color-scheme", html)
 
 
 if __name__ == "__main__":

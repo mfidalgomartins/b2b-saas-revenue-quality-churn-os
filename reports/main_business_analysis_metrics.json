@@ -1,6 +1,5 @@
 {
   "meta": {
-    "generated_at_utc": "2026-05-26T20:34:49.838817+00:00",
     "month_start": "2023-03-01",
     "month_end": "2026-02-01",
     "n_months": 36
@@ -19,129 +18,131 @@
     "top10_share": 0.040178,
     "top50_share": 0.142807,
     "share_discounted_mrr_latest": 0.159462,
-    "share_at_risk_mrr_latest": 0.039971
+    "share_at_risk_mrr_latest": 0.039501
   },
   "section2": {
-    "logo_churn_rate": 0.008242,
-    "revenue_churn_rate": 0.005823,
-    "overall_grr": 0.991813,
-    "overall_nrr": 0.998451,
-    "latest_grr": 0.99175,
-    "latest_nrr": 0.998253,
+    "overall_logo_churn_rate": 0.00828,
+    "overall_revenue_churn_rate": 0.005676,
+    "overall_grr": 0.991905,
+    "overall_nrr": 0.998689,
+    "latest_logo_churn_rate": 0.007295,
+    "latest_revenue_churn_rate": 0.003914,
+    "latest_grr": 0.991727,
+    "latest_nrr": 0.998248,
     "churn_segment": [
       {
         "segment": "SMB",
-        "active_rows": 55838,
-        "churn_events": 628,
-        "logo_churn_rate": 0.011246821161216376
+        "active_rows": 54166,
+        "churn_events": 613,
+        "logo_churn_rate": 0.011317062363844478
       },
       {
         "segment": "Mid-Market",
-        "active_rows": 29387,
-        "churn_events": 150,
-        "logo_churn_rate": 0.005104297818763399
+        "active_rows": 28569,
+        "churn_events": 147,
+        "logo_churn_rate": 0.005145437362175785
       },
       {
         "segment": "Enterprise",
-        "active_rows": 14504,
-        "churn_events": 44,
-        "logo_churn_rate": 0.003033645890788748
+        "active_rows": 14127,
+        "churn_events": 42,
+        "logo_churn_rate": 0.0029730303673816097
       }
     ],
     "churn_plan": [
       {
         "plan_id": "P1",
-        "active_rows": 23209,
-        "churn_events": 336,
-        "logo_churn_rate": 0.014477142487827999
+        "active_rows": 22467,
+        "churn_events": 327,
+        "logo_churn_rate": 0.01455468019762318
       },
       {
         "plan_id": "P2",
-        "active_rows": 14649,
+        "active_rows": 14284,
         "churn_events": 62,
-        "logo_churn_rate": 0.004232370810294218
+        "logo_churn_rate": 0.0043405208625035005
       },
       {
         "plan_id": "P3",
-        "active_rows": 20118,
-        "churn_events": 256,
-        "logo_churn_rate": 0.01272492295456805
+        "active_rows": 19458,
+        "churn_events": 248,
+        "logo_churn_rate": 0.012745400349470654
       },
       {
         "plan_id": "P4",
-        "active_rows": 14020,
+        "active_rows": 13639,
         "churn_events": 47,
-        "logo_churn_rate": 0.003352353780313837
+        "logo_churn_rate": 0.00344600043991495
       },
       {
         "plan_id": "P5",
-        "active_rows": 7727,
+        "active_rows": 7528,
         "churn_events": 65,
-        "logo_churn_rate": 0.008412061602174194
+        "logo_churn_rate": 0.00863443145589798
       },
       {
         "plan_id": "P6",
-        "active_rows": 9063,
-        "churn_events": 16,
-        "logo_churn_rate": 0.0017654198389054397
+        "active_rows": 8829,
+        "churn_events": 15,
+        "logo_churn_rate": 0.0016989466530750934
       },
       {
         "plan_id": "P7",
-        "active_rows": 4387,
-        "churn_events": 26,
-        "logo_churn_rate": 0.0059266013220879874
+        "active_rows": 4276,
+        "churn_events": 24,
+        "logo_churn_rate": 0.005612722170252572
       },
       {
         "plan_id": "P8",
-        "active_rows": 6556,
+        "active_rows": 6381,
         "churn_events": 14,
-        "logo_churn_rate": 0.0021354484441732766
+        "logo_churn_rate": 0.002194013477511362
       }
     ],
     "churn_channel": [
       {
         "acquisition_channel": "self_serve",
-        "active_rows": 19934,
-        "churn_events": 215,
-        "logo_churn_rate": 0.010785592455101837
+        "active_rows": 19334,
+        "churn_events": 208,
+        "logo_churn_rate": 0.01075824971552705
       },
       {
         "acquisition_channel": "paid_media",
-        "active_rows": 17217,
-        "churn_events": 173,
-        "logo_churn_rate": 0.010048208166347215
+        "active_rows": 16721,
+        "churn_events": 171,
+        "logo_churn_rate": 0.010226661084863345
       },
       {
         "acquisition_channel": "content_marketing",
-        "active_rows": 15865,
-        "churn_events": 150,
-        "logo_churn_rate": 0.009454774661203908
+        "active_rows": 15388,
+        "churn_events": 148,
+        "logo_churn_rate": 0.009617884065505589
       },
       {
         "acquisition_channel": "partner_referral",
-        "active_rows": 18763,
-        "churn_events": 140,
-        "logo_churn_rate": 0.007461493364600544
+        "active_rows": 18249,
+        "churn_events": 138,
+        "logo_churn_rate": 0.007562058194969587
       },
       {
         "acquisition_channel": "outbound_sdr",
-        "active_rows": 17282,
-        "churn_events": 103,
-        "logo_churn_rate": 0.005959958338155306
+        "active_rows": 16788,
+        "churn_events": 98,
+        "logo_churn_rate": 0.0058375029783178465
       },
       {
         "acquisition_channel": "enterprise_sales",
-        "active_rows": 10668,
-        "churn_events": 41,
-        "logo_churn_rate": 0.0038432695913010874
+        "active_rows": 10382,
+        "churn_events": 39,
+        "logo_churn_rate": 0.0037565016374494315
       }
     ],
     "renewal_churn": [
       {
         "renewal_due_flag": 0,
-        "active_rows": 78822,
-        "churn_events": 552,
-        "logo_churn_rate": 0.007003120956078252
+        "active_rows": 75955,
+        "churn_events": 532,
+        "logo_churn_rate": 0.007004147192416562
       },
       {
         "renewal_due_flag": 1,
@@ -195,9 +196,9 @@
     ]
   },
   "section5": {
-    "at_risk_accounts_count": 80,
-    "at_risk_mrr_total": 380663.4,
-    "top20_at_risk_share_within_at_risk": 0.805493
+    "at_risk_accounts_count": 79,
+    "at_risk_mrr_total": 376192.67,
+    "top20_at_risk_share_within_at_risk": 0.813417
   },
   "section6": {
     "unusual_discount_managers": [

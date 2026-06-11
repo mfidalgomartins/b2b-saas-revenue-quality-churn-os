@@ -38,6 +38,8 @@ class TestArtifactContracts(unittest.TestCase):
             self.assertIn(key, analysis_payload, f"Missing analysis metrics section: {key}")
         self.assertIn("latest_grr", analysis_payload["section2"])
         self.assertIn("latest_nrr", analysis_payload["section2"])
+        self.assertIn("latest_logo_churn_rate", analysis_payload["section2"])
+        self.assertIn("latest_revenue_churn_rate", analysis_payload["section2"])
 
     def test_dashboard_payload_contract(self) -> None:
         html_path = OUTPUTS / "dashboard" / "revenue-quality-command-center.html"
@@ -64,7 +66,9 @@ class TestArtifactContracts(unittest.TestCase):
         self.assertTrue(required_keys.issubset(set(payload.keys())), f"Missing dashboard payload keys: {required_keys}")
         self.assertGreaterEqual(len(payload.get("chart_catalog", [])), 15, "Dashboard chart catalog is incomplete")
         self.assertGreater(len(payload.get("accounts", [])), 0, "Dashboard account payload is empty")
-        self.assertNotEqual(payload.get("meta", {}).get("validation_readiness_tier", ""), "", "Dashboard readiness tier is missing")
+        self.assertNotEqual(
+            payload.get("meta", {}).get("validation_readiness_tier", ""), "", "Dashboard readiness tier is missing"
+        )
 
 
 if __name__ == "__main__":

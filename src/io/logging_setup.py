@@ -1,4 +1,5 @@
 """Lightweight logging setup shared across pipeline scripts."""
+
 from __future__ import annotations
 
 import logging

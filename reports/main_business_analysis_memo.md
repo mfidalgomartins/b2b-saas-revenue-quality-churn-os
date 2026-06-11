@@ -9,8 +9,8 @@ All findings are associative; correlation does not establish causality.
 - ARR — 12 × MRR.
 - GRR — `(starting_mrr − contraction_mrr − churn_mrr) / starting_mrr`.
 - NRR — `(starting_mrr + expansion_mrr − contraction_mrr − churn_mrr) / starting_mrr`.
-- Logo churn rate — churn events / active account-month rows.
-- Revenue churn rate — churned MRR / active MRR.
+- Logo churn rate — churned logos / beginning-of-month active logos.
+- Revenue churn rate — churned MRR / beginning MRR.
 
 ## Revenue quality
 
@@ -28,17 +28,17 @@ not a clean pricing metric on its own.
 
 ## Retention and churn
 
-- Logo churn — 0.82%
-- Revenue churn — 0.58%
-- Latest GRR / NRR — 99.17% / 99.83%
+- Latest logo churn — 0.73%
+- Latest revenue churn — 0.39%
+- Latest GRR / NRR — 99.17% / 99.82%
 
 NRR near parity leaves little buffer if churn or contraction accelerates.
 
 ## Discount and fragility
 
 Worst discount band on forward 3-month churn: **>30%** at
-4.31%. Heavy discounting near renewal is the single
-strongest leading signal in the panel.
+4.31%. This makes discount intensity near renewal a useful
+prioritisation signal in the simulated panel.
 
 ## Expansion quality
 
@@ -48,12 +48,12 @@ later in the simulated panel.
 
 ## Account-level concentration
 
-- High/Critical-priority accounts — 80
-- At-risk MRR — $380,663
-- Top-20 share inside at-risk MRR — 80.5%
+- High/Critical-priority accounts — 79
+- At-risk MRR — $376,193
+- Top-20 share inside at-risk MRR — 81.3%
 
 A small group of accounts carries most of the downside. Account-level
-governance moves the dial more than portfolio-wide policy changes.
+prioritisation should complement portfolio-wide commercial policy.
 
 ## What leadership should watch
 

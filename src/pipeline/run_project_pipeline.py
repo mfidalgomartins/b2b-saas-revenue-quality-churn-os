@@ -1,11 +1,13 @@
 """End-to-end orchestrator for the revenue-quality analytics pipeline.
 
-Runs twelve stages (generate → profile → features → score → backtest →
-sensitivity → analyze → forecast → visualize → graphs → dashboard) and a
-two-step release gate (validate → gate).
+Runs eleven build stages (generate → profile → features → score → backtest →
+sensitivity → analyze → forecast → graphs → dashboard → report), validates the
+resulting artifacts, refreshes the dashboard with validation status, and
+enforces the release gate.
 Each stage is invoked as a subprocess so module-level state cannot leak between
 steps; timings are logged for monthly performance tracking.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -44,52 +46,99 @@ def build_steps(args: argparse.Namespace, py: str) -> list[tuple[str, list[str]]
     steps: list[tuple[str, list[str]]] = []
 
     if not args.skip_data_generation:
-        steps.append((
-            "generate",
-            [py, "src/data_generation/generate_synthetic_data.py",
-             "--output-dir", "data/raw",
-             "--note-path", "docs/core/synthetic_data.md",
-             "--seed", str(args.seed)],
-        ))
+        steps.append(
+            (
+                "generate",
+                [
+                    py,
+                    "src/data_generation/generate_synthetic_data.py",
+                    "--output-dir",
+                    "data/raw",
+                    "--note-path",
+                    "docs/core/synthetic_data.md",
+                    "--seed",
+                    str(args.seed),
+                ],
+            )
+        )
 
-    steps.extend([
-        ("profile", [py, "src/profiling/build_data_profile.py", "--base-dir", "."]),
-        ("features", [
-            py, "src/features/build_analytical_layer.py",
-            "--raw-dir", "data/raw",
-            "--processed-dir", "data/processed",
-            "--feature-dictionary-path", "docs/core/feature_dictionary.md",
-            "--notes-path", "docs/core/analytical_layer_notes.md",
-        ]),
-        ("scoring", [py, "src/scoring/build_scoring_system.py", "--base-dir", "."]),
-        ("backtest", [py, "src/scoring/backtest_scoring_calibration.py", "--base-dir", "."]),
-        ("sensitivity", [py, "src/scoring/run_weight_sensitivity.py", "--base-dir", "."]),
-        ("analysis", [py, "src/analysis/build_main_business_analysis.py", "--base-dir", "."]),
-        ("forecast", [py, "src/forecasting/build_forecasting_scenarios.py", "--base-dir", "."]),
-        ("visualization", [py, "src/visualization/build_leadership_charts.py", "--base-dir", "."]),
-        ("graphs", [py, "src/visualization/build_executive_graphs.py", "--base-dir", "."]),
-        ("dashboard", [
-            py, "src/dashboard/build_executive_dashboard.py",
-            "--base-dir", ".",
-            "--output", "outputs/dashboard/revenue-quality-command-center.html",
-        ]),
-    ])
+    steps.extend(
+        [
+            ("profile", [py, "src/profiling/build_data_profile.py", "--base-dir", "."]),
+            (
+                "features",
+                [
+                    py,
+                    "src/features/build_analytical_layer.py",
+                    "--raw-dir",
+                    "data/raw",
+                    "--processed-dir",
+                    "data/processed",
+                    "--feature-dictionary-path",
+                    "docs/core/feature_dictionary.md",
+                    "--notes-path",
+                    "docs/core/analytical_layer_notes.md",
+                ],
+            ),
+            ("scoring", [py, "src/scoring/build_scoring_system.py", "--base-dir", "."]),
+            ("backtest", [py, "src/scoring/backtest_scoring_calibration.py", "--base-dir", "."]),
+            ("sensitivity", [py, "src/scoring/run_weight_sensitivity.py", "--base-dir", "."]),
+            ("analysis", [py, "src/analysis/build_main_business_analysis.py", "--base-dir", "."]),
+            ("forecast", [py, "src/forecasting/build_forecasting_scenarios.py", "--base-dir", "."]),
+            ("graphs", [py, "src/visualization/build_executive_graphs.py", "--base-dir", "."]),
+            ("supplementary_graphs", [py, "src/visualization/build_supplementary_graphs.py", "--base-dir", "."]),
+            (
+                "dashboard",
+                [
+                    py,
+                    "src/dashboard/build_executive_dashboard.py",
+                    "--base-dir",
+                    ".",
+                    "--output",
+                    "outputs/dashboard/revenue-quality-command-center.html",
+                ],
+            ),
+        ]
+    )
 
     if not args.skip_validation:
         steps.append(("validate", [py, "src/validation/run_full_project_validation.py", "--base-dir", "."]))
-        steps.append(("dashboard_refresh", [
-            py, "src/dashboard/build_executive_dashboard.py",
-            "--base-dir", ".",
-            "--output", "outputs/dashboard/revenue-quality-command-center.html",
-        ]))
+        steps.append(
+            (
+                "dashboard_refresh",
+                [
+                    py,
+                    "src/dashboard/build_executive_dashboard.py",
+                    "--base-dir",
+                    ".",
+                    "--output",
+                    "outputs/dashboard/revenue-quality-command-center.html",
+                ],
+            )
+        )
         if not args.skip_gate:
-            steps.append(("gate", [
-                py, "src/validation/check_validation_gate.py",
-                "--summary-path", "reports/formal_validation_summary.json",
-                "--max-warn", "0", "--max-fail", "0",
-                "--max-high-severity", "0", "--max-critical-severity", "0",
-                "--min-readiness-tier", "technically valid",
-            ]))
+            steps.append(
+                (
+                    "gate",
+                    [
+                        py,
+                        "src/validation/check_validation_gate.py",
+                        "--summary-path",
+                        "reports/formal_validation_summary.json",
+                        "--max-warn",
+                        "0",
+                        "--max-fail",
+                        "0",
+                        "--max-high-severity",
+                        "0",
+                        "--max-critical-severity",
+                        "0",
+                        "--min-readiness-tier",
+                        "technically valid",
+                    ],
+                )
+            )
+    steps.append(("report", [py, "scripts/build_pdf_report.py"]))
     return steps
 
 

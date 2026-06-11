@@ -1,12 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "b2b-saas-revenue-quality-os"
 version = "0.1.0"
 description = "B2B SaaS revenue quality, churn early-warning, and scenario forecasting pipeline"
 readme = "README.md"
 requires-python = ">=3.12"
+dependencies = [
+  "matplotlib>=3.8,<4.0",
+  "numpy>=1.26,<3.0",
+  "pandas>=2.2,<3.0",
+  "pillow>=10.0,<13.0",
+  "reportlab>=4.0,<5.0",
+  "seaborn>=0.13,<1.0",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.6,<1.0"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["src*"]
 
 [tool.ruff]
 line-length = 120

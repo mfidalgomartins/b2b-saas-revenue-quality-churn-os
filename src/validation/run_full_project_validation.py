@@ -14,7 +14,12 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.scoring.scoring_utils import CHURN_WEIGHTS  # noqa: E402
+from src.metrics import build_monthly_retention  # noqa: E402
+from src.scoring.scoring_utils import (  # noqa: E402
+    CHURN_WEIGHTS,
+    quality_to_risk_tier,
+    risk_tier,
+)
 
 
 @dataclass
@@ -66,20 +71,6 @@ def add_finding(
     )
 
 
-def risk_tier(score: float) -> str:
-    if score < 30:
-        return "Low"
-    if score < 55:
-        return "Moderate"
-    if score < 75:
-        return "High"
-    return "Critical"
-
-
-def quality_to_risk_tier(score: float) -> str:
-    return risk_tier(100.0 - score)
-
-
 def load_tables(base_dir: Path) -> dict[str, pd.DataFrame]:
     raw = base_dir / "data" / "raw"
     processed = base_dir / "data" / "processed"
@@ -94,34 +85,38 @@ def load_tables(base_dir: Path) -> dict[str, pd.DataFrame]:
         "monthly_account_metrics": pd.read_csv(raw / "monthly_account_metrics.csv", parse_dates=["month"]),
         "invoices": pd.read_csv(raw / "invoices.csv", parse_dates=["invoice_month"]),
         "account_managers": pd.read_csv(raw / "account_managers.csv"),
-        "account_monthly_revenue_quality": pd.read_csv(processed / "account_monthly_revenue_quality.csv", parse_dates=["month"]),
+        "account_monthly_revenue_quality": pd.read_csv(
+            processed / "account_monthly_revenue_quality.csv", parse_dates=["month"]
+        ),
         "customer_health_features": pd.read_csv(processed / "customer_health_features.csv"),
-        "cohort_retention_summary": pd.read_csv(processed / "cohort_retention_summary.csv", parse_dates=["cohort_month"]),
+        "cohort_retention_summary": pd.read_csv(
+            processed / "cohort_retention_summary.csv", parse_dates=["cohort_month"]
+        ),
         "account_risk_base": pd.read_csv(processed / "account_risk_base.csv", parse_dates=["current_month"]),
         "account_manager_summary": pd.read_csv(processed / "account_manager_summary.csv"),
         "account_scoring_model_output": pd.read_csv(processed / "account_scoring_model_output.csv"),
         "account_scoring_components": pd.read_csv(processed / "account_scoring_components.csv"),
-        "scenario_mrr_trajectories": pd.read_csv(processed / "scenario_mrr_trajectories.csv", parse_dates=["forecast_month"]),
+        "scenario_mrr_trajectories": pd.read_csv(
+            processed / "scenario_mrr_trajectories.csv", parse_dates=["forecast_month"]
+        ),
         "mrr_scenario_table": pd.read_csv(processed / "mrr_scenario_table.csv"),
         "commercial_risk_impact_estimates": pd.read_csv(processed / "commercial_risk_impact_estimates.csv"),
-        "main_metrics_json": pd.DataFrame([json.loads((base_dir / "reports" / "main_business_analysis_metrics.json").read_text())]),
+        "main_metrics_json": pd.DataFrame(
+            [json.loads((base_dir / "reports" / "main_business_analysis_metrics.json").read_text())]
+        ),
     }
 
 
 def validate_dashboard_payload(base_dir: Path, tables: dict[str, pd.DataFrame]) -> dict[str, Any]:
     html_path = base_dir / "outputs" / "dashboard" / "revenue-quality-command-center.html"
-    html_files = [
-        path
-        for path in base_dir.rglob("*.html")
-        if ".git" not in path.parts and ".venv" not in path.parts
-    ]
+    html_files = [path for path in base_dir.rglob("*.html") if ".git" not in path.parts and ".venv" not in path.parts]
     payload_files = []
     for path in html_files:
         html_text = path.read_text(encoding="utf-8")
         m = re.search(r'<script id="dashboard-data" type="application/json">(.*?)</script>', html_text, flags=re.S)
         if not m:
             continue
-        # Source-side templates carry the script tag with a sentinel placeholder
+        # Source-side templates carry the script tag with a payload sentinel
         # (not real JSON). Only count files that actually embed parseable JSON.
         try:
             json.loads(m.group(1))
@@ -211,7 +206,9 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
     }
     max_null = max(key_null_checks.values())
     if max_null == 0:
-        add_finding(findings, "2", "Null Checks", "Raw/Processed", "PASS", "None", "All key fields have 0.00% null rate.")
+        add_finding(
+            findings, "2", "Null Checks", "Raw/Processed", "PASS", "None", "All key fields have 0.00% null rate."
+        )
     else:
         bad = [f"{k}={v:.2%}" for k, v in key_null_checks.items() if v > 0]
         add_finding(
@@ -240,7 +237,15 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
         "account_scoring_model_output.customer_id": int(scoring.duplicated("customer_id").sum()),
     }
     if sum(dup_checks.values()) == 0:
-        add_finding(findings, "3", "Duplicate Checks", "Raw/Processed", "PASS", "None", "No duplicate primary-key rows detected.")
+        add_finding(
+            findings,
+            "3",
+            "Duplicate Checks",
+            "Raw/Processed",
+            "PASS",
+            "None",
+            "No duplicate primary-key rows detected.",
+        )
     else:
         bad = [f"{k}={v}" for k, v in dup_checks.items() if v > 0]
         add_finding(
@@ -255,24 +260,46 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
         )
 
     # 4) Impossible values
-    effective_adjust_col = "effective_revenue_adjustment_amount" if "effective_revenue_adjustment_amount" in inv.columns else "discount_amount"
+    effective_adjust_col = (
+        "effective_revenue_adjustment_amount"
+        if "effective_revenue_adjustment_amount" in inv.columns
+        else "discount_amount"
+    )
     impossible = {
         "subscriptions.discount_pct_out_of_range": int(((subs["discount_pct"] < 0) | (subs["discount_pct"] > 1)).sum()),
-        "subscriptions.active_nonpositive_contracted_mrr": int(((subs["status"] == "active") & (subs["contracted_mrr"] <= 0)).sum()),
-        "subscriptions.realized_gt_120pct_contracted": int((subs["realized_mrr"] > (subs["contracted_mrr"] * 1.2)).sum()),
+        "subscriptions.active_nonpositive_contracted_mrr": int(
+            ((subs["status"] == "active") & (subs["contracted_mrr"] <= 0)).sum()
+        ),
+        "subscriptions.realized_gt_120pct_contracted": int(
+            (subs["realized_mrr"] > (subs["contracted_mrr"] * 1.2)).sum()
+        ),
         "monthly.flags_not_binary": int(
-            ((~mm["active_flag"].isin([0, 1])) | (~mm["churn_flag"].isin([0, 1])) | (~mm["renewal_due_flag"].isin([0, 1]))).sum()
+            (
+                (~mm["active_flag"].isin([0, 1]))
+                | (~mm["churn_flag"].isin([0, 1]))
+                | (~mm["renewal_due_flag"].isin([0, 1]))
+            ).sum()
         ),
         "monthly.usage_outside_0_100": int(((mm["product_usage_score"] < 0) | (mm["product_usage_score"] > 100)).sum()),
         "monthly.nps_outside_-100_100": int(((mm["nps_score"] < -100) | (mm["nps_score"] > 100)).sum()),
         "invoices.negative_discount_amount": int((inv["discount_amount"] < 0).sum()),
-        "invoices.negative_collection_loss_amount": int((inv.get("collection_loss_amount", pd.Series([0] * len(inv))) < 0).sum()),
+        "invoices.negative_collection_loss_amount": int(
+            (inv.get("collection_loss_amount", pd.Series([0] * len(inv))) < 0).sum()
+        ),
         "invoices.effective_adjustment_gt_billed": int((inv[effective_adjust_col] > inv["billed_mrr"] + 1e-6).sum()),
         "invoices.realized_gt_105pct_billed": int((inv["realized_mrr"] > (inv["billed_mrr"] * 1.05)).sum()),
         "amrq.realized_price_index_gt_1p2": int((amrq["realized_price_index"] > 1.2).sum()),
     }
     if sum(impossible.values()) == 0:
-        add_finding(findings, "4", "Impossible Values", "Raw/Processed", "PASS", "None", "No impossible-value violations in checked fields.")
+        add_finding(
+            findings,
+            "4",
+            "Impossible Values",
+            "Raw/Processed",
+            "PASS",
+            "None",
+            "No impossible-value violations in checked fields.",
+        )
     else:
         bad = [f"{k}={v}" for k, v in impossible.items() if v > 0]
         add_finding(
@@ -287,8 +314,10 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
         )
 
     # 5) Date logic consistency
-    first_sub = subs.groupby("customer_id", as_index=False)["subscription_start_date"].min().rename(
-        columns={"subscription_start_date": "first_subscription_start"}
+    first_sub = (
+        subs.groupby("customer_id", as_index=False)["subscription_start_date"]
+        .min()
+        .rename(columns={"subscription_start_date": "first_subscription_start"})
     )
     signup_cmp = customers.merge(first_sub, on="customer_id", how="left")
     signup_after_first_sub = int((signup_cmp["signup_date"] > signup_cmp["first_subscription_start"]).sum())
@@ -298,7 +327,12 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
     max_processed_month = amrq["month"].max()
     future_processed_rows = int((amrq["month"] > max_raw_month).sum())
 
-    if signup_after_first_sub == 0 and sub_end_before_start == 0 and future_processed_rows == 0 and max_raw_month == max_processed_month:
+    if (
+        signup_after_first_sub == 0
+        and sub_end_before_start == 0
+        and future_processed_rows == 0
+        and max_raw_month == max_processed_month
+    ):
         add_finding(
             findings,
             "5",
@@ -340,7 +374,10 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
 
     latest_month = amrq["month"].max()
     latest_mrr_from_monthly = (
-        amrq[amrq["month"] == latest_month].groupby("customer_id", as_index=False)["active_mrr"].sum().rename(columns={"active_mrr": "mrr_latest"})
+        amrq[amrq["month"] == latest_month]
+        .groupby("customer_id", as_index=False)["active_mrr"]
+        .sum()
+        .rename(columns={"active_mrr": "mrr_latest"})
     )
     latest_mrr_from_scores = scoring[["customer_id", "current_mrr"]]
     current_cmp = latest_mrr_from_monthly.merge(latest_mrr_from_scores, on="customer_id", how="outer").fillna(0.0)
@@ -413,40 +450,30 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
         )
 
     # 8) Retention denominator correctness
-    panel = amrq.merge(mm[["customer_id", "month", "active_flag", "churn_flag"]], on=["customer_id", "month"], how="left")
-    active = panel[panel["active_flag"] == 1].copy()
-    monthly_ret = active.groupby("month", as_index=False).agg(
-        mrr=("active_mrr", "sum"),
-        expansion_mrr=("expansion_mrr", "sum"),
-        contraction_mrr=("contraction_mrr", "sum"),
-    )
-    churn_mrr = (
-        active[active["churn_flag"] == 1].groupby("month", as_index=False)["active_mrr"].sum().rename(columns={"active_mrr": "churn_mrr"})
-    )
-    monthly_ret = monthly_ret.merge(churn_mrr, on="month", how="left").fillna({"churn_mrr": 0.0}).sort_values("month")
-
-    monthly_ret["grr"] = np.where(
-        monthly_ret["mrr"] > 0,
-        (monthly_ret["mrr"] - monthly_ret["contraction_mrr"] - monthly_ret["churn_mrr"]) / monthly_ret["mrr"],
-        np.nan,
-    )
-    monthly_ret["nrr"] = np.where(
-        monthly_ret["mrr"] > 0,
-        (monthly_ret["mrr"] + monthly_ret["expansion_mrr"] - monthly_ret["contraction_mrr"] - monthly_ret["churn_mrr"]) / monthly_ret["mrr"],
-        np.nan,
-    )
+    monthly_ret = build_monthly_retention(amrq, mm)
     invalid_grr = int(((monthly_ret["grr"] < 0) | (monthly_ret["grr"] > 1.05)).sum())
     invalid_nrr = int((monthly_ret["nrr"] < 0).sum())
 
     metrics_json = json.loads((base_dir / "reports" / "main_business_analysis_metrics.json").read_text())
     reported_latest_grr = float(metrics_json["section2"]["latest_grr"])
     reported_latest_nrr = float(metrics_json["section2"]["latest_nrr"])
+    reported_latest_logo_churn = float(metrics_json["section2"]["latest_logo_churn_rate"])
+    reported_latest_revenue_churn = float(metrics_json["section2"]["latest_revenue_churn_rate"])
 
     latest_calc = monthly_ret.iloc[-1]
     delta_grr = abs(float(latest_calc["grr"]) - reported_latest_grr)
     delta_nrr = abs(float(latest_calc["nrr"]) - reported_latest_nrr)
+    delta_logo_churn = abs(float(latest_calc["logo_churn_rate"]) - reported_latest_logo_churn)
+    delta_revenue_churn = abs(float(latest_calc["revenue_churn_rate"]) - reported_latest_revenue_churn)
 
-    if invalid_grr == 0 and invalid_nrr == 0 and delta_grr < 1e-6 and delta_nrr < 1e-6:
+    if (
+        invalid_grr == 0
+        and invalid_nrr == 0
+        and delta_grr < 1e-6
+        and delta_nrr < 1e-6
+        and delta_logo_churn < 1e-6
+        and delta_revenue_churn < 1e-6
+    ):
         add_finding(
             findings,
             "8",
@@ -454,7 +481,7 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
             "Metrics",
             "PASS",
             "None",
-            "GRR/NRR denominators are positive and reported latest values reconcile exactly to recomputation.",
+            "GRR/NRR and logo/revenue churn use beginning-base denominators, exclude new logos, and reconcile exactly to reported latest values.",
         )
     else:
         add_finding(
@@ -466,7 +493,9 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
             "Medium",
             (
                 f"invalid_grr_rows={invalid_grr}, invalid_nrr_rows={invalid_nrr}, "
-                f"latest_delta_grr={delta_grr:.6f}, latest_delta_nrr={delta_nrr:.6f}"
+                f"latest_delta_grr={delta_grr:.6f}, latest_delta_nrr={delta_nrr:.6f}, "
+                f"latest_delta_logo_churn={delta_logo_churn:.6f}, "
+                f"latest_delta_revenue_churn={delta_revenue_churn:.6f}"
             ),
             "Reconcile denominator definitions and update memo definitions if methodology differs.",
         )
@@ -474,7 +503,11 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
     # 9) Cohort logic correctness
     coh_check = coh.copy()
     coh_check["cohort_key"] = (
-        coh_check["cohort_month"].dt.strftime("%Y-%m") + "|" + coh_check["segment"].astype(str) + "|" + coh_check["region"].astype(str)
+        coh_check["cohort_month"].dt.strftime("%Y-%m")
+        + "|"
+        + coh_check["segment"].astype(str)
+        + "|"
+        + coh_check["region"].astype(str)
     )
     month0 = coh_check[coh_check["month_number"] == 0]
     month0_grr_ok = int((month0["gross_retention_rate"].sub(1).abs() < 1e-9).sum())
@@ -525,7 +558,9 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
     ]
     out_of_range = {c: int(((scoring[c] < 0) | (scoring[c] > 100)).sum()) for c in score_cols}
     if sum(out_of_range.values()) == 0:
-        add_finding(findings, "10", "Score Range Correctness", "Scoring", "PASS", "None", "All scoring outputs are in [0,100].")
+        add_finding(
+            findings, "10", "Score Range Correctness", "Scoring", "PASS", "None", "All scoring outputs are in [0,100]."
+        )
     else:
         bad = [f"{k}={v}" for k, v in out_of_range.items() if v > 0]
         add_finding(
@@ -541,14 +576,52 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
 
     # 11) Risk tier assignment consistency
     tier_mismatch = {
-        "churn_risk_tier": int((scoring.apply(lambda r: risk_tier(float(r["churn_risk_score"])) != r["churn_risk_tier"], axis=1)).sum()),
-        "discount_dependency_tier": int((scoring.apply(lambda r: risk_tier(float(r["discount_dependency_score"])) != r["discount_dependency_tier"], axis=1)).sum()),
-        "governance_priority_tier": int((scoring.apply(lambda r: risk_tier(float(r["governance_priority_score"])) != r["governance_priority_tier"], axis=1)).sum()),
-        "revenue_quality_risk_tier": int((scoring.apply(lambda r: quality_to_risk_tier(float(r["revenue_quality_score"])) != r["revenue_quality_risk_tier"], axis=1)).sum()),
-        "expansion_quality_risk_tier": int((scoring.apply(lambda r: quality_to_risk_tier(float(r["expansion_quality_score"])) != r["expansion_quality_risk_tier"], axis=1)).sum()),
+        "churn_risk_tier": int(
+            (scoring.apply(lambda r: risk_tier(float(r["churn_risk_score"])) != r["churn_risk_tier"], axis=1)).sum()
+        ),
+        "discount_dependency_tier": int(
+            (
+                scoring.apply(
+                    lambda r: risk_tier(float(r["discount_dependency_score"])) != r["discount_dependency_tier"], axis=1
+                )
+            ).sum()
+        ),
+        "governance_priority_tier": int(
+            (
+                scoring.apply(
+                    lambda r: risk_tier(float(r["governance_priority_score"])) != r["governance_priority_tier"], axis=1
+                )
+            ).sum()
+        ),
+        "revenue_quality_risk_tier": int(
+            (
+                scoring.apply(
+                    lambda r: quality_to_risk_tier(float(r["revenue_quality_score"])) != r["revenue_quality_risk_tier"],
+                    axis=1,
+                )
+            ).sum()
+        ),
+        "expansion_quality_risk_tier": int(
+            (
+                scoring.apply(
+                    lambda r: (
+                        quality_to_risk_tier(float(r["expansion_quality_score"])) != r["expansion_quality_risk_tier"]
+                    ),
+                    axis=1,
+                )
+            ).sum()
+        ),
     }
     if sum(tier_mismatch.values()) == 0:
-        add_finding(findings, "11", "Risk Tier Assignment Consistency", "Scoring", "PASS", "None", "All tier labels match threshold rules.")
+        add_finding(
+            findings,
+            "11",
+            "Risk Tier Assignment Consistency",
+            "Scoring",
+            "PASS",
+            "None",
+            "All tier labels match threshold rules.",
+        )
     else:
         bad = [f"{k}={v}" for k, v in tier_mismatch.items() if v > 0]
         add_finding(
@@ -563,10 +636,17 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
         )
 
     # 12) Scenario calculation integrity
-    row_calc = scen["start_mrr"] + scen["expansion_mrr"] - scen["contraction_mrr"] - scen["churn_mrr"] + scen["net_new_mrr"]
+    row_calc = (
+        scen["start_mrr"] + scen["expansion_mrr"] - scen["contraction_mrr"] - scen["churn_mrr"] + scen["net_new_mrr"]
+    )
     row_mismatch = int((row_calc.sub(scen["forecast_mrr"]).abs() > 0.05).sum())
     arr_mismatch = int((scen["forecast_arr"].sub(scen["forecast_mrr"] * 12).abs() > 0.1).sum())
-    realized_arr_mismatch = int((scen["realized_arr_estimate"].sub(scen["forecast_arr"] * scen["realized_price_index_assumption"]).abs() > 0.1).sum())
+    realized_arr_mismatch = int(
+        (
+            scen["realized_arr_estimate"].sub(scen["forecast_arr"] * scen["realized_price_index_assumption"]).abs()
+            > 0.1
+        ).sum()
+    )
 
     summary_mismatch = 0
     for _, row in scen_sum.iterrows():
@@ -673,10 +753,18 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
         analysis_payload = json.loads(analysis_metrics_path.read_text(encoding="utf-8"))
         meta = analysis_payload.get("meta", {})
         section2 = analysis_payload.get("section2", {})
-        analysis_ok = bool(meta.get("generated_at_utc")) and ("latest_grr" in section2) and ("latest_nrr" in section2)
+        analysis_ok = (
+            bool(meta.get("month_end"))
+            and ("latest_grr" in section2)
+            and ("latest_nrr" in section2)
+            and ("latest_logo_churn_rate" in section2)
+            and ("latest_revenue_churn_rate" in section2)
+        )
         analysis_detail = (
-            f"generated_at_utc={meta.get('generated_at_utc', '')[:19]}, "
-            f"latest_grr_present={'latest_grr' in section2}, latest_nrr_present={'latest_nrr' in section2}"
+            f"month_end={meta.get('month_end', '')}, "
+            f"latest_grr_present={'latest_grr' in section2}, latest_nrr_present={'latest_nrr' in section2}, "
+            f"latest_logo_churn_present={'latest_logo_churn_rate' in section2}, "
+            f"latest_revenue_churn_present={'latest_revenue_churn_rate' in section2}"
         )
 
     profiling_detail = "profiling_artifacts_present" if profiling_ok else "profiling_artifacts_missing"
@@ -713,12 +801,26 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
     # 14) Leakage risk
     latest_raw_month = mm["month"].max()
     latest_quality_month = amrq["month"].max()
-    # Proxy: check whether scoring correlates materially with same-month churn (can indicate concurrent leakage if misused as prediction).
+    # Direct guard: the historical-churn feature must exclude the current
+    # snapshot month's churn event.
     same_month_churn = mm[mm["month"] == latest_raw_month][["customer_id", "churn_flag"]]
-    leak_probe = scoring[["customer_id", "churn_risk_score"]].merge(same_month_churn, on="customer_id", how="left").fillna({"churn_flag": 0})
+    history_probe = chf[["customer_id", "churn_history_flag"]].merge(
+        same_month_churn,
+        on="customer_id",
+        how="left",
+        validate="one_to_one",
+    )
+    concurrent_history_leaks = int(
+        ((history_probe["churn_flag"] == 1) & (history_probe["churn_history_flag"] == 1)).sum()
+    )
+    leak_probe = (
+        scoring[["customer_id", "churn_risk_score"]]
+        .merge(same_month_churn, on="customer_id", how="left")
+        .fillna({"churn_flag": 0})
+    )
     corr_same_month = float(leak_probe["churn_risk_score"].corr(leak_probe["churn_flag"]))
 
-    if latest_quality_month <= latest_raw_month and abs(corr_same_month) < 0.2:
+    if latest_quality_month <= latest_raw_month and concurrent_history_leaks == 0 and abs(corr_same_month) < 0.2:
         add_finding(
             findings,
             "14",
@@ -728,7 +830,7 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
             "None",
             (
                 f"No future-date leakage detected (latest_processed_month={latest_quality_month.date()}, latest_raw_month={latest_raw_month.date()}); "
-                f"same-month churn correlation probe={corr_same_month:.3f}."
+                f"concurrent_history_leaks={concurrent_history_leaks}; same-month churn correlation probe={corr_same_month:.3f}."
             ),
         )
     else:
@@ -741,7 +843,7 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
             "High",
             (
                 f"Potential leakage signal: latest_processed_month={latest_quality_month.date()}, latest_raw_month={latest_raw_month.date()}, "
-                f"same_month_corr={corr_same_month:.3f}"
+                f"concurrent_history_leaks={concurrent_history_leaks}, same_month_corr={corr_same_month:.3f}"
             ),
             "Apply strict temporal feature cutoffs and rerun feature/scoring pipeline.",
         )
@@ -801,6 +903,7 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
     metric_detail = "analysis_or_dashboard_payload_missing"
     if analysis_payload and dashboard_payload:
         section1 = analysis_payload.get("section1", {})
+        section2 = analysis_payload.get("section2", {})
         section5 = analysis_payload.get("section5", {})
         db_kpis = dashboard_payload.get("official_kpis", {})
 
@@ -814,18 +917,23 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
         delta_mrr_report_vs_dashboard = abs(float(db_kpis.get("current_mrr", 0.0)) - mrr_end_reported)
         delta_arr_report_vs_dashboard = abs(float(db_kpis.get("arr", 0.0)) - arr_reported)
         delta_risk_report_vs_dashboard = abs(float(db_kpis.get("revenue_at_risk_mrr", 0.0)) - at_risk_reported)
+        delta_logo_churn_report_vs_dashboard = abs(
+            float(db_kpis.get("logo_churn", 0.0)) - float(section2.get("latest_logo_churn_rate", 0.0))
+        )
 
         metric_consistency_ok = (
             delta_mrr_processed_vs_report <= 2.0
             and delta_mrr_report_vs_dashboard <= 2.0
             and delta_arr_report_vs_dashboard <= 24.0
             and delta_risk_report_vs_dashboard <= 2.0
+            and delta_logo_churn_report_vs_dashboard <= 1e-6
         )
         metric_detail = (
             f"delta_mrr_processed_vs_report={delta_mrr_processed_vs_report:.2f}, "
             f"delta_mrr_report_vs_dashboard={delta_mrr_report_vs_dashboard:.2f}, "
             f"delta_arr_report_vs_dashboard={delta_arr_report_vs_dashboard:.2f}, "
-            f"delta_risk_report_vs_dashboard={delta_risk_report_vs_dashboard:.2f}"
+            f"delta_risk_report_vs_dashboard={delta_risk_report_vs_dashboard:.2f}, "
+            f"delta_logo_churn_report_vs_dashboard={delta_logo_churn_report_vs_dashboard:.6f}"
         )
 
     if metric_consistency_ok:
@@ -858,11 +966,7 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
     churn_iqr = float(scoring["churn_risk_score"].quantile(0.75) - scoring["churn_risk_score"].quantile(0.25))
     low_tier_share = float((scoring["churn_risk_tier"] == "Low").mean())
 
-    stability_fail = (
-        nonzero_churn_tiers < 2
-        or nonzero_gov_tiers < 2
-        or churn_iqr < 1.0
-    )
+    stability_fail = nonzero_churn_tiers < 2 or nonzero_gov_tiers < 2 or churn_iqr < 1.0
     stability_warn = low_tier_share > 0.97
 
     stability_detail = (
@@ -924,9 +1028,7 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
 
     delta_arr_at_risk = abs(arr_at_risk_expected - arr_at_risk_reported)
     ratio_ok = not np.isnan(stress_ratio) and abs(stress_ratio - 5.0) <= 0.02
-    finance_detail = (
-        f"delta_arr_at_risk={delta_arr_at_risk:.2f}, stress_ratio={stress_ratio:.4f}, scenario_order_ok={scenario_order_ok}"
-    )
+    finance_detail = f"delta_arr_at_risk={delta_arr_at_risk:.2f}, stress_ratio={stress_ratio:.4f}, scenario_order_ok={scenario_order_ok}"
 
     if delta_arr_at_risk <= 24.0 and ratio_ok and scenario_order_ok:
         add_finding(
@@ -1036,9 +1138,7 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
         ordered = [t for t in ["Low", "Moderate", "High", "Critical"] if t in eligible.index]
         rates = [(t, float(eligible.loc[t, "forward_churn_rate"])) for t in ordered]
         violations = [
-            f"{a[0]}({a[1]:.1%})>{b[0]}({b[1]:.1%})"
-            for a, b in zip(rates, rates[1:], strict=False)
-            if a[1] > b[1]
+            f"{a[0]}({a[1]:.1%})>{b[0]}({b[1]:.1%})" for a, b in zip(rates, rates[1:], strict=False) if a[1] > b[1]
         ]
         weights_match = backtest_summary.get("weights") == dict(CHURN_WEIGHTS)
         evidence = (
@@ -1047,27 +1147,44 @@ def run_validation(base_dir: Path) -> tuple[list[Finding], dict[str, Any]]:
         )
         if not weights_match:
             add_finding(
-                findings, "21", "Backtest Calibration",
-                "Release Governance", "FAIL", "Critical",
+                findings,
+                "21",
+                "Backtest Calibration",
+                "Release Governance",
+                "FAIL",
+                "Critical",
                 evidence + ". Weights drift detected between backtest and production scorer.",
                 "Re-run backtest after confirming scoring_utils.CHURN_WEIGHTS is the single source.",
             )
         elif violations:
             add_finding(
-                findings, "21", "Backtest Calibration",
-                "Release Governance", "FAIL", "High",
+                findings,
+                "21",
+                "Backtest Calibration",
+                "Release Governance",
+                "FAIL",
+                "High",
                 f"Monotonicity violated: {', '.join(violations)}. {evidence}",
                 "Inspect component weights/thresholds; the model is not separating tiers reliably.",
             )
         else:
             add_finding(
-                findings, "21", "Backtest Calibration",
-                "Release Governance", "PASS", "None", evidence,
+                findings,
+                "21",
+                "Backtest Calibration",
+                "Release Governance",
+                "PASS",
+                "None",
+                evidence,
             )
     else:
         add_finding(
-            findings, "21", "Backtest Calibration",
-            "Release Governance", "WARN", "Medium",
+            findings,
+            "21",
+            "Backtest Calibration",
+            "Release Governance",
+            "WARN",
+            "Medium",
             "Backtest artifacts not found (reports/scoring_backtest_summary.json).",
             "Run src/scoring/backtest_scoring_calibration.py to generate the calibration report.",
         )
@@ -1222,13 +1339,15 @@ def write_validation_outputs(base_dir: Path, findings: list[Finding], summary: d
         "readiness": readiness,
         "readiness_scale": list(READINESS_ORDER.keys()),
         "confidence_by_component": confidence_by_component(findings).to_dict(orient="records"),
-        "findings_csv_path": str(findings_csv_path),
+        "findings_csv_path": str(findings_csv_path.relative_to(base_dir)),
     }
     (reports_dir / "formal_validation_summary.json").write_text(json.dumps(summary_payload, indent=2), encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run full-project validation and write governed machine-readable outputs.")
+    parser = argparse.ArgumentParser(
+        description="Run full-project validation and write governed machine-readable outputs."
+    )
     parser.add_argument("--base-dir", type=str, default=".")
     return parser.parse_args()
 

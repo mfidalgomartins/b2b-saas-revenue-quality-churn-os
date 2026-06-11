@@ -126,7 +126,7 @@ Key: `customer_id`
 | seat_growth_rate | float | Seat growth over trailing window |
 | expansion_frequency | float | 12M expansion frequency |
 | contraction_frequency | float | 12M contraction frequency |
-| churn_history_flag | int | Any historical churn |
+| churn_history_flag | int | Churn event before the current snapshot month |
 | renewal_due_flag | int | Renewal due in latest month |
 | concentration_weight | float | MRR share weight |
 | tenure_months | int | Account tenure |
@@ -155,7 +155,7 @@ Key: `customer_id`
 | churn_risk_inputs | json-string | Churn-related inputs |
 | revenue_quality_inputs | json-string | Revenue quality inputs |
 | account_fragility_inputs | json-string | Fragility/exposure inputs |
-| forward_risk_flags | json-string | Forward risk flags list |
+| operational_risk_flags | json-string | Operational risk flags observed at the scoring date |
 
 ### 5) `account_manager_summary` (grain: manager snapshot)
 Key: `account_manager_id`
@@ -196,8 +196,8 @@ Contains weighted component contributions for score explainability.
 ## Key Metric Definitions
 - `MRR`: sum of active monthly recurring revenue.
 - `ARR`: annualized run-rate (`12 * MRR`).
-- `Logo churn rate`: churn events divided by active account rows.
-- `Revenue churn rate`: churned MRR divided by active MRR.
+- `Logo churn rate`: churned logos divided by beginning-of-month active logos.
+- `Revenue churn rate`: churned MRR divided by beginning MRR.
 - `GRR`: `(starting_mrr - contraction_mrr - churn_mrr) / starting_mrr`.
 - `NRR`: `(starting_mrr + expansion_mrr - contraction_mrr - churn_mrr) / starting_mrr`.
 - `Realized price index`: realized MRR divided by active MRR.

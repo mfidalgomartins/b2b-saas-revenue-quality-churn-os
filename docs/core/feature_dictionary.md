@@ -30,7 +30,7 @@ Assumptions/caveats:
 - `seat_growth_rate`: Relative seat change from earliest to latest point in last 3 active months.
 - `expansion_frequency`: Share of active months with expansion in trailing 12 months.
 - `contraction_frequency`: Share of active months with contraction in trailing 12 months.
-- `churn_history_flag`: 1 if account has ever churned historically.
+- `churn_history_flag`: 1 if account churned before the current snapshot month.
 - `renewal_due_flag`: Renewal due at current month from operational panel.
 - `concentration_weight`: `current_mrr / total_current_mrr`.
 - `tenure_months`: Months from signup to current month.
@@ -58,7 +58,7 @@ Assumptions/caveats:
 - `churn_risk_inputs`: JSON payload of leading churn inputs.
 - `revenue_quality_inputs`: JSON payload of monetization/quality inputs.
 - `account_fragility_inputs`: JSON payload of fragility and exposure inputs.
-- `forward_risk_flags`: JSON list of triggered operational risk flags.
+- `operational_risk_flags`: JSON list of triggered operational risk flags.
 
 Assumptions/caveats:
 - Flags are rule-based heuristics for triage, not model outputs.

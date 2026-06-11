@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
-# (typing imports removed)
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.metrics import build_monthly_retention  # noqa: E402
 
 
 def load_inputs(base_dir: Path) -> dict[str, pd.DataFrame]:
@@ -26,36 +30,20 @@ def clip_rate(x: float, low: float, high: float) -> float:
 
 
 def build_company_monthly_frame(monthly_quality: pd.DataFrame, monthly_raw: pd.DataFrame) -> pd.DataFrame:
-    frame = monthly_quality.merge(
-        monthly_raw[["customer_id", "month", "churn_flag"]],
-        on=["customer_id", "month"],
-        how="left",
-    )
-
-    monthly = frame.groupby("month", as_index=False).agg(
-        mrr=("active_mrr", "sum"),
-        expansion_mrr=("expansion_mrr", "sum"),
-        contraction_mrr=("contraction_mrr", "sum"),
-    )
-
-    churn = (
-        frame[frame["churn_flag"] == 1]
-        .groupby("month", as_index=False)["active_mrr"]
-        .sum()
-        .rename(columns={"active_mrr": "churn_mrr"})
-    )
-    monthly = monthly.merge(churn, on="month", how="left").fillna({"churn_mrr": 0.0})
-
-    monthly = monthly.sort_values("month").reset_index(drop=True)
-    monthly["prev_mrr"] = monthly["mrr"].shift(1)
+    monthly = build_monthly_retention(monthly_quality, monthly_raw)
+    monthly["prev_mrr"] = monthly["starting_mrr"]
     monthly["observed_growth_rate"] = np.where(
         monthly["prev_mrr"] > 0,
         (monthly["mrr"] - monthly["prev_mrr"]) / monthly["prev_mrr"],
         np.nan,
     )
 
-    monthly["expansion_rate"] = np.where(monthly["prev_mrr"] > 0, monthly["expansion_mrr"] / monthly["prev_mrr"], np.nan)
-    monthly["contraction_rate"] = np.where(monthly["prev_mrr"] > 0, monthly["contraction_mrr"] / monthly["prev_mrr"], np.nan)
+    monthly["expansion_rate"] = np.where(
+        monthly["prev_mrr"] > 0, monthly["expansion_mrr"] / monthly["prev_mrr"], np.nan
+    )
+    monthly["contraction_rate"] = np.where(
+        monthly["prev_mrr"] > 0, monthly["contraction_mrr"] / monthly["prev_mrr"], np.nan
+    )
     monthly["churn_rate"] = np.where(monthly["prev_mrr"] > 0, monthly["churn_mrr"] / monthly["prev_mrr"], np.nan)
 
     monthly["net_new_rate"] = (
@@ -346,10 +334,10 @@ def compute_business_impacts(
     top20_full_churn_arr_impact = top20_high_risk_mrr * 12
     top20_20pct_contraction_arr_impact = top20_high_risk_mrr * 0.20 * 12
 
-    # Retention improvement opportunity from improvement case vs base case.
+    # Uplift from the improvement case, which changes retention, expansion, and net-new assumptions.
     base_arr = float(scenario_summary.loc[scenario_summary["scenario"] == "base_case", "end_arr"].iloc[0])
     improvement_arr = float(scenario_summary.loc[scenario_summary["scenario"] == "improvement_case", "end_arr"].iloc[0])
-    retention_improvement_opportunity_arr = improvement_arr - base_arr
+    improvement_scenario_arr_uplift = improvement_arr - base_arr
 
     impact_rows = [
         {
@@ -383,10 +371,10 @@ def compute_business_impacts(
             "definition": "Stress test: annualized ARR impact if top-20 high-risk accounts contract by 20%.",
         },
         {
-            "metric": "retention_improvement_opportunity_arr",
-            "value": round(retention_improvement_opportunity_arr, 2),
+            "metric": "improvement_scenario_arr_uplift",
+            "value": round(improvement_scenario_arr_uplift, 2),
             "unit": "ARR",
-            "definition": "ARR uplift opportunity from improvement scenario vs base case at forecast horizon.",
+            "definition": "ARR uplift from improvement scenario vs base case at forecast horizon.",
         },
         {
             "metric": "high_risk_mrr_share",
@@ -433,34 +421,34 @@ Provide near-term, decision-useful commercial intelligence for MRR trajectory an
 
 ## Baseline MRR Forecast
 - Starting MRR: ${start_mrr:,.0f}
-- Baseline forecast end-MRR ({horizon_months}m): ${base_row['end_mrr']:,.0f}
-- Baseline MRR growth over horizon: {base_row['mrr_growth_pct']:.1%}
+- Baseline forecast end-MRR ({horizon_months}m): ${base_row["end_mrr"]:,.0f}
+- Baseline MRR growth over horizon: {base_row["mrr_growth_pct"]:.1%}
 
 Baseline assumptions (monthly rates):
-- Expansion rate: {baseline_rates['expansion_rate']:.2%}
-- Contraction rate: {baseline_rates['contraction_rate']:.2%}
-- Churn rate: {baseline_rates['churn_rate']:.2%}
-- Net-new rate (residual): {baseline_rates['net_new_rate']:.2%}
+- Expansion rate: {baseline_rates["expansion_rate"]:.2%}
+- Contraction rate: {baseline_rates["contraction_rate"]:.2%}
+- Churn rate: {baseline_rates["churn_rate"]:.2%}
+- Net-new rate (residual): {baseline_rates["net_new_rate"]:.2%}
 
 ## Risk-Adjusted Forecast
-- Risk-adjusted end-MRR: ${risk_row['end_mrr']:,.0f}
-- Difference vs base case: ${risk_row['mrr_vs_base']:,.0f} MRR
+- Risk-adjusted end-MRR: ${risk_row["end_mrr"]:,.0f}
+- Difference vs base case: ${risk_row["mrr_vs_base"]:,.0f} MRR
 
 Risk-adjusted assumptions incorporate:
 - Higher churn/contraction from high-risk concentration.
 - Lower expansion and net-new rates due to fragility drag.
 
 Risk-adjusted rates (monthly):
-- Expansion rate: {risk_adjusted_rates['expansion_rate']:.2%}
-- Contraction rate: {risk_adjusted_rates['contraction_rate']:.2%}
-- Churn rate: {risk_adjusted_rates['churn_rate']:.2%}
-- Net-new rate: {risk_adjusted_rates['net_new_rate']:.2%}
+- Expansion rate: {risk_adjusted_rates["expansion_rate"]:.2%}
+- Contraction rate: {risk_adjusted_rates["contraction_rate"]:.2%}
+- Churn rate: {risk_adjusted_rates["churn_rate"]:.2%}
+- Net-new rate: {risk_adjusted_rates["net_new_rate"]:.2%}
 
 ## Scenario Comparison
-- Base case (reference): end-MRR ${base_row['end_mrr']:,.0f}
-- Downside / fragile-growth: end-MRR ${downside_row['end_mrr']:,.0f} ({downside_row['mrr_vs_base']:,.0f} vs base)
-- Improvement / healthy-growth: end-MRR ${improvement_row['end_mrr']:,.0f} ({improvement_row['mrr_vs_base']:,.0f} vs base)
-- Discount-discipline improvement: end-MRR ${discount_row['end_mrr']:,.0f} ({discount_row['mrr_vs_base']:,.0f} vs base)
+- Base case (reference): end-MRR ${base_row["end_mrr"]:,.0f}
+- Downside / fragile-growth: end-MRR ${downside_row["end_mrr"]:,.0f} ({downside_row["mrr_vs_base"]:,.0f} vs base)
+- Improvement / healthy-growth: end-MRR ${improvement_row["end_mrr"]:,.0f} ({improvement_row["mrr_vs_base"]:,.0f} vs base)
+- Discount-discipline improvement: end-MRR ${discount_row["end_mrr"]:,.0f} ({discount_row["mrr_vs_base"]:,.0f} vs base)
 
 Interpretation:
 - The fragile-growth downside quantifies sensitivity to churn/contraction concentration.
@@ -468,12 +456,12 @@ Interpretation:
 - Discount-discipline improvement may slightly moderate short-term expansion but improves realized ARR quality.
 
 ## Business Impact Estimates
-- ARR at risk: ${impact_val('arr_at_risk'):,.0f}
-- Expected contraction exposure (6m): ${impact_val('expected_contraction_exposure_mrr_6m'):,.0f} MRR
-- Concentration-adjusted downside (6m): ${impact_val('concentration_adjusted_downside_mrr_6m'):,.0f} MRR
-- Stress test: top-20 high-risk full churn impact: ${impact_val('top20_high_risk_full_churn_arr_impact'):,.0f} ARR
-- Stress test: top-20 high-risk 20% contraction impact: ${impact_val('top20_high_risk_20pct_contraction_arr_impact'):,.0f} ARR
-- Retention improvement opportunity (improvement vs base): ${impact_val('retention_improvement_opportunity_arr'):,.0f} ARR
+- ARR at risk: ${impact_val("arr_at_risk"):,.0f}
+- Expected contraction exposure (6m): ${impact_val("expected_contraction_exposure_mrr_6m"):,.0f} MRR
+- Concentration-adjusted downside (6m): ${impact_val("concentration_adjusted_downside_mrr_6m"):,.0f} MRR
+- Stress test: top-20 high-risk full churn impact: ${impact_val("top20_high_risk_full_churn_arr_impact"):,.0f} ARR
+- Stress test: top-20 high-risk 20% contraction impact: ${impact_val("top20_high_risk_20pct_contraction_arr_impact"):,.0f} ARR
+- Improvement scenario uplift vs base: ${impact_val("improvement_scenario_arr_uplift"):,.0f} ARR
 
 ## Assumptions by Scenario
 - Base case: continuation of recent rate regime.
@@ -525,7 +513,9 @@ def main() -> None:
         )
     else:
         latest_realized_price_index = float(
-            tables["monthly_quality"].loc[tables["monthly_quality"]["month"] == latest_month, "realized_price_index"].mean()
+            tables["monthly_quality"]
+            .loc[tables["monthly_quality"]["month"] == latest_month, "realized_price_index"]
+            .mean()
         )
 
     trajectories = build_scenarios(
@@ -547,7 +537,9 @@ def main() -> None:
 
     # Required outputs
     trajectories[trajectories["scenario"] == "base_case"].to_csv(output_dir / "baseline_mrr_forecast.csv", index=False)
-    trajectories[trajectories["scenario"] == "risk_adjusted_case"].to_csv(output_dir / "risk_adjusted_mrr_forecast.csv", index=False)
+    trajectories[trajectories["scenario"] == "risk_adjusted_case"].to_csv(
+        output_dir / "risk_adjusted_mrr_forecast.csv", index=False
+    )
     trajectories.to_csv(output_dir / "scenario_mrr_trajectories.csv", index=False)
     scenario_summary.to_csv(output_dir / "mrr_scenario_table.csv", index=False)
     impacts.to_csv(output_dir / "commercial_risk_impact_estimates.csv", index=False)
@@ -563,8 +555,8 @@ def main() -> None:
     )
 
     print("Forecasting/scenario layer build complete.")
-    print(f"baseline_mrr_forecast: {len(trajectories[trajectories['scenario']=='base_case']):,} rows")
-    print(f"risk_adjusted_mrr_forecast: {len(trajectories[trajectories['scenario']=='risk_adjusted_case']):,} rows")
+    print(f"baseline_mrr_forecast: {len(trajectories[trajectories['scenario'] == 'base_case']):,} rows")
+    print(f"risk_adjusted_mrr_forecast: {len(trajectories[trajectories['scenario'] == 'risk_adjusted_case']):,} rows")
     print(f"scenario_mrr_trajectories: {len(trajectories):,} rows")
     print(f"mrr_scenario_table: {len(scenario_summary):,} rows")
     print(f"commercial_risk_impact_estimates: {len(impacts):,} rows")

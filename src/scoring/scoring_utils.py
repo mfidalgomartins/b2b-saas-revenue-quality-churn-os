@@ -4,6 +4,7 @@ A single source of truth for risk-tier thresholds, weighted score composition,
 and the churn-risk component formulas. Production scoring, calibration backtest,
 and validation all import from here so the model definition cannot drift.
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -37,6 +38,7 @@ def quality_to_risk_tier(score: float) -> str:
 
 
 # -- Component composition ----------------------------------------------------
+
 
 def clip01(values: pd.Series | np.ndarray) -> pd.Series | np.ndarray:
     """Clip values to the unit interval [0, 1]."""
@@ -117,6 +119,7 @@ GOVERNANCE_WEIGHTS: dict[str, float] = {
 # returns a Series in [0, 1]. This is the single definition used by both the
 # production scorer and the calibration backtest.
 
+
 def compute_churn_components(features: pd.DataFrame) -> dict[str, pd.Series]:
     """Compute the seven churn-risk components from a trailing-feature frame.
 
@@ -148,13 +151,9 @@ def compute_churn_components(features: pd.DataFrame) -> dict[str, pd.Series]:
             + 0.40 * clip01(features["heavy_discount_frequency_12m"] / 0.60)
         ),
         "renewal_exposure": clip01(
-            features["renewal_due_flag"] * features["renewal_risk_proxy"]
-            + features["renewal_due_flag"] * 0.20
+            features["renewal_due_flag"] * features["renewal_risk_proxy"] + features["renewal_due_flag"] * 0.20
         ),
-        "history_tenure": (
-            0.70 * features["churn_history_flag"]
-            + 0.30 * clip01((6 - features["tenure_months"]) / 6)
-        ),
+        "history_tenure": (0.70 * features["churn_history_flag"] + 0.30 * clip01((6 - features["tenure_months"]) / 6)),
     }
 
 

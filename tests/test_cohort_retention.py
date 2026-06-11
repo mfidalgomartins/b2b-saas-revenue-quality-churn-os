@@ -4,6 +4,7 @@ The retention table is the backbone of every GRR/NRR figure in the executive
 dashboard. These tests pin the formula so that any regression in cohort
 indexing, base-revenue capping, or rate computation surfaces immediately.
 """
+
 from __future__ import annotations
 
 import sys

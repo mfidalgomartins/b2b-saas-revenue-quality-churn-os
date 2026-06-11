@@ -25,8 +25,8 @@ The project uses synthetic data designed to emulate B2B SaaS commercial behavior
 Primary operating metrics:
 - `MRR_t = sum(active_mrr_t)`
 - `ARR_t = 12 * MRR_t`
-- `Logo churn rate_t = churn_events_t / active_account_rows_t`
-- `Revenue churn rate_t = churned_mrr_t / active_mrr_t`
+- `Logo churn rate_t = churned_logos_t / beginning_active_logos_t`
+- `Revenue churn rate_t = churned_mrr_t / starting_mrr_t`
 - `GRR_t = (starting_mrr_t - contraction_mrr_t - churn_mrr_t) / starting_mrr_t`
 - `NRR_t = (starting_mrr_t + expansion_mrr_t - contraction_mrr_t - churn_mrr_t) / starting_mrr_t`
 - `Realized price index_t = realized_mrr_t / active_mrr_t`
@@ -35,6 +35,10 @@ Primary operating metrics:
 Portfolio risk metrics:
 - `At-risk MRR`: sum of `current_mrr` for high/critical governance-priority accounts.
 - `Concentration`: cumulative share of MRR held by top-N accounts.
+
+Retention denominators exclude logos acquired during the measured month.
+`starting_mrr` is reconstructed before the month's expansion and contraction
+movements.
 
 ## 3) Feature Engineering Logic
 Reference SQL semantic-layer equivalents are provided under:
@@ -78,7 +82,7 @@ Outputs:
 - `churn_risk_inputs`
 - `revenue_quality_inputs`
 - `account_fragility_inputs`
-- `forward_risk_flags`
+- `operational_risk_flags`
 
 ### account_manager_summary
 Purpose: manager-level governance lens.
@@ -137,6 +141,10 @@ Each account gets:
 - dominant risk driver,
 - recommended action.
 
+Historical calibration reconstructs each score using only information available
+at that month and evaluates churn over the following three months. A parity
+test detects drift between the historical reconstruction and production score.
+
 ## 5) Scenario Logic
 Forecasting is a transparent rate-based framework.
 
@@ -159,7 +167,7 @@ Outputs include:
 - commercial impact estimates (ARR at risk, downside exposure, stress tests).
 
 ## 6) Validation Approach
-A formal 20-check QA gate is implemented in:
+A formal 21-check QA gate is implemented in:
 - `src/validation/run_full_project_validation.py`
 
 ### Checks covered
@@ -183,6 +191,7 @@ A formal 20-check QA gate is implemented in:
 18. financial/decision logic integrity for scenarios and impact table
 19. release artifact readiness for the executive dashboard
 20. test suite integrity (unittest discovery/execution)
+21. forward-outcome scoring calibration and production-weight parity
 
 Validation outputs:
 - `reports/formal_validation_findings.csv`
@@ -210,6 +219,5 @@ To avoid static/stale narrative artifacts, profiling and business-analysis outpu
 Monthly refresh process is automated via:
 - `src/pipeline/monthly_release_refresh.py`
 
-Release artifacts:
-
-Optional release tags can be requested during refresh when running inside a git repository.
+The refresh rebuilds the pipeline, validates the outputs, lists the publication
+artifacts, and can create an optional annotated git tag.

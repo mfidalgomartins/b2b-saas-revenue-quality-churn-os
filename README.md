@@ -1,32 +1,31 @@
 # B2B SaaS Revenue Quality & Churn Early Warning
 
-A reproducible analytics pipeline that interrogates whether B2B SaaS recurring-revenue growth is **durable or discount-financed**, and surfaces the accounts most likely to churn before renewal.
+A reproducible Python and SQL analytics system for testing whether B2B SaaS recurring-revenue growth is **durable or discount-financed**, then prioritising accounts with elevated churn risk.
 
-End-to-end: synthetic data generation → feature engineering → rule-based scoring → backtest calibration → scenario forecasting → self-contained executive dashboard, gated by a 21-control formal validation layer.
+**[Open the live dashboard](https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/)** · **[Read the analytical report](outputs/reports/revenue_quality_os_analytical_report.pdf)**
 
-**Live dashboard:** [revenue-quality-command-center](https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/)
-
-![Executive dashboard above-the-fold](outputs/preview/dashboard-hero.png)
+![MRR and ARR growth trend](outputs/graphs/mrr_arr_growth_trend.png)
 
 ---
 
-## Why this exists
+## Analytical scope
 
-Topline MRR can grow while revenue quality quietly degrades. By the time logo churn shows up in the board deck, the leading indicators — discount creep, usage decay, payment slippage, fragile expansion — have been visible in the data for months.
+The seeded simulation covers **4,500 accounts across 36 monthly periods from March 2023 to February 2026**. The pipeline runs synthetic data generation, schema validation, feature engineering, interpretable scoring, forward-outcome calibration, scenario forecasting, chart and PDF generation, and a self-contained executive dashboard.
 
-This project demonstrates an interpretable, auditable framework for catching that drift early, with every score traceable to the raw field it came from.
+Topline MRR can grow while discount creep, usage decay, payment slippage, and fragile expansion weaken the book. Every score in this repository is traceable to documented fields and formulas so the resulting intervention queue can be audited.
 
 ## What's inside
 
 | Layer | What it does |
 |---|---|
-| `src/data_generation/` | Generates 11 raw CSVs (customers, plans, subscriptions, monthly metrics, invoices, …) with seeded RNG. Deterministic for `--seed 42`. |
+| `src/data_generation/` | Generates 6 raw CSVs with seeded RNG. Deterministic for `--seed 42`. |
 | `src/features/` | Builds the analytical layer: account-month revenue quality, customer health features, cohort retention summaries, account risk base. Schema-validated at the boundary. |
 | `src/scoring/` | Four interpretable 0–100 scores — churn risk, revenue quality, discount dependency, expansion quality — composed into a governance priority. Single source of truth for weights in `scoring_utils.py`. |
-| `src/scoring/backtest_scoring_calibration.py` | Reconstructs every historical month's score with the production weights and measures forward-3M churn by tier. Drift between backtest and production is impossible by construction. |
+| `src/scoring/backtest_scoring_calibration.py` | Reconstructs every historical month's score with the production formulas and measures forward-3M churn by tier. A parity test detects drift against the latest production score. |
 | `src/scoring/run_weight_sensitivity.py` | ±20% weight perturbation report. Quantifies how stable tier assignments are. |
 | `src/forecasting/` | MRR scenario trajectories — base, downside, upside, discount-discipline, risk-adjusted. |
-| `src/visualization/` + `src/dashboard/` | 15 leadership charts and a self-contained HTML executive command center. |
+| `src/visualization/` + `src/dashboard/` | 16 presentation-ready graphs and a self-contained HTML dashboard. |
+| `scripts/build_pdf_report.py` | Builds the 31-page analytical report from the same processed tables and graph pack. |
 | `src/validation/` | 21 governance checks (row counts, nulls, duplicates, leakage, calibration monotonicity, …) feeding a publication-readiness gate. |
 | `sql/marts/` | SQL mirror of the Python semantic layer for warehouse consumers. |
 
@@ -40,20 +39,22 @@ This project demonstrates an interpretable, auditable framework for catching tha
 | Net Revenue Retention (NRR) | 99.8% |
 | Gross Revenue Retention (GRR) | 99.2% |
 | Discount-reliant MRR | 15.9% |
-| Backtest forward-3M churn — Low / Moderate / High | 2.3% / 6.2% / 18.1% |
+| Backtest forward-3M churn — Low / Moderate / High | 2.3% / 6.1% / 18.9% |
 | Weight sensitivity — max tier flips under ±20% perturbation | 5.3% |
 | Governance gate | 21 / 21 PASS · readiness `technically valid` |
 
-The 8× lift between Low- and High-tier forward churn is the credibility test for the rule-based scoring approach — a calibration anyone can reproduce by running the pipeline.
+The roughly 8× lift between Low- and High-tier forward churn is the main calibration result for the rule-based score.
 
 ## Run it
 
 ```bash
-pip install -r requirements.txt
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
 python src/pipeline/run_project_pipeline.py --base-dir . --seed 42
 ```
 
-Stages: `generate → profile → features → score → backtest → sensitivity → analyze → forecast → visualize → dashboard → validate → gate`. ~30 seconds on a modern laptop.
+Stages: `generate → profile → features → score → backtest → sensitivity → analyze → forecast → graphs → dashboard → validate → gate → report`.
 
 Strict release gate (used in CI):
 
@@ -74,16 +75,19 @@ python src/validation/check_validation_gate.py \
 
 ## Design choices
 
-- **Rule-based, not ML.** Every score is a weighted sum of normalised components defined in `scoring_utils.py`. Defensible in front of a CFO; no black-box explainability problem.
+- **Rule-based, not ML.** Every score is a weighted sum of normalised components defined in `scoring_utils.py`.
 - **One source of truth for weights.** Production scorer and calibration backtest both import the same `CHURN_WEIGHTS` dict. A unit test asserts weights sum to 1.
 - **Schema contracts at load boundaries.** `src/io/contracts.py` rejects malformed inputs before they propagate.
-- **Validation gate, not assertions.** 21 governance checks produce a readiness tier; the CLI gate fails CI on any regression in WARN / FAIL counts or severity counts.
+- **Beginning-base retention.** GRR, NRR, revenue churn, and logo churn exclude new logos and use reconstructed beginning-of-month denominators.
+- **Validation gate.** 21 governance checks produce a readiness tier; the CLI gate fails CI on any regression in WARN / FAIL counts or severity counts.
 - **Self-contained dashboard.** Charts are drawn inline as SVG from the embedded JSON payload. The HTML works offline and on GitHub Pages without a build step.
 
 ## Limitations
 
 - Synthetic data by design. The pipeline shape is real; absolute numbers are illustrative.
-- Rule-based scores are interpretable but not causal. The backtest measures discrimination, not treatment effect.
+- Rule-based scores are interpretable but not causal. Calibration uses the same synthetic data-generating environment and is not external validation.
+- Scenario forecasts are assumption-driven operating ranges, not statistical forecasts.
+- Churn-event months remain part of monthly revenue exposure; retention metrics explicitly remove churned MRR from the retained base.
 - Single-tenant assumption: no multi-product overlap or cross-sell logic modelled.
 
 ## Repository layout
@@ -93,15 +97,17 @@ src/        analysis/  dashboard/  data_generation/  features/  forecasting/
             io/  pipeline/  profiling/  scoring/  validation/  visualization/
 data/       raw/  processed/
 docs/core/  feature_dictionary.md  methodology.md  scoring_model_design.md  …
-outputs/    charts/  dashboard/  preview/
+outputs/    graphs/  dashboard/  reports/
 reports/    profiling, business analysis, validation, backtest, sensitivity
 sql/        staging/  marts/
-tests/      41 unit + contract tests
+tests/      unit, metric-integrity, and artifact-contract tests
 ```
 
 ## Tech
 
-Python 3.12 · pandas · NumPy · Matplotlib · Seaborn · SQL · HTML / CSS / SVG / JS · ruff · unittest · GitHub Actions
+Python 3.12 · pandas · NumPy · Matplotlib · Seaborn · ReportLab · SQL · HTML / CSS / SVG / JS · Ruff · unittest · GitHub Actions
+
+Released under the [MIT License](LICENSE).
 
 ---
 

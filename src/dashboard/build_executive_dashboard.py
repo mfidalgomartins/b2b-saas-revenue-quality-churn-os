@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.metrics import build_monthly_retention  # noqa: E402
 
 try:
     from dashboard_contract import (
@@ -21,7 +26,6 @@ except ImportError:  # pragma: no cover - supports package-style imports in test
         OFFICIAL_KPI_SPECS,
         REDIRECT_ENTRYPOINTS,
     )
-
 
 
 def parse_args() -> argparse.Namespace:
@@ -42,10 +46,12 @@ def _safe_float(value: Any, digits: int = 4) -> float:
 
 
 def _load_latest_plan(customers: pd.DataFrame, subscriptions: pd.DataFrame, plans: pd.DataFrame) -> pd.DataFrame:
-    latest_sub = (
-        subscriptions.sort_values(["customer_id", "subscription_start_date"]).drop_duplicates("customer_id", keep="last")
+    latest_sub = subscriptions.sort_values(["customer_id", "subscription_start_date"]).drop_duplicates(
+        "customer_id", keep="last"
     )
-    latest_sub = latest_sub.merge(plans[["plan_id", "plan_name", "plan_tier", "billing_cycle"]], on="plan_id", how="left")
+    latest_sub = latest_sub.merge(
+        plans[["plan_id", "plan_name", "plan_tier", "billing_cycle"]], on="plan_id", how="left"
+    )
     latest_sub = latest_sub[
         [
             "customer_id",
@@ -71,7 +77,7 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "MRR/ARR trend over time",
             "Is recurring revenue compounding at a pace that justifies the current risk profile?",
             "Use this to separate headline growth from the quality controls needed to protect it.",
-            "01_mrr_arr_growth_trend.png",
+            "mrr_arr_growth_trend.png",
             "executive_overview",
         ),
         (
@@ -80,7 +86,7 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "Gross vs net retention trend",
             "Is expansion large enough to offset churn and contraction?",
             "Use this before approving growth plans that depend on upsell masking base-book weakness.",
-            "02_grr_nrr_retention_trend.png",
+            "grr_nrr_retention_trend.png",
             "retention_churn",
         ),
         (
@@ -89,25 +95,25 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "Logo churn by segment",
             "Which segments are creating disproportionate logo churn pressure?",
             "Use this to target retention plays where churn is structurally concentrated.",
-            "03_logo_churn_by_segment.png",
+            "logo_churn_by_segment_channel.png",
             "retention_churn",
         ),
         (
             "chart_04_concentration",
-            "A Small Account Core Concentrates Disproportionate Revenue Exposure",
-            "Revenue concentration curve",
-            "How dependent is the portfolio on the largest accounts?",
-            "Use this to size executive attention on concentration and renewal exposure.",
-            "04_revenue_concentration_curve.png",
-            "revenue_quality",
+            "A Small Account Core Concentrates Disproportionate At-Risk MRR",
+            "At-risk MRR concentration curve",
+            "How concentrated is the current downside exposure?",
+            "Use this to focus intervention on the smallest account set that covers most downside.",
+            "at_risk_mrr_concentration.png",
+            "account_risk",
         ),
         (
             "chart_05_discount_mix",
-            "Discount Behavior Differs Materially by Segment, Channel, and Manager",
-            "Average discount by segment/channel/manager",
-            "Where is discounting becoming a management behavior rather than a deal exception?",
-            "Use this to focus pricing governance by segment, channel, or manager.",
-            "05_average_discount_segment_channel_manager.png",
+            "Manager Portfolios Pair Discount and Churn Differently",
+            "Account-manager discount vs churn",
+            "Which manager portfolios combine heavy discounts with elevated churn?",
+            "Use this to focus commercial governance review.",
+            "account_manager_discount_vs_churn.png",
             "revenue_quality",
         ),
         (
@@ -116,7 +122,7 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "Discounted revenue share trend",
             "Is more of the book becoming dependent on pricing concessions?",
             "Use this as the guardrail for margin quality and renewal-price discipline.",
-            "06_discounted_revenue_share_trend.png",
+            "discount_dependency_trend.png",
             "revenue_quality",
         ),
         (
@@ -125,7 +131,7 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "Churn risk score distribution",
             "Is churn exposure broad-based or concentrated in a manageable tail?",
             "Use this to decide whether the response is operating cadence or targeted recovery.",
-            "07_churn_risk_score_distribution.png",
+            "churn_risk_score_distribution.png",
             "account_risk",
         ),
         (
@@ -134,16 +140,16 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "Revenue quality score distribution",
             "How much of the customer base has weak revenue quality signals?",
             "Use this to identify whether pricing, usage, and retention quality need systemic attention.",
-            "08_revenue_quality_score_distribution.png",
+            "revenue_quality_score_distribution.png",
             "account_risk",
         ),
         (
             "chart_09_expansion_quality",
-            "Expansion Quality Is Strongest in Specific Segments Only",
-            "Expansion quality by segment",
-            "Which segments produce expansion that is likely to be durable?",
-            "Use this to steer expansion effort toward segments with healthier quality signals.",
-            "09_expansion_quality_by_segment.png",
+            "Expansion Quality Mix Separates Durable and Fragile Growth",
+            "Expansion quality composition",
+            "How much expansion MRR is supported by healthy account signals?",
+            "Use this to separate durable expansion from fragile booked growth.",
+            "expansion_quality_mix.png",
             "revenue_quality",
         ),
         (
@@ -152,7 +158,7 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "Top accounts by governance priority",
             "Which accounts should leadership act on first?",
             "Use this as the intervention queue for owner assignment and next-action tracking.",
-            "10_top_accounts_governance_priority.png",
+            "governance_priority_accounts.png",
             "account_risk",
         ),
         (
@@ -161,35 +167,35 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "Cohort retention heatmap",
             "Which cohorts are retaining value and which cohorts are degrading?",
             "Use this to separate onboarding quality issues from current-period commercial pressure.",
-            "11_cohort_retention_heatmap.png",
+            "cohort_retention_heatmap.png",
             "retention_churn",
         ),
         (
             "chart_12_discount_vs_risk",
-            "Higher Discount Intensity Is Associated with Higher Risk",
-            "Discount vs churn risk",
-            "Are heavily discounted accounts also more likely to churn?",
+            "Higher Discount Intensity Is Associated with Forward Churn",
+            "Discount band vs forward churn",
+            "Do deeply discounted accounts show higher subsequent churn?",
             "Use this to challenge concession-led retention and renewal strategies.",
-            "12_discount_vs_churn_risk.png",
+            "discount_band_vs_forward_churn.png",
             "account_risk",
         ),
         (
             "chart_13_payment_vs_risk",
-            "Payment Delay Is a Leading Commercial Risk Signal",
-            "Payment delay vs churn risk",
-            "Do payment delays identify churn pressure before renewal?",
-            "Use this to trigger commercial follow-up before risk becomes a renewal event.",
-            "13_payment_delay_vs_churn_risk.png",
+            "Score Deciles Separate Forward Churn Outcomes",
+            "Score-decile calibration",
+            "Does the risk score rank realized forward churn?",
+            "Use this to assess whether the score is suitable for prioritization.",
+            "score_decile_calibration.png",
             "account_risk",
         ),
         (
             "chart_14_usage_vs_risk",
-            "Usage Deterioration Aligns with Elevated Churn Risk",
-            "Usage decline vs churn risk",
-            "Is usage decay explaining elevated churn risk?",
-            "Use this to route recovery work between customer success and commercial teams.",
-            "14_usage_decline_vs_churn_risk.png",
-            "account_risk",
+            "Scenario Assumptions Create a Material ARR Range",
+            "Scenario ARR variance",
+            "Which assumptions create the largest ARR swing?",
+            "Use this to rank operating scenarios by financial materiality.",
+            "scenario_arr_variance_vs_base.png",
+            "scenario_forecast",
         ),
         (
             "chart_15_scenarios",
@@ -197,12 +203,12 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
             "Scenario comparison",
             "How much MRR is at stake if revenue quality deteriorates?",
             "Use this to quantify downside exposure and the value of intervention.",
-            "15_scenario_mrr_comparison.png",
+            "scenario_mrr_trajectories.png",
             "scenario_forecast",
         ),
     ]
 
-    charts_dir = base_dir / "outputs" / "charts"
+    charts_dir = base_dir / "outputs" / "graphs"
     catalog: list[dict[str, str]] = []
     for chart_id, title, subtitle, question, decision_use, filename, section in chart_specs:
         path = charts_dir / filename
@@ -217,7 +223,7 @@ def _build_chart_catalog(base_dir: Path) -> list[dict[str, str]]:
                 "decision_use": decision_use,
                 "section": section,
                 "filename": filename,
-                "image_path": f"../charts/{filename}",
+                "image_path": f"../graphs/{filename}",
             }
         )
     return catalog
@@ -312,7 +318,7 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
         "arr": _safe_float(sec1.get("arr_end", accounts["current_mrr"].sum() * 12.0), 2),
         "gross_retention": _safe_float(sec2.get("latest_grr", 0.0), 6),
         "net_retention": _safe_float(sec2.get("latest_nrr", 0.0), 6),
-        "logo_churn": _safe_float(sec2.get("logo_churn_rate", 0.0), 6),
+        "logo_churn": _safe_float(sec2.get("latest_logo_churn_rate", 0.0), 6),
         "avg_discount": _safe_float(sec1.get("w_discount_end", 0.0), 6),
         "discounted_revenue_share": _safe_float(sec1.get("share_discounted_mrr_latest", 0.0), 6),
         "revenue_at_risk_mrr": _safe_float(sec5.get("at_risk_mrr_total", 0.0), 2),
@@ -335,58 +341,27 @@ def build_payload(base_dir: Path) -> dict[str, Any]:
 
     scenario_traj = scenario_traj.copy()
     scenario_traj["forecast_month"] = _to_month(scenario_traj["forecast_month"])
-    scenario_trajectory = scenario_traj[
-        ["scenario", "scenario_type", "forecast_month", "forecast_mrr"]
-    ].to_dict(orient="records")
+    scenario_trajectory = scenario_traj[["scenario", "scenario_type", "forecast_month", "forecast_mrr"]].to_dict(
+        orient="records"
+    )
 
     monthly_min = monthly_metrics["month"].min()
     monthly_max = monthly_metrics["month"].max()
 
-    monthly_panel = monthly_quality.merge(
-        monthly_metrics[["customer_id", "month", "churn_flag"]],
-        on=["customer_id", "month"],
-        how="left",
+    monthly_rollup = build_monthly_retention(monthly_quality, monthly_metrics)
+    discounted = (
+        monthly_quality.assign(discounted_mrr=lambda d: d["active_mrr"].where(d["discount_dependency_flag"].eq(1), 0.0))
+        .groupby("month", as_index=False)["discounted_mrr"]
+        .sum()
     )
-    monthly_rollup = (
-        monthly_panel.groupby("month", as_index=False)
-        .agg(
-            active_mrr=("active_mrr", "sum"),
-            expansion_mrr=("expansion_mrr", "sum"),
-            contraction_mrr=("contraction_mrr", "sum"),
-            churned_mrr=("active_mrr", lambda s: float(s[monthly_panel.loc[s.index, "churn_flag"].fillna(0).astype(int) == 1].sum())),
-            churn_events=("churn_flag", "sum"),
-            account_rows=("customer_id", "size"),
-            discounted_mrr=("active_mrr", lambda s: float(s[monthly_panel.loc[s.index, "discount_dependency_flag"].fillna(0).astype(int) == 1].sum())),
-        )
-        .sort_values("month")
-        .reset_index(drop=True)
-    )
+    monthly_rollup = monthly_rollup.merge(discounted, on="month", how="left", validate="one_to_one")
     monthly_rollup["month_label"] = _to_month(monthly_rollup["month"])
-    monthly_rollup["arr"] = monthly_rollup["active_mrr"] * 12.0
-    monthly_rollup["logo_churn_rate"] = monthly_rollup["churn_events"] / monthly_rollup["account_rows"].clip(lower=1)
-    monthly_rollup["discounted_share"] = monthly_rollup["discounted_mrr"] / monthly_rollup["active_mrr"].clip(lower=1)
-    monthly_rollup["starting_mrr"] = monthly_rollup["active_mrr"].shift(1)
-    valid_base = monthly_rollup["starting_mrr"] > 0
-    monthly_rollup["grr"] = 0.0
-    monthly_rollup["nrr"] = 0.0
-    monthly_rollup.loc[valid_base, "grr"] = (
-        (monthly_rollup.loc[valid_base, "starting_mrr"] - monthly_rollup.loc[valid_base, "contraction_mrr"] - monthly_rollup.loc[valid_base, "churned_mrr"])
-        / monthly_rollup.loc[valid_base, "starting_mrr"]
-    )
-    monthly_rollup.loc[valid_base, "nrr"] = (
-        (
-            monthly_rollup.loc[valid_base, "starting_mrr"]
-            + monthly_rollup.loc[valid_base, "expansion_mrr"]
-            - monthly_rollup.loc[valid_base, "contraction_mrr"]
-            - monthly_rollup.loc[valid_base, "churned_mrr"]
-        )
-        / monthly_rollup.loc[valid_base, "starting_mrr"]
-    )
-    monthly_rollup = monthly_rollup.fillna(0.0)
+    monthly_rollup["arr"] = monthly_rollup["mrr"] * 12.0
+    monthly_rollup["discounted_share"] = monthly_rollup["discounted_mrr"] / monthly_rollup["mrr"].clip(lower=1)
     monthly_summary = [
         {
             "month": str(r.month_label),
-            "mrr": _safe_float(r.active_mrr, 2),
+            "mrr": _safe_float(r.mrr, 2),
             "arr": _safe_float(r.arr, 2),
             "logo_churn_rate": _safe_float(r.logo_churn_rate, 6),
             "discounted_share": _safe_float(r.discounted_share, 6),
@@ -476,8 +451,6 @@ def build_html(payload: dict[str, Any]) -> str:
     template_path = Path(__file__).parent / "_template.html"
     template = template_path.read_text(encoding="utf-8")
     return template.replace("__PAYLOAD_JSON__", payload_json)
-
-
 
 
 def main() -> None:

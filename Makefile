@@ -7,9 +7,9 @@ FEATURE_DICT := $(BASE_DIR)/docs/core/feature_dictionary.md
 ANALYTICAL_NOTES := $(BASE_DIR)/docs/core/analytical_layer_notes.md
 VALIDATION_SUMMARY := $(BASE_DIR)/reports/formal_validation_summary.json
 
-.PHONY: all data profile features scoring analysis forecast viz dashboard validate gate lint test qa release-ready release-refresh clean
+.PHONY: all data profile features scoring backtest sensitivity analysis forecast graphs supplementary-graphs dashboard dashboard-refresh report validate gate format-check lint test qa release-ready release-refresh clean
 
-all: data profile features scoring analysis forecast viz dashboard validate
+all: data profile features scoring backtest sensitivity analysis forecast graphs supplementary-graphs dashboard validate dashboard-refresh report
 
 data:
 	$(PYTHON) src/data_generation/generate_synthetic_data.py --output-dir $(RAW_DIR) --note-path $(BASE_DIR)/docs/core/synthetic_data.md --seed $(SEED)
@@ -23,17 +23,32 @@ features:
 scoring:
 	$(PYTHON) src/scoring/build_scoring_system.py --base-dir $(BASE_DIR)
 
+backtest:
+	$(PYTHON) src/scoring/backtest_scoring_calibration.py --base-dir $(BASE_DIR)
+
+sensitivity:
+	$(PYTHON) src/scoring/run_weight_sensitivity.py --base-dir $(BASE_DIR)
+
 analysis:
 	$(PYTHON) src/analysis/build_main_business_analysis.py --base-dir $(BASE_DIR)
 
 forecast:
 	$(PYTHON) src/forecasting/build_forecasting_scenarios.py --base-dir $(BASE_DIR)
 
-viz:
-	$(PYTHON) src/visualization/build_leadership_charts.py --base-dir $(BASE_DIR)
+graphs:
+	$(PYTHON) src/visualization/build_executive_graphs.py --base-dir $(BASE_DIR)
+
+supplementary-graphs:
+	$(PYTHON) src/visualization/build_supplementary_graphs.py --base-dir $(BASE_DIR)
 
 dashboard:
 	$(PYTHON) src/dashboard/build_executive_dashboard.py --base-dir $(BASE_DIR) --output $(BASE_DIR)/outputs/dashboard/revenue-quality-command-center.html
+
+dashboard-refresh:
+	$(PYTHON) src/dashboard/build_executive_dashboard.py --base-dir $(BASE_DIR) --output $(BASE_DIR)/outputs/dashboard/revenue-quality-command-center.html
+
+report:
+	$(PYTHON) scripts/build_pdf_report.py
 
 validate:
 	$(PYTHON) src/validation/run_full_project_validation.py --base-dir $(BASE_DIR)
@@ -41,15 +56,18 @@ validate:
 gate:
 	$(PYTHON) src/validation/check_validation_gate.py --summary-path $(VALIDATION_SUMMARY) --max-warn 0 --max-fail 0 --max-high-severity 0 --max-critical-severity 0 --min-readiness-tier "technically valid"
 
+format-check:
+	$(PYTHON) -m ruff format --check src tests scripts
+
 lint:
-	$(PYTHON) -m ruff check src tests
+	$(PYTHON) -m ruff check src tests scripts
 
 test:
 	$(PYTHON) -m unittest discover -s tests -p 'test_*.py'
 
-qa: lint test validate gate
+qa: format-check lint test validate gate
 
-release-ready: lint test all gate
+release-ready: format-check lint test all gate
 
 release-refresh:
 	$(PYTHON) src/pipeline/monthly_release_refresh.py --base-dir $(BASE_DIR) --seed $(SEED)

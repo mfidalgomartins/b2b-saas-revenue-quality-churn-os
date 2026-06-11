@@ -4,6 +4,7 @@ These tests pin the canonical scoring primitives so that any drift in
 thresholds, weights, or component formulas is caught before propagating to
 production scoring or the calibration backtest.
 """
+
 from __future__ import annotations
 
 import math
@@ -158,21 +159,23 @@ class TestComputeChurnComponents(unittest.TestCase):
     def test_components_in_unit_interval(self) -> None:
         # 50 random-ish rows should never produce components outside [0, 1]
         rng = np.random.default_rng(0)
-        df = pd.DataFrame({
-            "trailing_3m_usage_avg": rng.uniform(0, 100, 50),
-            "trailing_3m_usage_trend": rng.uniform(-10, 10, 50),
-            "trailing_3m_nps_avg": rng.uniform(-100, 100, 50),
-            "trailing_3m_support_ticket_avg": rng.uniform(0, 30, 50),
-            "trailing_3m_payment_delay_avg": rng.uniform(0, 90, 50),
-            "trailing_3m_discount_avg": rng.uniform(0, 0.55, 50),
-            "contraction_frequency": rng.uniform(0, 1, 50),
-            "seat_growth_rate": rng.uniform(-0.5, 0.5, 50),
-            "heavy_discount_frequency_12m": rng.uniform(0, 1, 50),
-            "renewal_due_flag": rng.integers(0, 2, 50),
-            "renewal_risk_proxy": rng.uniform(0, 1, 50),
-            "churn_history_flag": rng.integers(0, 2, 50),
-            "tenure_months": rng.integers(0, 120, 50),
-        })
+        df = pd.DataFrame(
+            {
+                "trailing_3m_usage_avg": rng.uniform(0, 100, 50),
+                "trailing_3m_usage_trend": rng.uniform(-10, 10, 50),
+                "trailing_3m_nps_avg": rng.uniform(-100, 100, 50),
+                "trailing_3m_support_ticket_avg": rng.uniform(0, 30, 50),
+                "trailing_3m_payment_delay_avg": rng.uniform(0, 90, 50),
+                "trailing_3m_discount_avg": rng.uniform(0, 0.55, 50),
+                "contraction_frequency": rng.uniform(0, 1, 50),
+                "seat_growth_rate": rng.uniform(-0.5, 0.5, 50),
+                "heavy_discount_frequency_12m": rng.uniform(0, 1, 50),
+                "renewal_due_flag": rng.integers(0, 2, 50),
+                "renewal_risk_proxy": rng.uniform(0, 1, 50),
+                "churn_history_flag": rng.integers(0, 2, 50),
+                "tenure_months": rng.integers(0, 120, 50),
+            }
+        )
         for name, series in compute_churn_components(df).items():
             with self.subTest(component=name):
                 self.assertTrue((series >= 0).all(), f"{name} has negative values")

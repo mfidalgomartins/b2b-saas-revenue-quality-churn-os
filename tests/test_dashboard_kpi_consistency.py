@@ -5,6 +5,10 @@ import re
 import unittest
 from pathlib import Path
 
+import pandas as pd
+
+from src.metrics import build_monthly_retention
+
 ROOT = Path(__file__).resolve().parents[1]
 REPORTS = ROOT / "reports"
 OUTPUTS = ROOT / "outputs"
@@ -33,14 +37,18 @@ class TestDashboardKpiConsistency(unittest.TestCase):
         self.assertAlmostEqual(float(kpis.get("arr", 0.0)), float(sec1.get("arr_end", 0.0)), places=2)
         self.assertAlmostEqual(float(kpis.get("gross_retention", 0.0)), float(sec2.get("latest_grr", 0.0)), places=6)
         self.assertAlmostEqual(float(kpis.get("net_retention", 0.0)), float(sec2.get("latest_nrr", 0.0)), places=6)
-        self.assertAlmostEqual(float(kpis.get("logo_churn", 0.0)), float(sec2.get("logo_churn_rate", 0.0)), places=6)
+        self.assertAlmostEqual(
+            float(kpis.get("logo_churn", 0.0)), float(sec2.get("latest_logo_churn_rate", 0.0)), places=6
+        )
         self.assertAlmostEqual(float(kpis.get("avg_discount", 0.0)), float(sec1.get("w_discount_end", 0.0)), places=6)
         self.assertAlmostEqual(
             float(kpis.get("discounted_revenue_share", 0.0)),
             float(sec1.get("share_discounted_mrr_latest", 0.0)),
             places=6,
         )
-        self.assertAlmostEqual(float(kpis.get("revenue_at_risk_mrr", 0.0)), float(sec5.get("at_risk_mrr_total", 0.0)), places=2)
+        self.assertAlmostEqual(
+            float(kpis.get("revenue_at_risk_mrr", 0.0)), float(sec5.get("at_risk_mrr_total", 0.0)), places=2
+        )
 
     def test_dashboard_meta_readiness_matches_validation_summary(self) -> None:
         payload = load_dashboard_payload()
@@ -51,6 +59,18 @@ class TestDashboardKpiConsistency(unittest.TestCase):
 
         self.assertNotEqual(dashboard_tier, "", "Dashboard readiness tier is missing")
         self.assertEqual(dashboard_tier, summary_tier)
+
+    def test_latest_retention_kpis_match_canonical_monthly_metrics(self) -> None:
+        payload = load_dashboard_payload()
+        analysis = json.loads((REPORTS / "main_business_analysis_metrics.json").read_text(encoding="utf-8"))
+        quality = pd.read_csv(ROOT / "data/processed/account_monthly_revenue_quality.csv", parse_dates=["month"])
+        monthly = pd.read_csv(ROOT / "data/raw/monthly_account_metrics.csv", parse_dates=["month"])
+        latest = build_monthly_retention(quality, monthly).iloc[-1]
+
+        kpis = payload["official_kpis"]
+        sec2 = analysis["section2"]
+        self.assertAlmostEqual(float(kpis["logo_churn"]), float(latest["logo_churn_rate"]), places=6)
+        self.assertAlmostEqual(float(sec2["latest_revenue_churn_rate"]), float(latest["revenue_churn_rate"]), places=6)
 
 
 if __name__ == "__main__":

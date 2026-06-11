@@ -68,6 +68,7 @@ def build_account_monthly_revenue_quality(tables: dict[str, pd.DataFrame]) -> pd
         ],
         on=["customer_id", "month"],
         how="left",
+        validate="one_to_one",
     )
 
     base = base.merge(
@@ -75,10 +76,21 @@ def build_account_monthly_revenue_quality(tables: dict[str, pd.DataFrame]) -> pd
         on=["customer_id", "month"],
         how="left",
         suffixes=("", "_invoice"),
+        validate="one_to_one",
     )
 
-    base = base.merge(customers[["customer_id", "segment", "region", "signup_date"]], on="customer_id", how="left")
-    base = base.merge(plans[["plan_id", "plan_tier", "billing_cycle", "list_mrr", "included_seats"]], on="plan_id", how="left")
+    base = base.merge(
+        customers[["customer_id", "segment", "region", "signup_date"]],
+        on="customer_id",
+        how="left",
+        validate="many_to_one",
+    )
+    base = base.merge(
+        plans[["plan_id", "plan_tier", "billing_cycle", "list_mrr", "included_seats"]],
+        on="plan_id",
+        how="left",
+        validate="many_to_one",
+    )
 
     base["active_mrr"] = np.where(base["active_flag"] == 1, base["contracted_mrr"].fillna(0.0), 0.0)
 
@@ -104,8 +116,7 @@ def build_account_monthly_revenue_quality(tables: dict[str, pd.DataFrame]) -> pd
     )
 
     base["discount_dependency_flag"] = np.where(
-        (base["trailing_3m_discount_avg"] >= 0.25)
-        | ((base["avg_discount_pct"] >= 0.30) & (base["expansion_mrr"] > 0)),
+        (base["trailing_3m_discount_avg"] >= 0.25) | ((base["avg_discount_pct"] >= 0.30) & (base["expansion_mrr"] > 0)),
         1,
         0,
     )
@@ -207,8 +218,10 @@ def build_customer_health_features(
             seat_growth_rate = 0.0
 
         expansion_frequency = float((last_12_active["expansion_mrr"] > 0).mean()) if len(last_12_active) > 0 else 0.0
-        contraction_frequency = float((last_12_active["contraction_mrr"] > 0).mean()) if len(last_12_active) > 0 else 0.0
-        churn_history_flag = int((g["churn_flag"] == 1).any())
+        contraction_frequency = (
+            float((last_12_active["contraction_mrr"] > 0).mean()) if len(last_12_active) > 0 else 0.0
+        )
+        churn_history_flag = int((g.loc[g["month"] < current_month, "churn_flag"] == 1).any())
 
         current_row = g[g["month"] == current_month]
         if len(current_row) > 0:
@@ -219,7 +232,9 @@ def build_customer_health_features(
             renewal_due_flag = 0
 
         signup_date = customers.loc[customers["customer_id"] == cid, "signup_date"].iloc[0]
-        tenure_months = int((current_month.year - signup_date.year) * 12 + (current_month.month - signup_date.month) + 1)
+        tenure_months = int(
+            (current_month.year - signup_date.year) * 12 + (current_month.month - signup_date.month) + 1
+        )
         tenure_months = max(tenure_months, 0)
 
         rows.append(
@@ -270,11 +285,12 @@ def build_cohort_retention_summary(
     tables: dict[str, pd.DataFrame],
     account_monthly_revenue_quality: pd.DataFrame,
 ) -> pd.DataFrame:
-    customers = tables["customers"][ ["customer_id", "segment", "region"] ].copy()
+    customers = tables["customers"][["customer_id", "segment", "region"]].copy()
     subs = tables["subscriptions"].copy()
 
     first_month = (
-        subs.groupby("customer_id", as_index=False)["subscription_start_date"].min()
+        subs.groupby("customer_id", as_index=False)["subscription_start_date"]
+        .min()
         .rename(columns={"subscription_start_date": "cohort_month"})
     )
 
@@ -289,9 +305,8 @@ def build_cohort_retention_summary(
     panel = panel.merge(first_revenue, on="customer_id", how="left")
     panel = panel.merge(customers, on="customer_id", how="left")
 
-    panel["month_number"] = (
-        (panel["month"].dt.year - panel["cohort_month"].dt.year) * 12
-        + (panel["month"].dt.month - panel["cohort_month"].dt.month)
+    panel["month_number"] = (panel["month"].dt.year - panel["cohort_month"].dt.year) * 12 + (
+        panel["month"].dt.month - panel["cohort_month"].dt.month
     )
     panel = panel[panel["month_number"] >= 0].copy()
 
@@ -339,9 +354,7 @@ def build_account_risk_base(
     monthly = tables["monthly_account_metrics"].copy()
     current_month = monthly["month"].max()
 
-    latest_quality = account_monthly_revenue_quality[
-        account_monthly_revenue_quality["month"] == current_month
-    ][
+    latest_quality = account_monthly_revenue_quality[account_monthly_revenue_quality["month"] == current_month][
         [
             "customer_id",
             "active_mrr",
@@ -383,27 +396,35 @@ def build_account_risk_base(
         ("usage_declining", risk["trailing_3m_usage_trend"] < -2.5),
         ("low_nps", risk["trailing_3m_nps_avg"] < 10),
         ("payment_delay_stress", risk["trailing_3m_payment_delay_avg"] > 20),
-        ("discount_dependency",
-            (risk["trailing_3m_discount_avg"] >= 0.25) | (risk["discount_dependency_flag"] == 1)),
+        ("discount_dependency", (risk["trailing_3m_discount_avg"] >= 0.25) | (risk["discount_dependency_flag"] == 1)),
         ("frequent_contraction", risk["contraction_frequency"] > 0.25),
-        ("renewal_at_risk",
-            (risk["renewal_due_flag"] == 1) & (risk["renewal_risk_proxy"] >= 0.60)),
+        ("renewal_at_risk", (risk["renewal_due_flag"] == 1) & (risk["renewal_risk_proxy"] >= 0.60)),
         ("high_concentration_exposure", risk["concentration_weight"] > 0.01),
         ("high_risk_score", risk["account_risk_score"] >= 70),
     ]
 
     churn_keys = [
-        "trailing_3m_usage_trend", "trailing_3m_nps_avg",
-        "trailing_3m_support_ticket_avg", "trailing_3m_payment_delay_avg",
-        "contraction_frequency", "renewal_due_flag",
+        "trailing_3m_usage_trend",
+        "trailing_3m_nps_avg",
+        "trailing_3m_support_ticket_avg",
+        "trailing_3m_payment_delay_avg",
+        "contraction_frequency",
+        "renewal_due_flag",
     ]
     revenue_keys = [
-        "current_mrr", "realized_price_index", "avg_discount_pct",
-        "discount_dependency_flag", "revenue_quality_flag",
+        "current_mrr",
+        "realized_price_index",
+        "avg_discount_pct",
+        "discount_dependency_flag",
+        "revenue_quality_flag",
     ]
     fragility_keys = [
-        "seat_growth_rate", "expansion_frequency", "contraction_frequency",
-        "concentration_weight", "churn_history_flag", "renewal_risk_proxy",
+        "seat_growth_rate",
+        "expansion_frequency",
+        "contraction_frequency",
+        "concentration_weight",
+        "churn_history_flag",
+        "renewal_risk_proxy",
     ]
 
     int_cols = {"renewal_due_flag", "discount_dependency_flag", "churn_history_flag"}
@@ -421,21 +442,21 @@ def build_account_risk_base(
                 payload[k] = float(value)
         return json.dumps(payload, sort_keys=True)
 
-    flags_matrix = pd.concat(
-        [series.rename(name) for name, series in flag_specs], axis=1
-    )
+    flags_matrix = pd.concat([series.rename(name) for name, series in flag_specs], axis=1)
 
-    out = pd.DataFrame({
-        "customer_id": risk["customer_id"].to_numpy(),
-        "current_month": current_month,
-        "churn_risk_inputs": risk.apply(lambda r: _row_to_payload(r, churn_keys), axis=1),
-        "revenue_quality_inputs": risk.apply(lambda r: _row_to_payload(r, revenue_keys), axis=1),
-        "account_fragility_inputs": risk.apply(lambda r: _row_to_payload(r, fragility_keys), axis=1),
-        "forward_risk_flags": flags_matrix.apply(
-            lambda row: json.dumps([name for name, on in row.items() if bool(on)]),
-            axis=1,
-        ),
-    })
+    out = pd.DataFrame(
+        {
+            "customer_id": risk["customer_id"].to_numpy(),
+            "current_month": current_month,
+            "churn_risk_inputs": risk.apply(lambda r: _row_to_payload(r, churn_keys), axis=1),
+            "revenue_quality_inputs": risk.apply(lambda r: _row_to_payload(r, revenue_keys), axis=1),
+            "account_fragility_inputs": risk.apply(lambda r: _row_to_payload(r, fragility_keys), axis=1),
+            "operational_risk_flags": flags_matrix.apply(
+                lambda row: json.dumps([name for name, on in row.items() if bool(on)]),
+                axis=1,
+            ),
+        }
+    )
     return out
 
 
@@ -475,9 +496,13 @@ def build_account_manager_summary(
 
     churn_events = mm_window[mm_window["churn_flag"] == 1][["account_manager_id", "customer_id"]].drop_duplicates()
 
-    expansion_rate_df = quality_window.merge(customers, on="customer_id", how="left").groupby("account_manager_id", as_index=False).agg(
-        expansion_mrr_sum=("expansion_mrr", "sum"),
-        base_mrr_sum=("active_mrr", "sum"),
+    expansion_rate_df = (
+        quality_window.merge(customers, on="customer_id", how="left")
+        .groupby("account_manager_id", as_index=False)
+        .agg(
+            expansion_mrr_sum=("expansion_mrr", "sum"),
+            base_mrr_sum=("active_mrr", "sum"),
+        )
     )
     expansion_rate_df["expansion_rate"] = np.where(
         expansion_rate_df["base_mrr_sum"] > 0,
@@ -503,9 +528,11 @@ def build_account_manager_summary(
         retention_rate = float(retained_count / start_count) if start_count > 0 else 0.0
         churn_rate = float(churn_count / start_count) if start_count > 0 else 0.0
 
-        expansion_rate = float(
-            expansion_rate_df.loc[expansion_rate_df["account_manager_id"] == am_id, "expansion_rate"].iloc[0]
-        ) if (expansion_rate_df["account_manager_id"] == am_id).any() else 0.0
+        expansion_rate = (
+            float(expansion_rate_df.loc[expansion_rate_df["account_manager_id"] == am_id, "expansion_rate"].iloc[0])
+            if (expansion_rate_df["account_manager_id"] == am_id).any()
+            else 0.0
+        )
 
         usage_risk = np.clip((55 - g["trailing_3m_usage_avg"]) / 55, 0, 1)
         nps_risk = np.clip((10 - g["trailing_3m_nps_avg"]) / 110, 0, 1)
@@ -567,7 +594,7 @@ Assumptions/caveats:
 - `seat_growth_rate`: Relative seat change from earliest to latest point in last 3 active months.
 - `expansion_frequency`: Share of active months with expansion in trailing 12 months.
 - `contraction_frequency`: Share of active months with contraction in trailing 12 months.
-- `churn_history_flag`: 1 if account has ever churned historically.
+- `churn_history_flag`: 1 if account churned before the current snapshot month.
 - `renewal_due_flag`: Renewal due at current month from operational panel.
 - `concentration_weight`: `current_mrr / total_current_mrr`.
 - `tenure_months`: Months from signup to current month.
@@ -595,7 +622,7 @@ Assumptions/caveats:
 - `churn_risk_inputs`: JSON payload of leading churn inputs.
 - `revenue_quality_inputs`: JSON payload of monetization/quality inputs.
 - `account_fragility_inputs`: JSON payload of fragility and exposure inputs.
-- `forward_risk_flags`: JSON list of triggered operational risk flags.
+- `operational_risk_flags`: JSON list of triggered operational risk flags.
 
 Assumptions/caveats:
 - Flags are rule-based heuristics for triage, not model outputs.
@@ -651,7 +678,9 @@ def save_tables(processed_dir: Path, tables: dict[str, pd.DataFrame]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build analytical layer tables for revenue quality and churn analytics.")
+    parser = argparse.ArgumentParser(
+        description="Build analytical layer tables for revenue quality and churn analytics."
+    )
     parser.add_argument("--raw-dir", type=str, default="data/raw")
     parser.add_argument("--processed-dir", type=str, default="data/processed")
     parser.add_argument("--feature-dictionary-path", type=str, default="docs/core/feature_dictionary.md")
@@ -670,7 +699,9 @@ def main() -> None:
     customer_health_features = build_customer_health_features(tables, account_monthly_revenue_quality)
     cohort_retention_summary = build_cohort_retention_summary(tables, account_monthly_revenue_quality)
     account_risk_base = build_account_risk_base(tables, account_monthly_revenue_quality, customer_health_features)
-    account_manager_summary = build_account_manager_summary(tables, customer_health_features, account_monthly_revenue_quality)
+    account_manager_summary = build_account_manager_summary(
+        tables, customer_health_features, account_monthly_revenue_quality
+    )
 
     out_tables = {
         "account_monthly_revenue_quality": account_monthly_revenue_quality,

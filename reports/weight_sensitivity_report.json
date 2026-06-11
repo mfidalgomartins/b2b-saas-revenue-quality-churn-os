@@ -9,8 +9,8 @@
     "exposure_concentration": 0.2,
     "renewal_urgency": 0.05
   },
-  "max_tier_flip_pct": 0.053111,
+  "max_tier_flip_pct": 0.052889,
   "max_tier_flip_lever": "exposure_concentration (down)",
-  "mean_tier_flip_pct": 0.029259,
+  "mean_tier_flip_pct": 0.029222,
   "all_under_5pct": false
 }

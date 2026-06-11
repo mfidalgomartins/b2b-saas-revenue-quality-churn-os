@@ -3,14 +3,11 @@
   "evaluation_rows": 88613,
   "evaluation_accounts": 4343,
   "overall_forward_churn_rate": 0.024635,
-  "monotonic_violations": [
-    "High>Critical"
-  ],
+  "monotonic_violations": [],
   "tier_churn_rate": {
     "Low": 0.023109,
-    "Moderate": 0.061786,
-    "High": 0.181102,
-    "Critical": 0.0
+    "Moderate": 0.06143,
+    "High": 0.188976
   },
   "weights": {
     "usage_deterioration": 0.25,

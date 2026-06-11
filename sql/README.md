@@ -3,7 +3,7 @@
 This folder provides SQL equivalents for key staging and mart transformations used in the Python pipeline.
 
 ## Purpose
-- Improve analytics-engineering interview defensibility.
+- Make warehouse migration and metric review straightforward.
 - Provide a migration path to warehouse-native modeling (dbt/DuckDB/Snowflake/BigQuery).
 - Keep business metric definitions explicit and reviewable in SQL.
 

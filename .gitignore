@@ -26,6 +26,7 @@ env/
 # Editor/IDE
 .vscode/
 .idea/
+.claude/
 
 # Test and coverage artifacts
 .coverage
