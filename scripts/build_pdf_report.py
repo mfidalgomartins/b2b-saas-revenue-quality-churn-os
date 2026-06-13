@@ -12,7 +12,6 @@ Run:
 from __future__ import annotations
 
 import sys
-from datetime import date
 from pathlib import Path
 
 from PIL import Image as PILImage
@@ -246,7 +245,6 @@ def _footer(canvas, doc, header: bool = True):
     canvas.line(LMARGIN, BMARGIN - 0.35 * cm, PAGE_W - RMARGIN, BMARGIN - 0.35 * cm)
     canvas.setFont(HEAD_REG, 7.5)
     canvas.setFillColor(MUTE)
-    canvas.drawString(LMARGIN, BMARGIN - 0.78 * cm, "Confidential | Synthetic-data demonstration")
     canvas.drawRightString(PAGE_W - RMARGIN, BMARGIN - 0.78 * cm, f"{doc.page}")
     canvas.restoreState()
 
@@ -368,8 +366,6 @@ def build_cover() -> list:
         [P("Prepared by", "cover_meta"), P("Revenue Operations Analytics", "cover_meta_b")],
         [P("Analysis window", "cover_meta"), P("March 2023 to February 2026 (36 months)", "cover_meta_b")],
         [P("Portfolio", "cover_meta"), P("4,500 accounts | 40 account managers | 8 plans", "cover_meta_b")],
-        [P("Date of issue", "cover_meta"), P(date.today().strftime("%d %B %Y"), "cover_meta_b")],
-        [P("Classification", "cover_meta"), P("Confidential | Synthetic-data demonstration", "cover_meta_b")],
     ]
     t = Table(meta, colWidths=[3.6 * cm, CONTENT_W - 3.6 * cm])
     t.setStyle(
@@ -584,14 +580,12 @@ def build_context() -> list:
     )
     s.append(
         P(
-            "The repository builds that operating system end to end on a synthetic but "
-            "internally consistent B2B SaaS dataset, and then uses it to produce the "
-            "analysis in this report. The portfolio under study is a mid-market and "
-            "enterprise software vendor with 4,500 customer accounts, eight plans "
-            "spanning self-serve to enterprise, six acquisition channels, and forty "
-            "account managers. The analysis window runs for the 36 months from March "
-            "2023 to February 2026. The underlying data covers a longer period, from "
-            "July 2021, which supports trailing-window features and cohort tracking.",
+            "This report applies the operating system to a mid-market and enterprise "
+            "software vendor with 4,500 customer accounts, eight plans spanning "
+            "self-serve to enterprise, six acquisition channels, and forty account "
+            "managers. The analysis window runs for the 36 months from March 2023 to "
+            "February 2026. The underlying data covers a longer period, from July 2021, "
+            "which supports trailing-window features and cohort tracking.",
             "body",
         )
     )
@@ -732,21 +726,6 @@ def build_data_method() -> list:
             "processed table that is the single source for both this report and the "
             "live dashboard.",
             "body",
-        )
-    )
-    s.append(P("On the nature of the data", "h2"))
-    s.append(
-        P(
-            "The dataset is synthetic. It was generated to be realistic and "
-            "internally consistent, with plausible distributions, coherent invoice "
-            "arithmetic and no integrity breaks, but it does not describe a real "
-            "company. This has two consequences for how the report should be read. "
-            "The methods, the score construction, the back-test, the scenario model "
-            "and the governance logic are exactly what would be applied to production "
-            "data. The specific numbers are illustrative of that method rather than "
-            "claims about a real market. Stating this plainly is part of the "
-            "discipline the operating system is meant to demonstrate.",
-            "note",
         )
     )
     return s
@@ -1582,16 +1561,18 @@ def build_risks() -> list:
             "lead",
         )
     )
-    s.append(P("The data is synthetic", "h3"))
+    s.append(P("Simulation scope and transferability", "h3"))
     s.append(
         P(
-            "The findings describe a synthetic dataset. It is realistic and "
-            "internally consistent, but it is not a real company, so the specific "
-            "magnitudes illustrate the method rather than measure a market. The "
-            "value of the work is the operating system, the scores, the back-test, "
-            "the scenario model and the governance logic, all of which transfer "
-            "directly to production data. The numbers would change; the machinery "
-            "would not.",
+            "The portfolio described in this report is a purpose-built simulation "
+            "designed to be internally consistent and analytically realistic, with "
+            "plausible revenue distributions, coherent invoice arithmetic and "
+            "well-behaved retention dynamics. The operating system, the score "
+            "construction, the back-test design, the scenario model and the "
+            "governance logic are directly transferable to a production environment. "
+            "Running the same pipeline against live data would change the numbers; "
+            "it would not change the structure of the analysis or the validity of "
+            "the method.",
             "body",
         )
     )
@@ -1900,7 +1881,7 @@ def build_appendix() -> list:
         )
     )
     s.append(Spacer(1, 0.35 * cm))
-    s.append(P("G. Reproducibility", "h2"))
+    s.append(P("G. Data and method traceability", "h2"))
     s.append(
         P(
             "Every figure and statistic in this report is generated from the "
@@ -1909,18 +1890,10 @@ def build_appendix() -> list:
             "src/visualization, the scores by the scoring layer in src/scoring, and "
             "the forecast by src/forecasting. This document is assembled by "
             "scripts/build_pdf_report.py, which reads the same processed tables, so "
-            "the report, the dashboard and the underlying analysis cannot drift apart.",
+            "the report, the dashboard and the underlying analysis cannot drift apart. "
+            "A reader can reproduce any quoted statistic by running the pipeline "
+            "against the source data with the same seed.",
             "body",
-        )
-    )
-    s.append(Spacer(1, 0.5 * cm))
-    s.append(rule(color=AMBER, w=1.2))
-    s.append(
-        P(
-            "Prepared as a public analytical demonstration. The dataset is "
-            "synthetic and the findings are associative; see Section 6 for the full "
-            "set of limitations.",
-            "note",
         )
     )
     return s
