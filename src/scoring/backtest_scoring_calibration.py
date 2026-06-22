@@ -26,6 +26,7 @@ from src.scoring.scoring_utils import (  # noqa: E402
     CHURN_WEIGHTS,
     compute_churn_components,
     risk_tier,
+    rolling_trailing_slope,
     score_from_components,
 )
 
@@ -74,20 +75,18 @@ def build_trailing_panel(base_dir: Path) -> pd.DataFrame:
     panel = panel.merge(customers[["customer_id", "signup_date"]], on="customer_id", how="left")
     panel = panel.sort_values(["customer_id", "month"]).reset_index(drop=True)
 
-    grp = panel.groupby("customer_id", group_keys=False)
+    grp = panel.groupby("customer_id")
 
     def trailing_mean(col: str, window: int) -> pd.Series:
-        return grp[col].apply(lambda s: s.rolling(window=window, min_periods=1).mean())
+        # Native grouped-rolling: identical values to a per-group rolling mean,
+        # without the per-group Python dispatch of groupby.apply.
+        rolled = grp[col].rolling(window=window, min_periods=1).mean()
+        return rolled.reset_index(level=0, drop=True)
 
     def trailing_trend(col: str, window: int = 3) -> pd.Series:
-        def slope(values: np.ndarray) -> float:
-            v = values[~np.isnan(values)]
-            if len(v) < 2:
-                return 0.0
-            x = np.arange(len(v))
-            return float(np.polyfit(x, v, 1)[0])
-
-        return grp[col].apply(lambda s: s.rolling(window=window, min_periods=1).apply(slope, raw=True))
+        # Closed-form rolling OLS slope (see scoring_utils.rolling_trailing_slope).
+        slopes = grp[col].transform(lambda s: rolling_trailing_slope(s.to_numpy(), window))
+        return slopes
 
     panel["trailing_3m_usage_avg"] = trailing_mean("product_usage_score", 3)
     panel["trailing_3m_usage_trend"] = trailing_trend("product_usage_score", 3)
@@ -97,14 +96,10 @@ def build_trailing_panel(base_dir: Path) -> pd.DataFrame:
     panel["trailing_3m_discount_avg"] = trailing_mean("avg_discount_pct", 3)
 
     panel["contraction_event"] = (panel["contraction_mrr"].fillna(0) > 0).astype(int)
-    panel["contraction_frequency"] = grp["contraction_event"].apply(
-        lambda s: s.rolling(window=12, min_periods=1).mean()
-    )
+    panel["contraction_frequency"] = trailing_mean("contraction_event", 12)
 
     panel["heavy_discount_event"] = (panel["avg_discount_pct"].fillna(0) >= 0.25).astype(int)
-    panel["heavy_discount_frequency_12m"] = grp["heavy_discount_event"].apply(
-        lambda s: s.rolling(window=12, min_periods=1).mean()
-    )
+    panel["heavy_discount_frequency_12m"] = trailing_mean("heavy_discount_event", 12)
 
     panel["seats_active_lag1"] = grp["seats_active"].shift(1)
     panel["seats_active_lag2"] = grp["seats_active"].shift(2)
@@ -115,7 +110,8 @@ def build_trailing_panel(base_dir: Path) -> pd.DataFrame:
         0.0,
     )
 
-    panel["churn_history_flag"] = grp["churn_flag"].apply(lambda s: s.shift(1).fillna(0).cummax()).astype(int)
+    prior_churn = grp["churn_flag"].shift(1).fillna(0)
+    panel["churn_history_flag"] = prior_churn.groupby(panel["customer_id"]).cummax().astype(int)
 
     panel["tenure_months"] = (
         (panel["month"].dt.year - panel["signup_date"].dt.year) * 12
@@ -143,27 +139,27 @@ def build_trailing_panel(base_dir: Path) -> pd.DataFrame:
 
 
 def attach_forward_churn(panel: pd.DataFrame, horizon_months: int) -> pd.DataFrame:
-    """For each row, flag if any churn event occurs within horizon_months."""
+    """For each row, flag if any churn event occurs within horizon_months.
+
+    Months are monthly period starts, so a calendar offset of ``horizon_months``
+    is equivalent to a shift on the integer month index ``year*12 + month``. For
+    each customer the answer is computed with two vectorised ``searchsorted``
+    boundaries over a churn prefix-sum — no per-row ``DateOffset`` construction.
+    """
     panel = panel.sort_values(["customer_id", "month"]).reset_index(drop=True)
-    out = panel[["customer_id", "month", "churn_flag"]].copy()
-    out["forward_churn_flag"] = 0
+    month_index = (panel["month"].dt.year * 12 + panel["month"].dt.month).to_numpy()
+    churn = panel["churn_flag"].fillna(0).astype(int).to_numpy()
+    flags = np.zeros(len(panel), dtype=int)
 
-    for _, group_idx in panel.groupby("customer_id", sort=False).groups.items():
-        rows = panel.loc[group_idx, ["month", "churn_flag"]].sort_values("month")
-        months = rows["month"].to_numpy()
-        churn = rows["churn_flag"].fillna(0).astype(int).to_numpy()
-        flags = np.zeros(len(rows), dtype=int)
-        for i in range(len(rows)):
-            upper = pd.Timestamp(months[i]) + pd.DateOffset(months=horizon_months)
-            mask = (months > months[i]) & (months <= upper)
-            flags[i] = int(churn[mask].any()) if mask.any() else 0
-        out.loc[rows.index, "forward_churn_flag"] = flags
+    for positions in panel.groupby("customer_id", sort=False).indices.values():
+        positions = np.sort(positions)
+        m = month_index[positions]  # ascending within the customer
+        prefix = np.concatenate(([0], np.cumsum(churn[positions])))
+        lo = np.searchsorted(m, m, side="right")  # first month strictly after m_i
+        hi = np.searchsorted(m, m + horizon_months, side="right")  # first month after m_i + horizon
+        flags[positions] = (prefix[hi] - prefix[lo] > 0).astype(int)
 
-    panel = panel.merge(
-        out[["customer_id", "month", "forward_churn_flag"]],
-        on=["customer_id", "month"],
-        how="left",
-    )
+    panel["forward_churn_flag"] = flags
     return panel
 
 

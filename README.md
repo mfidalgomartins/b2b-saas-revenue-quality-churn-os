@@ -20,7 +20,7 @@ Topline MRR can grow while discount creep, usage decay, payment slippage, and fr
 |---|---|
 | `src/data_generation/` | Generates 6 raw CSVs with seeded RNG. Deterministic for `--seed 42`. |
 | `src/features/` | Builds the analytical layer: account-month revenue quality, customer health features, cohort retention summaries, account risk base. Schema-validated at the boundary. |
-| `src/scoring/` | Four interpretable 0–100 scores — churn risk, revenue quality, discount dependency, expansion quality — composed into a governance priority. Single source of truth for weights in `scoring_utils.py`. |
+| `src/scoring/` | Four interpretable 0–100 scores — churn risk, revenue quality, discount dependency, expansion quality — composed into a governance priority. Single source of truth for weights **and component formulas** in `scoring_utils.py`. |
 | `src/scoring/backtest_scoring_calibration.py` | Reconstructs every historical month's score with the production formulas and measures forward-3M churn by tier. A parity test detects drift against the latest production score. |
 | `src/scoring/run_weight_sensitivity.py` | ±20% weight perturbation report. Quantifies how stable tier assignments are. |
 | `src/forecasting/` | MRR scenario trajectories — base, downside, upside, discount-discipline, risk-adjusted. |
@@ -66,6 +66,25 @@ python src/validation/check_validation_gate.py \
   --min-readiness-tier "technically valid"
 ```
 
+## Quality gates
+
+Everything below is enforced by `make qa` and by CI on every push and pull request — none of it is "run it by hand if you remember".
+
+| Gate | Command | Bar |
+|---|---|---|
+| Lint | `make lint` | Ruff `E,F,I,B,UP,SIM,C4`, clean |
+| Format | `make format-check` | Ruff formatter, no diff |
+| Coverage | `make coverage` | **100% branch coverage** of the pure-logic core library (`fail_under = 100`) |
+| Static security | `make security` | Bandit, no findings (subprocess/`git` patterns reviewed and documented) |
+| Dependency audit | `make audit` | `pip-audit`, no known CVEs in declared dependencies |
+| Governance gate | `make gate` | 0 WARN / 0 FAIL / 0 high / 0 critical, `technically valid` |
+| Performance | `make benchmark` | Backtest hotspot benchmark; see [`docs/core/performance.md`](docs/core/performance.md) |
+
+Coverage is measured over the modules unit tests import directly (`metrics`, `scoring_utils`, `io/*`,
+the validation gate, `dashboard_contract`); the end-to-end pipeline scripts are exercised by the integration
+build (`make all`) and the artifact-contract suite. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full
+workflow and [`SECURITY.md`](SECURITY.md) for the security posture.
+
 ## Decisions this supports
 
 - **Renewal triage** — which accounts need intervention now, ranked by governance priority.
@@ -76,7 +95,7 @@ python src/validation/check_validation_gate.py \
 ## Design choices
 
 - **Rule-based, not ML.** Every score is a weighted sum of normalised components defined in `scoring_utils.py`.
-- **One source of truth for weights.** Production scorer and calibration backtest both import the same `CHURN_WEIGHTS` dict. A unit test asserts weights sum to 1.
+- **One source of truth for scoring math.** All four score families compose from `compute_*_components` functions and weight dicts in `scoring_utils.py`; the production scorer and calibration backtest import the same definitions, so they cannot drift. Unit tests assert weights sum to 1 and pin each component family.
 - **Schema contracts at load boundaries.** `src/io/contracts.py` rejects malformed inputs before they propagate.
 - **Beginning-base retention.** GRR, NRR, revenue churn, and logo churn exclude new logos and use reconstructed beginning-of-month denominators.
 - **Validation gate.** 21 governance checks produce a readiness tier; the CLI gate fails CI on any regression in WARN / FAIL counts or severity counts.
@@ -105,7 +124,7 @@ tests/      unit, metric-integrity, and artifact-contract tests
 
 ## Tech
 
-Python 3.12 · pandas · NumPy · Matplotlib · Seaborn · ReportLab · SQL · HTML / CSS / SVG / JS · Ruff · unittest · GitHub Actions
+Python 3.12 · pandas · NumPy · Matplotlib · Seaborn · ReportLab · SQL · HTML / CSS / SVG / JS · Ruff · unittest · coverage.py · Bandit · pip-audit · GitHub Actions
 
 Released under the [MIT License](LICENSE).
 

@@ -35,7 +35,8 @@ class Finding:
 
 
 SEVERITY_ORDER = {"Critical": 5, "High": 4, "Medium": 3, "Low": 2, "None": 1}
-STATUS_ORDER = {"FAIL": 3, "WARN": 2, "PASS": 1}
+# "PASS"/"WARN"/"FAIL" are check-status labels, not credentials (B105 false positive).
+STATUS_ORDER = {"FAIL": 3, "WARN": 2, "PASS": 1}  # nosec
 READINESS_ORDER = {
     "publish-blocked": 1,
     "not committee-grade": 2,

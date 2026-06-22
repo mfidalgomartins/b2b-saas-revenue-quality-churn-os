@@ -2,16 +2,18 @@
 
 Not part of the build. Run from repo root:
     python scripts/shoot_dashboard.py
-Writes PNGs to /tmp/dash/.
+Writes PNGs to a fresh temp directory (override with DASH_SHOT_DIR).
 """
 
+import os
 import pathlib
+import tempfile
 
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 HTML = ROOT / "outputs/dashboard/revenue-quality-command-center.html"
-OUT = pathlib.Path("/tmp/dash")
+OUT = pathlib.Path(os.environ.get("DASH_SHOT_DIR") or tempfile.mkdtemp(prefix="dash_"))
 OUT.mkdir(parents=True, exist_ok=True)
 
 url = HTML.as_uri()

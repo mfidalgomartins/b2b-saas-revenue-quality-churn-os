@@ -106,6 +106,20 @@ class TestCanonicalDashboardContract(unittest.TestCase):
         self.assertIn("rq-theme", html)
         self.assertIn("prefers-color-scheme", html)
 
+    def test_dashboard_ships_a_designed_print_stylesheet(self) -> None:
+        """Saving-to-PDF / printing must produce designed output, not a screen capture.
+
+        The print layer forces the light palette onto paper, paginates without
+        splitting decision units, drops interactive-only chrome, and renders the
+        accent/pills via print-color-adjust.
+        """
+        html = (ROOT / CANONICAL_DASHBOARD_PATH).read_text(encoding="utf-8")
+
+        self.assertIn("@media print", html)
+        self.assertIn("@page", html)
+        self.assertIn("print-color-adjust: exact", html)
+        self.assertIn("break-inside: avoid", html)
+
 
 if __name__ == "__main__":
     unittest.main()

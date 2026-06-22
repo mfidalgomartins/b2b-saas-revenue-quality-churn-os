@@ -20,6 +20,9 @@ from src.scoring.scoring_utils import (  # noqa: E402
     clip01,
     component_contributions,
     compute_churn_components,
+    compute_discount_dependency_components,
+    compute_expansion_quality_components,
+    compute_revenue_quality_components,
     quality_to_risk_tier,
     risk_tier,
     score_from_components,
@@ -333,18 +336,7 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
     quality_flag_health_map = {"healthy": 1.0, "watch": 0.7, "fragile": 0.35, "inactive": 0.15}
     score_df["quality_flag_health_factor"] = score_df["revenue_quality_flag"].map(quality_flag_health_map).fillna(0.5)
 
-    revenue_quality_components = {
-        "pricing_realization": clip01((score_df["realized_price_index"] - 0.72) / 0.30),
-        "discount_discipline": 1 - clip01((score_df["trailing_3m_discount_avg"] - 0.12) / 0.25),
-        "retention_momentum": 0.55 * (1 - clip01(score_df["contraction_frequency"] / 0.35))
-        + 0.45 * clip01(score_df["expansion_frequency"] / 0.35),
-        "account_health_quality": 0.40 * clip01((score_df["trailing_3m_usage_avg"] - 50) / 30)
-        + 0.35 * clip01((score_df["trailing_3m_nps_avg"] + 10) / 45)
-        + 0.25 * (1 - clip01(score_df["trailing_3m_payment_delay_avg"] / 30)),
-        "stability_governance": 0.50 * (1 - score_df["renewal_risk_proxy"])
-        + 0.30 * (1 - score_df["churn_history_flag"])
-        + 0.20 * score_df["quality_flag_health_factor"],
-    }
+    revenue_quality_components = compute_revenue_quality_components(score_df)
     score_df["revenue_quality_score"] = score_from_components(revenue_quality_components, REVENUE_QUALITY_WEIGHTS)
 
     # Inactive accounts should not show strong quality scores.
@@ -379,13 +371,7 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
     # -------------------------
     # 3) Discount Dependency Score (0-100, higher = more dependency risk)
     # -------------------------
-    discount_components = {
-        "discount_level": clip01((score_df["trailing_3m_discount_avg"] - 0.12) / 0.25),
-        "discount_persistence": clip01(score_df["heavy_discount_frequency_12m"] / 0.70),
-        "discounted_expansion_pressure": clip01(score_df["discounted_expansion_share_12m"] / 0.80),
-        "price_realization_erosion": clip01((0.90 - score_df["realized_price_index"]) / 0.35),
-        "policy_signal": np.maximum(score_df["discount_dependency_flag"], score_df["manager_discount_outlier_flag"]),
-    }
+    discount_components = compute_discount_dependency_components(score_df)
     score_df["discount_dependency_score"] = score_from_components(discount_components, DISCOUNT_DEPENDENCY_WEIGHTS)
     score_df["discount_dependency_tier"] = score_df["discount_dependency_score"].apply(risk_tier)
 
@@ -409,13 +395,7 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
     # -------------------------
     # 4) Expansion Quality Score (0-100, higher = healthier expansion quality)
     # -------------------------
-    expansion_components = {
-        "healthy_expansion_mix": clip01(score_df["healthy_expansion_ratio_12m"] / 0.80),
-        "fragility_control": 1 - clip01(score_df["fragile_expansion_ratio_12m"] / 0.80),
-        "expansion_discount_discipline": 1 - clip01((score_df["avg_expansion_discount_12m"] - 0.12) / 0.28),
-        "expansion_payment_quality": 1 - clip01((score_df["avg_expansion_payment_delay_12m"] - 8) / 25),
-        "post_expansion_durability": 1 - clip01(score_df["post_expansion_contraction_rate_3m"] / 0.70),
-    }
+    expansion_components = compute_expansion_quality_components(score_df)
     score_df["expansion_quality_score"] = score_from_components(expansion_components, EXPANSION_QUALITY_WEIGHTS)
 
     # No recent expansion: assign a neutral baseline adjusted by general health, not a hard penalty.

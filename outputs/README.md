@@ -26,7 +26,7 @@ concentration and before-vs-after views. Regenerate with
 
 ## dashboard/
 `revenue-quality-command-center.html` opens standalone in any browser, with a
-light and dark theme. `README.md` and `DESIGN_AUDIT.md` document it.
+light and dark theme. `README.md` documents how to access it.
 
 **Live dashboard (GitHub Pages):**
 https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/

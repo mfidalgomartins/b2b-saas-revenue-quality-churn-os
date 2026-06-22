@@ -12,13 +12,21 @@ dependencies = [
   "matplotlib>=3.8,<4.0",
   "numpy>=1.26,<3.0",
   "pandas>=2.2,<3.0",
-  "pillow>=10.0,<13.0",
+  "pillow>=12.2,<13.0",  # 12.2 patches PYSEC-2026-165 / CVE-2026-40192 et al.
   "reportlab>=4.0,<5.0",
   "seaborn>=0.13,<1.0",
 ]
 
 [project.optional-dependencies]
-dev = ["ruff>=0.6,<1.0"]
+dev = [
+  "ruff>=0.6,<1.0",
+  "coverage>=7.5,<8.0",
+  "bandit>=1.7,<2.0",
+  "pip-audit>=2.7,<3.0",
+  # Pin a patched transitive of the pip-audit toolchain so the audit gate stays
+  # green: msgpack 1.2.1 fixes GHSA-6v7p-g79w-8964.
+  "msgpack>=1.2.1",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -51,3 +59,34 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B011"]  # asserts are fine in tests
+
+# Coverage is enforced over the pure-logic "core library" — the modules unit
+# tests import directly. The end-to-end pipeline scripts are covered separately
+# by the integration build (`make all`) and the artifact-contract test suite.
+[tool.coverage.run]
+branch = true
+relative_files = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 100
+include = [
+  "src/metrics.py",
+  "src/scoring/scoring_utils.py",
+  "src/io/*.py",
+  "src/validation/check_validation_gate.py",
+  "src/dashboard/dashboard_contract.py",
+]
+exclude_also = [
+  "if __name__ == .__main__.:",
+  "raise NotImplementedError",
+]
+
+[tool.bandit]
+# Pipeline orchestration shells out to fixed, in-repo Python module commands and
+# the `git` binary on PATH — no untrusted input and never `shell=True`. B404/B603
+# flag the subprocess import/call pattern and B607 the partial `git` path; all
+# three are reviewed and accepted for this controlled, developer-run tooling.
+skips = ["B404", "B603", "B607"]
+exclude_dirs = [".venv", "build", "tests"]

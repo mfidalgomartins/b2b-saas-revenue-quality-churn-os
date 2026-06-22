@@ -24,6 +24,7 @@ from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
     Image,
+    KeepTogether,
     NextPageTemplate,
     PageBreak,
     PageTemplate,
@@ -125,8 +126,18 @@ def P(text: str, style: str = "body") -> Paragraph:
     return Paragraph(text, styles[style])
 
 
+# Exhibit registry — figures auto-number in document order so captions and
+# in-text references can never drift apart, and the front matter can list them.
+EXHIBITS: list[tuple[int, str]] = []
+
+
 def figure(name: str, title: str, caption: str, max_w: float = CONTENT_W, max_h: float = 11.5 * cm):
-    """Return [title, Image, caption] scaled to fit, keeping aspect ratio."""
+    """Return a single KeepTogether flowable: numbered title, image, caption.
+
+    Figures are numbered as "Exhibit N" in the order figure() is called, which is
+    document order, so the number in the caption always matches the in-text
+    reference. The (number, title) pair is registered for the List of Exhibits.
+    """
     path = GRAPHS / name
     with PILImage.open(path) as im:
         iw, ih = im.size
@@ -138,13 +149,19 @@ def figure(name: str, title: str, caption: str, max_w: float = CONTENT_W, max_h:
         w = h / ar
     img = Image(str(path), width=w, height=h)
     img.hAlign = "CENTER"
+
+    number = len(EXHIBITS) + 1
+    EXHIBITS.append((number, title))
+
     block = []
     if title:
-        block.append(P(f"Figure. {title}", "figtitle"))
+        block.append(P(f"Exhibit {number} &mdash; {title}", "figtitle"))
     block.append(img)
     if caption:
         block.append(P(caption, "caption"))
-    return block
+    # Bind title + image + caption so an exhibit never splits across a page break
+    # or strands its caption.
+    return [KeepTogether(block)]
 
 
 def kpi_band(items: list[tuple[str, str]]):
@@ -387,20 +404,20 @@ def build_toc() -> list:
     entries = [
         ("1", "Executive summary", "3"),
         ("2", "Context and objectives", "5"),
-        ("3", "Data and methodology", "7"),
-        ("4", "Analytical framework", "9"),
-        ("5", "Findings", "11"),
-        ("5.1", "Revenue scale and the quality of growth", "11"),
-        ("5.2", "Retention: gross, net and the cohort view", "12"),
+        ("3", "Data and methodology", "6"),
+        ("4", "Analytical framework", "8"),
+        ("5", "Findings", "10"),
+        ("5.1", "Revenue scale and the quality of growth", "10"),
+        ("5.2", "Retention: gross, net and the cohort view", "11"),
         ("5.3", "Where churn concentrates", "13"),
         ("5.4", "Discount intensity and realized pricing", "15"),
         ("5.5", "Expansion quality", "17"),
         ("5.6", "Account-level concentration and at-risk MRR", "18"),
-        ("5.7", "The churn-risk scoring system", "20"),
+        ("5.7", "The churn-risk scoring system", "21"),
         ("5.8", "Forecast and scenario analysis", "23"),
-        ("6", "Risks, limitations and caveats", "26"),
-        ("7", "Recommendations and action priorities", "27"),
-        ("8", "Appendix", "29"),
+        ("6", "Risks, limitations and caveats", "27"),
+        ("7", "Recommendations and action priorities", "29"),
+        ("8", "Appendix", "31"),
     ]
     rows = []
     for num, label, page in entries:
@@ -511,9 +528,10 @@ def build_exec_summary() -> list:
             "Third, downside risk is concentrated even though revenue is not. The top "
             "ten accounts represent only 4.0% of MRR and the top fifty only 14.3%, so "
             "the revenue base itself is well diversified. But within the at-risk "
-            "cohort the picture inverts: 79 accounts carry a High or Critical "
-            "governance priority, they hold $376K of MRR, and the top twenty of them "
-            "account for 81.3% of that at-risk MRR. The annualized ARR associated "
+            "cohort the picture inverts: 80 accounts carry a High or Critical "
+            "governance priority — 79 High and one Critical — and together they "
+            "hold $376K of MRR, with the top twenty of them accounting for 81.3% "
+            "of that at-risk MRR. The annualized ARR associated "
             "with High and Critical accounts is $4.51M. A stress test in which the "
             "top twenty high-risk accounts churn outright removes $3.67M of ARR. The "
             "right response is account-level governance on a short list, not a "
@@ -551,7 +569,7 @@ def build_exec_summary() -> list:
     s.append(
         P(
             "The recommendations that follow are deliberately concrete. They begin "
-            "with standing up account-level governance for the 79 High and Critical "
+            "with standing up account-level governance for the 80 High and Critical "
             "accounts and the 30-name priority shortlist, move to a discount-approval "
             "and repricing-at-renewal policy aimed at the deep-discount tail, and "
             "extend to an expansion-quality gate that separates durable growth from "
@@ -728,6 +746,35 @@ def build_data_method() -> list:
             "body",
         )
     )
+    s.append(P("Validation and release controls", "h2"))
+    s.append(
+        P(
+            "The report is not a one-off analysis pasted into a presentation. The "
+            "pipeline runs a governed validation gate before publication. In the "
+            "current release, 21 of 21 controls pass with no warnings, failures, "
+            "high-severity findings or critical findings, and the readiness tier is "
+            "technically valid. The controls cover raw-data logic, processed-table "
+            "contracts, feature engineering, metric construction, scoring outputs, "
+            "forecast outputs, dashboard feeds, written conclusions and release "
+            "governance. That matters because the report makes operational claims: "
+            "an account may be routed to repricing, a manager portfolio may be "
+            "reviewed, and a forecast scenario may influence budget decisions. Those "
+            "claims need a stronger basis than a visually plausible chart.",
+            "body",
+        )
+    )
+    s.append(
+        P(
+            "The validation gate does not make the findings causal, and it does not "
+            "make synthetic data equivalent to live production data. It does mean the "
+            "numbers reconcile across the processed tables, charts, dashboard and "
+            "written narrative, and that the score and forecast artefacts meet their "
+            "published contracts. For an executive reader, the practical conclusion "
+            "is simple: the report can be challenged on interpretation and business "
+            "judgement, but not on avoidable arithmetic drift between artefacts.",
+            "body",
+        )
+    )
     return s
 
 
@@ -823,6 +870,22 @@ def build_framework() -> list:
             "body",
         )
     )
+    s.append(P("Decision rights and operating rhythm", "h2"))
+    s.append(
+        P(
+            "The framework is deliberately designed to separate diagnosis from "
+            "authority. The score can tell the business that an account is a renewal "
+            "risk, a discount-dependency case, a payment-friction case or an "
+            "expansion-quality case. It should not, by itself, approve a concession "
+            "or force a commercial action. The right control is an operating cadence: "
+            "customer success owns usage and sentiment interventions, finance owns "
+            "payment stress, sales leadership owns discount exceptions, and revenue "
+            "operations owns the weekly queue and exception log. This keeps the score "
+            "interpretable while preventing it from becoming an ungoverned black-box "
+            "decision engine.",
+            "body",
+        )
+    )
     return s
 
 
@@ -848,7 +911,7 @@ def build_findings() -> list:
             "2.54-times increase over the window, an implied 2.70% compounded each "
             "month, and an ARR run-rate that reached $114.3M. On the standard growth "
             "lens the company is performing well and the trend is steady rather than "
-            "lumpy, as the smooth climb in Figure 1 shows.",
+            "lumpy, as the smooth climb in Exhibit 1 shows.",
             "body",
         )
     )
@@ -900,6 +963,18 @@ def build_findings() -> list:
             "body",
         )
     )
+    s.append(
+        P(
+            "The management implication is that the company should not treat growth "
+            "rate as the primary control metric. At this scale, the higher-quality "
+            "question is whether each incremental dollar arrives with healthy usage, "
+            "clean collection, rational discounting and a path to renewal. A board "
+            "view that shows MRR and ARR without realized price, discount dependency "
+            "and at-risk MRR would miss the three signals that deteriorate before "
+            "reported growth does.",
+            "body",
+        )
+    )
 
     # 5.2
     s.append(P("5.2  Retention: gross, net and the cohort view", "h2"))
@@ -909,7 +984,7 @@ def build_findings() -> list:
             "matters most for durability. Latest gross revenue retention is 99.17% "
             "and net revenue retention is 99.82%. Logo churn is 0.73% and revenue "
             "churn 0.39% in the most recent month. Across the full window the "
-            "averages are similar, with GRR at 99.19% and NRR at 99.87%. Figure 2 "
+            "averages are similar, with GRR at 99.19% and NRR at 99.87%. Exhibit 2 "
             "tracks the two retention series over time.",
             "body",
         )
@@ -936,7 +1011,7 @@ def build_findings() -> list:
     )
     s.append(
         P(
-            "The logo and revenue churn series in Figure 3 reinforce the point. Both "
+            "The logo and revenue churn series in Exhibit 3 reinforce the point. Both "
             "are low and stable, and revenue churn runs below logo churn, which tells "
             "us the accounts that leave are smaller than average. That is a benign "
             "pattern. It is also a complacency trap, because the accounts most likely "
@@ -955,7 +1030,7 @@ def build_findings() -> list:
     )
     s.append(
         P(
-            "The cohort heatmap in Figure 4 puts retention on a more honest footing "
+            "The cohort heatmap in Exhibit 4 puts retention on a more honest footing "
             "than any single rate. Reading down a column shows how a given month "
             "since acquisition behaves across cohorts; reading across a row shows a "
             "single cohort ageing. Most cells sit close to 100% net retention, with "
@@ -973,6 +1048,19 @@ def build_findings() -> list:
         "Green cells retain at or above 100%; red cells fall below. Weakness "
         "is concentrated in particular cohorts, which points to acquisition-"
         "quality differences rather than a uniform decline.",
+    )
+    s.append(
+        P(
+            "This is also where the report separates performance monitoring from "
+            "management action. A small NRR shortfall can be tolerated for a month; "
+            "a persistent shortfall, especially if concentrated in the same younger "
+            "cohorts, should trigger a review of acquisition quality, onboarding "
+            "promises and first-renewal execution. The operating threshold is not a "
+            "single red cell in the heatmap. It is repeated weakness in the same "
+            "cohort-age band, paired with rising discount dependency or fragile "
+            "expansion in those accounts.",
+            "body",
+        )
     )
 
     # 5.3
@@ -1089,7 +1177,7 @@ def build_findings() -> list:
             "the realized price index has settled at 0.822, and the share of MRR that "
             "carries a discount-dependency flag is 15.9%. Roughly one revenue dollar "
             "in six depends on a price concession to exist at its current level. "
-            "Figure 5 tracks how discount dependency has moved over the window.",
+            "Exhibit 5 tracks how discount dependency has moved over the window.",
             "body",
         )
     )
@@ -1103,7 +1191,7 @@ def build_findings() -> list:
     s.append(
         P(
             "Discounting would matter for margin even if it were harmless to "
-            "retention. It is not harmless. Figure 6 sorts accounts by their current "
+            "retention. It is not harmless. Exhibit 6 sorts accounts by their current "
             "discount band and shows the churn they go on to experience over the next "
             "three months. The relationship is not a simple straight line, and the "
             "report is careful not to pretend it is. The first three bands actually "
@@ -1189,6 +1277,19 @@ def build_findings() -> list:
             "note",
         )
     )
+    s.append(
+        P(
+            "The practical policy is therefore two-stage. First, classify the account "
+            "problem before approving any new concession: is the price gap a true "
+            "commercial discount, a collection-delay issue, a usage-value problem, "
+            "or a renewal-timing problem? Second, require an offset for every deep "
+            "discount that is renewed, such as scope reduction, term extension, "
+            "executive-success plan, committed usage milestone or a dated path back "
+            "toward list. Without that offset, discounting is simply converting "
+            "margin loss into delayed churn.",
+            "body",
+        )
+    )
 
     # 5.5
     s.append(P("5.5  Expansion quality", "h2"))
@@ -1198,7 +1299,7 @@ def build_findings() -> list:
             "100%. The question this section asks is not how much the base expanded "
             "but how much of that expansion is durable. The operating system flags "
             "every expansion event as healthy, watch or fragile based on the health "
-            "of the account at the time it grew. Figure 7 shows how $1.63M of "
+            "of the account at the time it grew. Exhibit 7 shows how $1.63M of "
             "expansion MRR splits across those three qualities.",
             "body",
         )
@@ -1237,6 +1338,30 @@ def build_findings() -> list:
             "body",
         )
     )
+    s.append(
+        data_table(
+            ["Expansion quality", "Expansion MRR", "Events", "Management treatment"],
+            [
+                ["Healthy", "$715K", "1,525", "Count as durable expansion"],
+                ["Watch", "$460K", "964", "Count, but monitor health before renewal"],
+                ["Fragile", "$457K", "1,060", "Discount in forecast; route to success"],
+            ],
+            widths=[3.6 * cm, 3.0 * cm, 2.4 * cm, CONTENT_W - 9.0 * cm],
+            align_right_from=1,
+        )
+    )
+    s.append(Spacer(1, 0.25 * cm))
+    s.append(
+        P(
+            "This treatment avoids a common failure in SaaS planning: treating all "
+            "expansion MRR as equal. A healthy expansion can carry quota credit and "
+            "forecast confidence. A watch expansion should count commercially but "
+            "stay in the customer-success book. A fragile expansion should not be "
+            "allowed to inflate the durable-growth narrative until the account's "
+            "usage and payment signals recover.",
+            "body",
+        )
+    )
 
     # 5.6
     s.append(P("5.6  Account-level concentration and at-risk MRR", "h2"))
@@ -1246,9 +1371,10 @@ def build_findings() -> list:
             "facts is where account-level governance earns its keep. The portfolio's "
             "top ten accounts hold only 4.0% of MRR, so no single logo can sink the "
             "business. Inside the at-risk cohort, however, concentration is extreme. "
-            "Seventy-nine accounts carry a High or Critical governance priority, they "
-            "hold $376K of MRR between them, and the top twenty of those account for "
-            "81.3% of the at-risk MRR. Figure 8 draws that concentration curve.",
+            "Seventy-nine accounts carry a High governance priority and one is "
+            "Critical. Together, those 80 accounts hold $376K of MRR, and the top "
+            "twenty of those account for "
+            "81.3% of the at-risk MRR. Exhibit 8 draws that concentration curve.",
             "body",
         )
     )
@@ -1268,7 +1394,7 @@ def build_findings() -> list:
             "ARR; a milder test in which they each contract by twenty percent removes "
             "$734K. Those are large numbers relative to the $376K of at-risk MRR "
             "precisely because the at-risk accounts are not the smallest ones. "
-            "Figure 9 names the top of the governance-priority queue with each "
+            "Exhibit 9 names the top of the governance-priority queue with each "
             "account's current MRR and risk tier.",
             "body",
         )
@@ -1282,7 +1408,7 @@ def build_findings() -> list:
     )
     s.append(
         P(
-            "Figure 10 reframes the same risk relationally, at the level of the "
+            "Exhibit 10 reframes the same risk relationally, at the level of the "
             "account manager. Each bubble is one of the forty managers, positioned by "
             "average portfolio discount and portfolio churn rate and sized by "
             "portfolio MRR. The honest finding is that, at this aggregate level, "
@@ -1317,6 +1443,20 @@ def build_findings() -> list:
         )
     )
     s.append(
+        P(
+            "The shortlist is small but not trivial. It contains $140K of current MRR, "
+            "or $1.68M annualized, and 26 of the 30 accounts are already inside a "
+            "renewal-risk window. Every account on the list carries both low-NPS and "
+            "discount-dependency flags, ten also show usage decline, and seven show "
+            "payment-delay stress. This is why a generic save motion would be weak. "
+            "The list needs account-specific treatment: value recovery for the "
+            "low-NPS cases, repricing discipline for the discount cases, product or "
+            "success intervention where usage is falling, and billing remediation "
+            "where payment stress is present.",
+            "body",
+        )
+    )
+    s.append(
         data_table(
             ["Account", "Segment", "Current MRR", "Risk score", "Recommended action"],
             [
@@ -1340,7 +1480,7 @@ def build_findings() -> list:
         P(
             "Everything above describes the past. The scoring system is the part of "
             "the operating system that acts on the future, and it is the most "
-            "rigorously validated component. Figure 11 shows how the churn-risk score "
+            "rigorously validated component. Exhibit 11 shows how the churn-risk score "
             "distributes across the base. The mass of accounts sits at low scores, "
             "with a thin right tail of genuinely high-risk accounts, which is the "
             "shape a useful early-warning score should have: most accounts are fine "
@@ -1357,7 +1497,7 @@ def build_findings() -> list:
     s.append(
         P(
             "A distribution is only credible if the scores predict. The back-test in "
-            "Figure 12 evaluates 4,343 accounts over an 88,613-row, three-month "
+            "Exhibit 12 evaluates 4,343 accounts over an 88,613-row, three-month "
             "forward window and asks a simple question: do higher scores churn more? "
             "They do. The top score decile churns at 4.80% against an overall rate of "
             "2.46%, a lift of 1.9 times the average and more than three times the "
@@ -1455,6 +1595,19 @@ def build_findings() -> list:
             "body",
         )
     )
+    s.append(
+        P(
+            "The weight-sensitivity test is a useful guardrail on whether this queue "
+            "is stable enough to manage. Perturbing each governance-priority weight "
+            "by plus or minus 20% moves, on average, 2.9% of accounts across a tier "
+            "boundary; the largest movement is 5.3% when exposure concentration is "
+            "reduced. That is not perfect immutability, and it should not be sold as "
+            "such. It is good operational stability: the exact boundary cases may "
+            "move, but the bulk of the queue and the high-priority narrative remain "
+            "intact under a material weighting challenge.",
+            "body",
+        )
+    )
 
     # 5.8
     s.append(P("5.8  Forecast and scenario analysis", "h2"))
@@ -1465,7 +1618,7 @@ def build_findings() -> list:
             "expansion, contraction, churn and net-new rates derived from a "
             "recency-weighted average of the last six observed months, projected six "
             "months forward from February 2026. There is no black box; every "
-            "assumption is explicit and can be changed. Figure 13 shows the resulting "
+            "assumption is explicit and can be changed. Exhibit 13 shows the resulting "
             "MRR trajectories under each scenario.",
             "body",
         )
@@ -1491,7 +1644,7 @@ def build_findings() -> list:
     )
     s.append(
         P(
-            "Figure 14 expresses the full scenario set as ARR differences from the "
+            "Exhibit 14 expresses the full scenario set as ARR differences from the "
             "base case, which is the most useful way for an executive to read the "
             "range. The fragile-growth downside sits $8.69M below base. The healthy-"
             "growth upside sits $4.50M above it. The discount-discipline scenario is "
@@ -1535,6 +1688,43 @@ def build_findings() -> list:
             "the price index by two points. This is the clearest single argument for "
             "discount discipline in the report: it is nearly invisible on the topline "
             "and worth millions in realized revenue.",
+            "body",
+        )
+    )
+    s.append(
+        data_table(
+            ["Monthly review trigger", "Why it matters", "Management response"],
+            [
+                [
+                    "NRR remains below 100%",
+                    "Expansion is not covering churn and contraction",
+                    "Escalate retention plan",
+                ],
+                [
+                    "Deep-discount churn rises",
+                    "Discounting is delaying rather than preventing loss",
+                    "Tighten renewal approval",
+                ],
+                ["High-risk MRR grows", "Concentration risk is expanding", "Reprioritize governance queue"],
+                [
+                    "Risk-adjusted gap widens",
+                    "Forecast downside is becoming the base reality",
+                    "Recut budget assumptions",
+                ],
+            ],
+            widths=[4.4 * cm, 5.5 * cm, CONTENT_W - 9.9 * cm],
+            align_right_from=3,
+        )
+    )
+    s.append(Spacer(1, 0.25 * cm))
+    s.append(
+        P(
+            "These triggers turn the forecast from a planning exhibit into a control "
+            "system. The monthly question is not whether the base case was exactly "
+            "right. It is whether the business is migrating toward the risk-adjusted "
+            "or downside path, and whether the leading indicators, discount "
+            "dependency, fragile expansion, renewal exposure and high-risk MRR, are "
+            "moving before the headline revenue line does.",
             "body",
         )
     )
@@ -1628,6 +1818,49 @@ def build_risks() -> list:
             "body",
         )
     )
+    s.append(
+        KeepTogether(
+            [
+                P("How to use the caveats", "h3"),
+                P(
+                    "The caveats should change the control design, not dilute the urgency. "
+                    "Because the discount and expansion findings are associative, the first "
+                    "implementation should be run with measurement discipline: define the "
+                    "treated account group, record the intervention, compare outcomes to a "
+                    "matched control group, and review the effect at the next renewal cycle. "
+                    "Because the forecast is assumption-driven, the model should be refreshed "
+                    "monthly and judged on whether it keeps the downside conversation timely, "
+                    "not on whether every dollar of end-MRR lands exactly. And because the "
+                    "data is synthetic, the first production deployment should start with "
+                    "metric reconciliation before changing commercial policy.",
+                    "body",
+                ),
+                P(
+                    "In production, the minimum control set should include three "
+                    "disciplines. First, reconcile the metric layer against finance-"
+                    "owned ARR, invoice and collections records before publishing any "
+                    "executive scorecard. Second, keep an intervention log that records "
+                    "who acted on each high-risk account, what action was taken, and "
+                    "what happened at the next renewal. Third, maintain a challenger "
+                    "view of the score weights each quarter so that the model remains "
+                    "stable enough to govern but flexible enough to learn from live "
+                    "outcomes. These controls are modest, but they are the difference "
+                    "between an analytical prototype and an operating system.",
+                    "body",
+                ),
+                P(
+                    "The report should therefore be read as a decision-ready operating "
+                    "case, not as a final causal proof. It is strong enough to rank "
+                    "work, allocate management attention, define policy tests and set "
+                    "monthly review triggers. It is not strong enough to automate "
+                    "commercial decisions without human review, matched-outcome "
+                    "tracking and finance reconciliation. That is the right boundary "
+                    "for the evidence available here.",
+                    "body",
+                ),
+            ]
+        )
+    )
     return s
 
 
@@ -1646,7 +1879,7 @@ def build_recommendations() -> list:
     s.append(P("Priority 1. Stand up account-level governance on the high-risk cohort", "h3"))
     s.append(
         P(
-            "Begin with the 79 High and Critical accounts and the 30-name priority "
+            "Begin with the 80 High and Critical accounts and the 30-name priority "
             "shortlist. These accounts hold $4.51M of annualized ARR and the top "
             "twenty of them concentrate 81.3% of at-risk MRR, so a weekly governance "
             "cadence over a list this short is the highest-return action available. "
@@ -1718,7 +1951,7 @@ def build_recommendations() -> list:
             "Discount and churn are only weakly correlated across managers, so this "
             "is a targeted review rather than a portfolio-wide judgement. Focus on "
             "the cluster that combines above-median discounting with above-median "
-            "churn, the four managers labelled in Figure 10 and the 32 accounts the "
+            "churn, the four managers labelled in Exhibit 10 and the 32 accounts the "
             "system routes to a manager-behaviour review. The goal is to understand "
             "whether the pattern reflects a harder book of business or a coachable "
             "habit, and to act accordingly.",
@@ -1736,6 +1969,33 @@ def build_recommendations() -> list:
             "gap between the base-case and risk-adjusted forecasts should narrow "
             "month over month as the high-risk cohort shrinks and discount discipline "
             "improves the realized price index.",
+            "body",
+        )
+    )
+    s.append(P("Operating cadence and success measures", "h2"))
+    s.append(
+        data_table(
+            ["Cadence", "Owner", "Success measure"],
+            [
+                ["Weekly risk queue", "Revenue operations", "High/Critical MRR and unresolved actions decline"],
+                ["Renewal deal desk", "Sales leadership", "Deep-discount renewals require documented offsets"],
+                ["Expansion quality review", "Customer success", "Fragile expansion share falls below current 28%"],
+                ["Monthly forecast review", "Finance and RevOps", "Risk-adjusted gap narrows versus base case"],
+            ],
+            widths=[4.1 * cm, 4.4 * cm, CONTENT_W - 8.5 * cm],
+            align_right_from=3,
+        )
+    )
+    s.append(Spacer(1, 0.25 * cm))
+    s.append(
+        P(
+            "This cadence is intentionally lightweight. It uses the artefacts already "
+            "produced by the pipeline: the priority shortlist, the recommended action "
+            "field, the discount-dependency tier, the expansion-quality flag and the "
+            "scenario table. The first month should be treated as a baseline-setting "
+            "cycle. By the second month, leadership should expect fewer unresolved "
+            "High and Critical accounts, fewer unoffset deep discounts, and a clearer "
+            "view of whether the risk-adjusted forecast gap is shrinking.",
             "body",
         )
     )
@@ -1762,7 +2022,7 @@ def build_appendix() -> list:
                 ["Discount-dependent share of MRR", "15.9%"],
                 ["Top-10 account share of MRR", "4.0%"],
                 ["Top-50 account share of MRR", "14.3%"],
-                ["High / Critical governance accounts", "79"],
+                ["High / Critical governance accounts", "80"],
                 ["At-risk MRR (High / Critical)", "$376,193"],
                 ["Top-20 share within at-risk MRR", "81.3%"],
                 ["Annualized ARR at risk", "$4,514,312"],

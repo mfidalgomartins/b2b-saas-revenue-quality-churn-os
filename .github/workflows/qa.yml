@@ -31,11 +31,19 @@ jobs:
       - name: Check formatting
         run: python -m ruff format --check src tests scripts
 
+      - name: Static security scan (bandit)
+        run: python -m bandit -c pyproject.toml -r src scripts -q
+
+      - name: Dependency vulnerability audit (pip-audit)
+        run: python -m pip_audit --skip-editable --progress-spinner off
+
       - name: Build end-to-end pipeline
         run: python src/pipeline/run_project_pipeline.py --base-dir . --seed 42
 
-      - name: Run data contract tests
-        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Run tests with coverage gate
+        run: |
+          python -m coverage run -m unittest discover -s tests -p 'test_*.py'
+          python -m coverage report
 
       - name: Enforce validation gate
         run: |

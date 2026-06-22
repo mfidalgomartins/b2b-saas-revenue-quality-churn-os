@@ -7,7 +7,7 @@ FEATURE_DICT := $(BASE_DIR)/docs/core/feature_dictionary.md
 ANALYTICAL_NOTES := $(BASE_DIR)/docs/core/analytical_layer_notes.md
 VALIDATION_SUMMARY := $(BASE_DIR)/reports/formal_validation_summary.json
 
-.PHONY: all data profile features scoring backtest sensitivity analysis forecast graphs supplementary-graphs dashboard dashboard-refresh report validate gate format-check lint test qa release-ready release-refresh clean
+.PHONY: all data profile features scoring backtest sensitivity analysis forecast graphs supplementary-graphs dashboard dashboard-refresh report validate gate format-check lint test coverage security audit benchmark qa release-ready release-refresh clean
 
 all: data profile features scoring backtest sensitivity analysis forecast graphs supplementary-graphs dashboard validate dashboard-refresh report
 
@@ -65,7 +65,20 @@ lint:
 test:
 	$(PYTHON) -m unittest discover -s tests -p 'test_*.py'
 
-qa: format-check lint test validate gate
+coverage:
+	$(PYTHON) -m coverage run -m unittest discover -s tests -p 'test_*.py'
+	$(PYTHON) -m coverage report
+
+security:
+	$(PYTHON) -m bandit -c pyproject.toml -r src scripts -q
+
+audit:
+	$(PYTHON) -m pip_audit --skip-editable --progress-spinner off
+
+benchmark:
+	$(PYTHON) scripts/benchmark_backtest.py --base-dir $(BASE_DIR)
+
+qa: format-check lint coverage security validate gate
 
 release-ready: format-check lint test all gate
 
