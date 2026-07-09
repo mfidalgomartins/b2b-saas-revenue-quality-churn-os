@@ -102,3 +102,6 @@ release-refresh:
 clean:
 	find . -name '__pycache__' -type d -prune -exec rm -rf {} +
 	find . -name '.DS_Store' -type f -delete
+	rm -rf build dist *.egg-info src/*.egg-info
+	rm -rf .mypy_cache .pytest_cache .ruff_cache tests/.ruff_cache
+	rm -f .coverage
