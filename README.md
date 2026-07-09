@@ -79,7 +79,13 @@ Everything below is enforced by `make qa` and by CI on every push and pull reque
 | Static security | `make security` | Bandit, no findings (subprocess/`git` patterns reviewed and documented) |
 | Dependency audit | `make audit` | `pip-audit`, no known CVEs in declared dependencies |
 | Governance gate | `make gate` | 0 WARN / 0 FAIL / 0 high / 0 critical, `technically valid` |
-| Performance | `make benchmark` | Backtest hotspot benchmark; see [`docs/core/performance.md`](docs/core/performance.md) |
+
+CI additionally rebuilds the full pipeline from seed on every push, as an end-to-end smoke test beyond
+what the gate table above covers on its own.
+
+One check is manual, not gated — `make benchmark` runs the backtest hotspot benchmark
+(see [`docs/core/performance.md`](docs/core/performance.md)) but isn't wired into `qa` or CI, since it
+reports a number to track over time rather than a pass/fail bar.
 
 Coverage is measured over the modules unit tests import directly (`metrics`, `scoring_utils`, `io/*`,
 the validation gate, `dashboard_contract`); the end-to-end pipeline scripts are exercised by the integration

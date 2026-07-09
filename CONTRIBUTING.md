@@ -21,8 +21,9 @@ make qa
 ```
 
 `qa` runs, in order: format check → lint → type check → tests with the coverage gate → static security scan →
-dependency posture (via the gate workflow) → validation gate. If `make qa` is green, CI will be green — the
-[workflow](.github/workflows/qa.yml) runs the same checks.
+dependency CVE audit → validation gate. If `make qa` is green, CI will be green — the
+[workflow](.github/workflows/qa.yml) runs the same checks, plus a full pipeline rebuild from seed as an
+end-to-end smoke test in between the security scan and the coverage run.
 
 Individual gates:
 

@@ -81,7 +81,7 @@ audit:
 benchmark:
 	$(PYTHON) scripts/benchmark_backtest.py --base-dir $(BASE_DIR)
 
-qa: format-check lint typecheck coverage security validate gate
+qa: format-check lint typecheck coverage security audit validate gate
 
 release-ready: format-check lint test all gate
 
