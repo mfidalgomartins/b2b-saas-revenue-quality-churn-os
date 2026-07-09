@@ -9,6 +9,12 @@ VALIDATION_SUMMARY := $(BASE_DIR)/reports/formal_validation_summary.json
 
 .PHONY: all data profile features scoring backtest sensitivity analysis forecast graphs supplementary-graphs dashboard dashboard-refresh report validate gate format-check lint typecheck test coverage security audit benchmark qa release-ready release-refresh clean
 
+# dashboard is built twice by design, not by accident: once before `validate`
+# so the validation gate's cross-output consistency check (#16) can compare the
+# dashboard's KPI payload against this run's fresh data, then again
+# (dashboard-refresh) after validate so the shipped dashboard embeds this run's
+# actual validation readiness tier instead of a stale one. See
+# src/pipeline/run_project_pipeline.py, which mirrors the same two-pass order.
 all: data profile features scoring backtest sensitivity analysis forecast graphs supplementary-graphs dashboard validate dashboard-refresh report
 
 data:
@@ -41,9 +47,14 @@ graphs:
 supplementary-graphs:
 	$(PYTHON) src/visualization/build_supplementary_graphs.py --base-dir $(BASE_DIR)
 
+# Same command as dashboard-refresh below — intentionally. See the comment on
+# the `all` target for why the pipeline runs this build twice.
 dashboard:
 	$(PYTHON) src/dashboard/build_executive_dashboard.py --base-dir $(BASE_DIR) --output $(BASE_DIR)/outputs/dashboard/revenue-quality-command-center.html
 
+# Rebuilds the dashboard after `validate` so it embeds this run's actual
+# validation readiness tier, not the tier from whatever build produced the
+# dashboard the pre-validate pass checked.
 dashboard-refresh:
 	$(PYTHON) src/dashboard/build_executive_dashboard.py --base-dir $(BASE_DIR) --output $(BASE_DIR)/outputs/dashboard/revenue-quality-command-center.html
 
