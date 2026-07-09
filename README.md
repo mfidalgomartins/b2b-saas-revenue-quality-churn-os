@@ -25,7 +25,7 @@ Topline MRR can grow while discount creep, usage decay, payment slippage, and fr
 | `src/scoring/run_weight_sensitivity.py` | ±20% weight perturbation report. Quantifies how stable tier assignments are. |
 | `src/forecasting/` | MRR scenario trajectories — base, downside, upside, discount-discipline, risk-adjusted. |
 | `src/visualization/` + `src/dashboard/` | 16 presentation-ready graphs and a self-contained HTML dashboard. |
-| `scripts/build_pdf_report.py` | Builds the 31-page analytical report from the same processed tables and graph pack. |
+| `scripts/build_pdf_report.py` | Builds the 32-page analytical report from the same processed tables and graph pack. |
 | `src/validation/` | 21 governance checks (row counts, nulls, duplicates, leakage, calibration monotonicity, …) feeding a publication-readiness gate. |
 | `sql/marts/` | SQL mirror of the Python semantic layer for warehouse consumers. |
 
@@ -74,6 +74,7 @@ Everything below is enforced by `make qa` and by CI on every push and pull reque
 |---|---|---|
 | Lint | `make lint` | Ruff `E,F,I,B,UP,SIM,C4`, clean |
 | Format | `make format-check` | Ruff formatter, no diff |
+| Types | `make typecheck` | mypy (strict-ish) over the pure-logic core library, zero errors |
 | Coverage | `make coverage` | **100% branch coverage** of the pure-logic core library (`fail_under = 100`) |
 | Static security | `make security` | Bandit, no findings (subprocess/`git` patterns reviewed and documented) |
 | Dependency audit | `make audit` | `pip-audit`, no known CVEs in declared dependencies |
@@ -124,7 +125,7 @@ tests/      unit, metric-integrity, and artifact-contract tests
 
 ## Tech
 
-Python 3.12 · pandas · NumPy · Matplotlib · Seaborn · ReportLab · SQL · HTML / CSS / SVG / JS · Ruff · unittest · coverage.py · Bandit · pip-audit · GitHub Actions
+Python 3.12 · pandas · NumPy · Matplotlib · Seaborn · ReportLab · SQL · HTML / CSS / SVG / JS · Ruff · mypy · unittest · coverage.py · Bandit · pip-audit · GitHub Actions
 
 Released under the [MIT License](LICENSE).
 

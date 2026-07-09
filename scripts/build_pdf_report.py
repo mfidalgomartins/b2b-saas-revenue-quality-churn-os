@@ -16,12 +16,15 @@ from pathlib import Path
 
 from PIL import Image as PILImage
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_JUSTIFY, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     BaseDocTemplate,
+    CondPageBreak,
     Frame,
     Image,
     KeepTogether,
@@ -36,7 +39,23 @@ from reportlab.platypus import (
 
 BASE = Path(__file__).resolve().parents[1]
 GRAPHS = BASE / "outputs" / "graphs"
+FONTS = BASE / "assets" / "fonts"
 OUT = BASE / "outputs" / "reports" / "revenue_quality_os_analytical_report.pdf"
+
+# ---------------------------------------------------------------------------
+# Fonts — bundled static instances of Source Serif 4 (body) and Inter
+# (headings/labels), so the report renders identically on every machine
+# instead of falling back to the PDF base-14 fonts. See assets/fonts/README.md.
+# ---------------------------------------------------------------------------
+pdfmetrics.registerFont(TTFont("SourceSerif4", str(FONTS / "SourceSerif4-Regular.ttf")))
+pdfmetrics.registerFont(TTFont("SourceSerif4-Bold", str(FONTS / "SourceSerif4-Bold.ttf")))
+pdfmetrics.registerFont(TTFont("SourceSerif4-Italic", str(FONTS / "SourceSerif4-Italic.ttf")))
+pdfmetrics.registerFont(TTFont("Inter", str(FONTS / "Inter-Regular.ttf")))
+pdfmetrics.registerFont(TTFont("Inter-SemiBold", str(FONTS / "Inter-SemiBold.ttf")))
+pdfmetrics.registerFontFamily(
+    "SourceSerif4", normal="SourceSerif4", bold="SourceSerif4-Bold", italic="SourceSerif4-Italic"
+)
+pdfmetrics.registerFontFamily("Inter", normal="Inter", bold="Inter-SemiBold")
 
 # ---------------------------------------------------------------------------
 # Palette (shared with the chart pack)
@@ -62,11 +81,11 @@ CONTENT_W = PAGE_W - LMARGIN - RMARGIN
 # ---------------------------------------------------------------------------
 # Styles
 # ---------------------------------------------------------------------------
-BODY_FONT = "Times-Roman"
-BODY_BOLD = "Times-Bold"
-BODY_ITALIC = "Times-Italic"
-HEAD_FONT = "Helvetica-Bold"
-HEAD_REG = "Helvetica"
+BODY_FONT = "SourceSerif4"
+BODY_BOLD = "SourceSerif4-Bold"
+BODY_ITALIC = "SourceSerif4-Italic"
+HEAD_FONT = "Inter-SemiBold"
+HEAD_REG = "Inter"
 
 styles: dict[str, ParagraphStyle] = {}
 
@@ -75,9 +94,9 @@ def _add(name: str, **kw) -> None:
     styles[name] = ParagraphStyle(name, **kw)
 
 
-_add("body", fontName=BODY_FONT, fontSize=10.7, leading=16.6, alignment=TA_JUSTIFY, textColor=INK, spaceAfter=9)
+_add("body", fontName=BODY_FONT, fontSize=10.7, leading=16.6, alignment=TA_LEFT, textColor=INK, spaceAfter=9)
 _add("body_first", parent=styles["body"], firstLineIndent=0)
-_add("lead", fontName=BODY_FONT, fontSize=11.6, leading=17.8, alignment=TA_JUSTIFY, textColor=INK, spaceAfter=11)
+_add("lead", fontName=BODY_FONT, fontSize=11.6, leading=17.8, alignment=TA_LEFT, textColor=INK, spaceAfter=11)
 _add("h1", fontName=HEAD_FONT, fontSize=19, leading=23, textColor=GREEN, spaceBefore=6, spaceAfter=4)
 _add("h1num", fontName=HEAD_REG, fontSize=11, leading=13, textColor=AMBER, spaceAfter=2, tracking=2)
 _add("h2", fontName=HEAD_FONT, fontSize=13, leading=17, textColor=GREEN, spaceBefore=14, spaceAfter=4)
@@ -333,6 +352,17 @@ def build() -> None:
         ]
     )
 
+    # Sections flow continuously rather than each forcing a new page. A hard
+    # page break after a slightly-overflowing section used to leave the next page
+    # ~90% empty (an orphan page). Instead, `section_gap()` puts a separating
+    # space between sections and a CondPageBreak that only breaks to a new page
+    # when the section head + lead paragraph would not fit in the space left —
+    # so a following section fills that whitespace, and no section ever starts
+    # orphaned at the foot of a page. Fonts, palette, headings and figures are
+    # unchanged; only pagination flows.
+    def section_gap() -> list:
+        return [Spacer(1, 0.85 * cm), CondPageBreak(7.0 * cm)]
+
     s = []  # story
     s += build_cover()
     s.append(NextPageTemplate("plain"))
@@ -341,19 +371,19 @@ def build() -> None:
     s.append(NextPageTemplate("body"))
     s.append(PageBreak())
     s += build_exec_summary()
-    s.append(PageBreak())
+    s += section_gap()
     s += build_context()
-    s.append(PageBreak())
+    s += section_gap()
     s += build_data_method()
-    s.append(PageBreak())
+    s += section_gap()
     s += build_framework()
-    s.append(PageBreak())
+    s += section_gap()
     s += build_findings()
-    s.append(PageBreak())
+    s += section_gap()
     s += build_risks()
-    s.append(PageBreak())
+    s += section_gap()
     s += build_recommendations()
-    s.append(PageBreak())
+    s += section_gap()
     s += build_appendix()
 
     doc.build(s)
@@ -403,21 +433,21 @@ def build_toc() -> list:
     s = [P("Contents", "h1"), Spacer(1, 0.3 * cm)]
     entries = [
         ("1", "Executive summary", "3"),
-        ("2", "Context and objectives", "5"),
-        ("3", "Data and methodology", "6"),
-        ("4", "Analytical framework", "8"),
-        ("5", "Findings", "10"),
-        ("5.1", "Revenue scale and the quality of growth", "10"),
-        ("5.2", "Retention: gross, net and the cohort view", "11"),
-        ("5.3", "Where churn concentrates", "13"),
-        ("5.4", "Discount intensity and realized pricing", "15"),
-        ("5.5", "Expansion quality", "17"),
-        ("5.6", "Account-level concentration and at-risk MRR", "18"),
+        ("2", "Context and objectives", "4"),
+        ("3", "Data and methodology", "5"),
+        ("4", "Analytical framework", "7"),
+        ("5", "Findings", "9"),
+        ("5.1", "Revenue scale and the quality of growth", "9"),
+        ("5.2", "Retention: gross, net and the cohort view", "10"),
+        ("5.3", "Where churn concentrates", "12"),
+        ("5.4", "Discount intensity and realized pricing", "14"),
+        ("5.5", "Expansion quality", "16"),
+        ("5.6", "Account-level concentration and at-risk MRR", "17"),
         ("5.7", "The churn-risk scoring system", "21"),
         ("5.8", "Forecast and scenario analysis", "23"),
-        ("6", "Risks, limitations and caveats", "27"),
-        ("7", "Recommendations and action priorities", "29"),
-        ("8", "Appendix", "31"),
+        ("6", "Risks, limitations and caveats", "26"),
+        ("7", "Recommendations and action priorities", "28"),
+        ("8", "Appendix", "30"),
     ]
     rows = []
     for num, label, page in entries:
@@ -696,11 +726,11 @@ def build_data_method() -> list:
                 ["invoices", "99,729", "one per invoice", "Billed and collected amounts, delay"],
                 ["account_managers", "40", "one per manager", "Portfolio attribution"],
             ],
-            widths=[4.6 * cm, 1.7 * cm, 3.0 * cm, CONTENT_W - 4.6 * cm - 1.7 * cm - 3.0 * cm],
+            widths=[4.2 * cm, 1.9 * cm, 3.6 * cm, CONTENT_W - 4.2 * cm - 1.9 * cm - 3.6 * cm],
             align_right_from=1,
         )
     )
-    s.append(Spacer(1, 0.3 * cm))
+    s.append(Spacer(1, 0.25 * cm))
     s.append(
         P(
             "The account-month table is the spine of the work. With 112,038 "
@@ -832,7 +862,7 @@ def build_framework() -> list:
             align_right_from=1,
         )
     )
-    s.append(Spacer(1, 0.3 * cm))
+    s.append(Spacer(1, 0.25 * cm))
     s.append(
         P(
             "Usage deterioration carries the most weight because, in the panel, a "
@@ -1122,7 +1152,7 @@ def build_findings() -> list:
             align_right_from=3,
         )
     )
-    s.append(Spacer(1, 0.3 * cm))
+    s.append(Spacer(1, 0.25 * cm))
     s.append(
         P(
             "The plan-level detail is worth seeing in full, because it shows that "
@@ -1177,7 +1207,7 @@ def build_findings() -> list:
             "the realized price index has settled at 0.822, and the share of MRR that "
             "carries a discount-dependency flag is 15.9%. Roughly one revenue dollar "
             "in six depends on a price concession to exist at its current level. "
-            "Exhibit 5 tracks how discount dependency has moved over the window.",
+            "Exhibit 6 tracks how discount dependency has moved over the window.",
             "body",
         )
     )
@@ -1191,7 +1221,7 @@ def build_findings() -> list:
     s.append(
         P(
             "Discounting would matter for margin even if it were harmless to "
-            "retention. It is not harmless. Exhibit 6 sorts accounts by their current "
+            "retention. It is not harmless. Exhibit 7 sorts accounts by their current "
             "discount band and shows the churn they go on to experience over the next "
             "three months. The relationship is not a simple straight line, and the "
             "report is careful not to pretend it is. The first three bands actually "
@@ -1299,7 +1329,7 @@ def build_findings() -> list:
             "100%. The question this section asks is not how much the base expanded "
             "but how much of that expansion is durable. The operating system flags "
             "every expansion event as healthy, watch or fragile based on the health "
-            "of the account at the time it grew. Exhibit 7 shows how $1.63M of "
+            "of the account at the time it grew. Exhibit 8 shows how $1.63M of "
             "expansion MRR splits across those three qualities.",
             "body",
         )
@@ -1372,9 +1402,9 @@ def build_findings() -> list:
             "top ten accounts hold only 4.0% of MRR, so no single logo can sink the "
             "business. Inside the at-risk cohort, however, concentration is extreme. "
             "Seventy-nine accounts carry a High governance priority and one is "
-            "Critical. Together, those 80 accounts hold $376K of MRR, and the top "
-            "twenty of those account for "
-            "81.3% of the at-risk MRR. Exhibit 8 draws that concentration curve.",
+            "Critical. Together, those 80 accounts hold $376K of MRR, with the top "
+            "twenty of them accounting for 81.3% of the at-risk MRR. Exhibit 9 draws "
+            "that concentration curve.",
             "body",
         )
     )
@@ -1394,7 +1424,7 @@ def build_findings() -> list:
             "ARR; a milder test in which they each contract by twenty percent removes "
             "$734K. Those are large numbers relative to the $376K of at-risk MRR "
             "precisely because the at-risk accounts are not the smallest ones. "
-            "Exhibit 9 names the top of the governance-priority queue with each "
+            "Exhibit 10 names the top of the governance-priority queue with each "
             "account's current MRR and risk tier.",
             "body",
         )
@@ -1408,7 +1438,7 @@ def build_findings() -> list:
     )
     s.append(
         P(
-            "Exhibit 10 reframes the same risk relationally, at the level of the "
+            "Exhibit 11 reframes the same risk relationally, at the level of the "
             "account manager. Each bubble is one of the forty managers, positioned by "
             "average portfolio discount and portfolio churn rate and sized by "
             "portfolio MRR. The honest finding is that, at this aggregate level, "
@@ -1480,7 +1510,7 @@ def build_findings() -> list:
         P(
             "Everything above describes the past. The scoring system is the part of "
             "the operating system that acts on the future, and it is the most "
-            "rigorously validated component. Exhibit 11 shows how the churn-risk score "
+            "rigorously validated component. Exhibit 12 shows how the churn-risk score "
             "distributes across the base. The mass of accounts sits at low scores, "
             "with a thin right tail of genuinely high-risk accounts, which is the "
             "shape a useful early-warning score should have: most accounts are fine "
@@ -1497,7 +1527,7 @@ def build_findings() -> list:
     s.append(
         P(
             "A distribution is only credible if the scores predict. The back-test in "
-            "Exhibit 12 evaluates 4,343 accounts over an 88,613-row, three-month "
+            "Exhibit 13 evaluates 4,343 accounts over an 88,613-row, three-month "
             "forward window and asks a simple question: do higher scores churn more? "
             "They do. The top score decile churns at 4.80% against an overall rate of "
             "2.46%, a lift of 1.9 times the average and more than three times the "
@@ -1618,7 +1648,7 @@ def build_findings() -> list:
             "expansion, contraction, churn and net-new rates derived from a "
             "recency-weighted average of the last six observed months, projected six "
             "months forward from February 2026. There is no black box; every "
-            "assumption is explicit and can be changed. Exhibit 13 shows the resulting "
+            "assumption is explicit and can be changed. Exhibit 14 shows the resulting "
             "MRR trajectories under each scenario.",
             "body",
         )
@@ -1644,7 +1674,7 @@ def build_findings() -> list:
     )
     s.append(
         P(
-            "Exhibit 14 expresses the full scenario set as ARR differences from the "
+            "Exhibit 15 expresses the full scenario set as ARR differences from the "
             "base case, which is the most useful way for an executive to read the "
             "range. The fragile-growth downside sits $8.69M below base. The healthy-"
             "growth upside sits $4.50M above it. The discount-discipline scenario is "
@@ -1951,7 +1981,7 @@ def build_recommendations() -> list:
             "Discount and churn are only weakly correlated across managers, so this "
             "is a targeted review rather than a portfolio-wide judgement. Focus on "
             "the cluster that combines above-median discounting with above-median "
-            "churn, the four managers labelled in Exhibit 10 and the 32 accounts the "
+            "churn, the four managers labelled in Exhibit 11 and the 32 accounts the "
             "system routes to a manager-behaviour review. The goal is to understand "
             "whether the pattern reflects a harder book of business or a coachable "
             "habit, and to act accordingly.",
@@ -2031,7 +2061,7 @@ def build_appendix() -> list:
             align_right_from=1,
         )
     )
-    s.append(Spacer(1, 0.4 * cm))
+    s.append(Spacer(1, 0.35 * cm))
     s.append(P("B. Scenario assumptions and outcomes", "h2"))
     s.append(
         P(

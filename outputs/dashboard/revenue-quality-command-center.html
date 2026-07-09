@@ -233,8 +233,13 @@ section { margin-bottom: 80px; }
   display: flex; align-items: baseline; justify-content: space-between;
   margin-bottom: 28px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
 }
-.section-title { display: flex; align-items: baseline; gap: 16px; }
-.section-num { font-family: var(--mono-font); font-size: 11px; color: var(--faint); letter-spacing: 0.02em; }
+/* flex-start, not baseline: when a long title wraps to multiple lines (mobile),
+   baseline-aligning the number to only the first line strands it next to the
+   first word with the rest of the heading dangling below. flex-start anchors
+   the number to the top of the block and reads correctly whether the title is
+   one line (desktop) or several (mobile). */
+.section-title { display: flex; align-items: flex-start; gap: 16px; }
+.section-num { font-family: var(--mono-font); font-size: 11px; color: var(--faint); letter-spacing: 0.02em; padding-top: 0.45em; }
 .section-title h2 {
   font-family: var(--display-font); font-weight: 600;
   font-size: 24px; letter-spacing: -0.021em; color: var(--ink);

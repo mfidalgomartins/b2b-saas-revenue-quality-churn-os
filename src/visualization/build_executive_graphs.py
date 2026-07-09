@@ -32,11 +32,20 @@ import pandas as pd
 import seaborn as sns
 
 mpl.use("Agg")
+import matplotlib.font_manager as fm  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
 
 from src.metrics import build_monthly_retention  # noqa: E402
+
+# Register the same bundled Inter used by the PDF report chrome, so chart text
+# matches the report's typography on every machine instead of silently falling
+# back to whatever sans-serif happens to be installed (Helvetica Neue on macOS,
+# DejaVu Sans on a bare Linux CI runner — two different looks for one document).
+for _weight_file in ("Inter-Regular.ttf", "Inter-SemiBold.ttf"):
+    fm.fontManager.addfont(str(REPO_ROOT / "assets" / "fonts" / _weight_file))
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -45,6 +54,7 @@ log = logging.getLogger(__name__)
 # Style constants
 # ---------------------------------------------------------------------------
 BG = "#fafaf7"
+INK = "#1d1d1b"  # matches the PDF report's body-text INK exactly (single ink across the document)
 ACCENT = "#1f3b2d"
 ACCENT_LIGHT = "#2d5a42"
 NEG = "#9c2b1b"
@@ -174,7 +184,7 @@ def chart_mrr_arr_growth(base: Path, out: Path, dpi: int) -> None:
     ax.legend(lines1 + lines2, labels1 + labels2, frameon=False, fontsize=10, loc="upper left", labelcolor=NEUTRAL)
 
     ax.set_title(
-        "Monthly Recurring Revenue — 36-Month View", fontsize=14, color="#0c0d0e", fontweight="semibold", pad=14
+        "Monthly Recurring Revenue — 36-Month View", fontsize=14, color=INK, fontweight="semibold", pad=14, loc="left"
     )
     ax.set_xlabel("")
     ax.set_ylabel("MRR", fontsize=10, color=NEUTRAL)
@@ -223,7 +233,9 @@ def chart_grr_nrr_trend(base: Path, out: Path, dpi: int) -> None:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=0, ha="center")
 
     ax.legend(frameon=False, fontsize=10, labelcolor=NEUTRAL)
-    ax.set_title("Gross & Net Revenue Retention — Monthly", fontsize=14, color="#0c0d0e", fontweight="semibold", pad=14)
+    ax.set_title(
+        "Gross & Net Revenue Retention — Monthly", fontsize=14, color=INK, fontweight="semibold", pad=14, loc="left"
+    )
     ax.set_xlabel("")
     ax.set_ylabel("Retention rate", fontsize=10, color=NEUTRAL)
     fig.tight_layout()
@@ -287,7 +299,7 @@ def chart_logo_revenue_churn(base: Path, out: Path, dpi: int) -> None:
 
     ax.legend(frameon=False, fontsize=10, labelcolor=NEUTRAL, loc="upper left")
     ax.set_title(
-        "Logo Churn vs Revenue Churn — Monthly Rate", fontsize=14, color="#0c0d0e", fontweight="semibold", pad=14
+        "Logo Churn vs Revenue Churn — Monthly Rate", fontsize=14, color=INK, fontweight="semibold", pad=14, loc="left"
     )
     ax.set_xlabel("")
     ax.set_ylabel("Monthly churn rate", fontsize=10, color=NEUTRAL)
@@ -308,8 +320,13 @@ def chart_revenue_quality_dist(base: Path, out: Path, dpi: int) -> None:
     fig, ax = plt.subplots(figsize=(11, 5.5))
     apply_style(ax)
 
-    # Compute thresholds from scoring_utils logic: 0-25=healthy, 25-50=watch, 50+=fragile
-    # For revenue quality (inverted — higher score = worse quality)
+    # revenue_quality_score is a QUALITY score: higher = healthier (the opposite
+    # sense of a risk score). Its risk tier is derived by scoring_utils as
+    # risk_tier(100 - score), so on this raw-score axis the tier boundaries fall
+    # at 100 - {75, 55, 30} = {25, 45, 70}: Critical <=25, High (25, 45],
+    # Moderate (45, 70], Low >70. The zone labels and axis caption must read in
+    # that direction (low score = fragile, high score = healthy) to match the
+    # bar coloring, which is driven by the same tier assignment.
     bins = np.arange(0, 105, 5)
     for tier, color in zip(tier_order, tier_colors, strict=True):
         subset = sc[sc["revenue_quality_risk_tier"] == tier]["revenue_quality_score"]
@@ -324,17 +341,22 @@ def chart_revenue_quality_dist(base: Path, out: Path, dpi: int) -> None:
             zorder=2,
         )
 
-    ax.axvline(25, color=NEUTRAL, linewidth=1.0, linestyle="--", alpha=0.6, zorder=3)
-    ax.axvline(50, color=NEUTRAL, linewidth=1.0, linestyle="--", alpha=0.6, zorder=3)
-    ax.text(12.5, ax.get_ylim()[1] * 0.92, "Healthy", ha="center", fontsize=9, color=PALETTE["Low"])
-    ax.text(37.5, ax.get_ylim()[1] * 0.92, "Watch", ha="center", fontsize=9, color=PALETTE["Moderate"])
-    ax.text(75, ax.get_ylim()[1] * 0.92, "Fragile", ha="center", fontsize=9, color=PALETTE["High"])
+    ax.axvline(30, color=NEUTRAL, linewidth=1.0, linestyle="--", alpha=0.6, zorder=3)
+    ax.axvline(70, color=NEUTRAL, linewidth=1.0, linestyle="--", alpha=0.6, zorder=3)
+    ax.text(15, ax.get_ylim()[1] * 0.92, "Fragile", ha="center", fontsize=9, color=PALETTE["High"])
+    ax.text(50, ax.get_ylim()[1] * 0.92, "Watch", ha="center", fontsize=9, color=PALETTE["Moderate"])
+    ax.text(85, ax.get_ylim()[1] * 0.92, "Healthy", ha="center", fontsize=9, color=PALETTE["Low"])
 
     ax.legend(frameon=False, fontsize=10, labelcolor=NEUTRAL, title="Quality tier", title_fontsize=9)
     ax.set_title(
-        "Revenue Quality Score — Account Distribution", fontsize=14, color="#0c0d0e", fontweight="semibold", pad=14
+        "Revenue Quality Score — Account Distribution",
+        fontsize=14,
+        color=INK,
+        fontweight="semibold",
+        pad=14,
+        loc="left",
     )
-    ax.set_xlabel("Revenue quality risk score (0 = healthy, 100 = fragile)", fontsize=10, color=NEUTRAL)
+    ax.set_xlabel("Revenue quality score (0 = fragile, 100 = healthy)", fontsize=10, color=NEUTRAL)
     ax.set_ylabel("Number of accounts", fontsize=10, color=NEUTRAL)
     ax.xaxis.set_major_locator(mticker.MultipleLocator(10))
     fig.tight_layout()
@@ -374,7 +396,9 @@ def chart_churn_risk_dist(base: Path, out: Path, dpi: int) -> None:
         ax.text(cutoff + 1, ax.get_ylim()[1] * 0.97, label, fontsize=8.5, color=NEUTRAL, ha="left")
 
     ax.legend(frameon=False, fontsize=10, labelcolor=NEUTRAL, title="Churn risk tier", title_fontsize=9)
-    ax.set_title("Churn Risk Score — Account Distribution", fontsize=14, color="#0c0d0e", fontweight="semibold", pad=14)
+    ax.set_title(
+        "Churn Risk Score — Account Distribution", fontsize=14, color=INK, fontweight="semibold", pad=14, loc="left"
+    )
     ax.set_xlabel("Churn risk score (0 = low risk, 100 = critical)", fontsize=10, color=NEUTRAL)
     ax.set_ylabel("Number of accounts", fontsize=10, color=NEUTRAL)
     ax.xaxis.set_major_locator(mticker.MultipleLocator(10))
@@ -418,11 +442,14 @@ def chart_discount_trend(base: Path, out: Path, dpi: int) -> None:
     ax.annotate(
         f"{latest.discount_share * 100:.1f}% of MRR\nis discount-reliant",
         xy=(latest["month"], latest["discount_share"]),
-        xytext=(-130, 20),
+        xytext=(-165, 46),
         textcoords="offset points",
         fontsize=11,
         color=NEG,
         fontweight="semibold",
+        ha="left",
+        linespacing=1.4,
+        bbox={"boxstyle": "square,pad=0.35", "facecolor": BG, "edgecolor": "none"},
         arrowprops={"arrowstyle": "-", "color": NEUTRAL, "alpha": 0.5},
     )
 
@@ -432,7 +459,9 @@ def chart_discount_trend(base: Path, out: Path, dpi: int) -> None:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=0, ha="center")
 
     ax.legend(frameon=False, fontsize=10, labelcolor=NEUTRAL)
-    ax.set_title("Discount-Reliant MRR Share — Monthly", fontsize=14, color="#0c0d0e", fontweight="semibold", pad=14)
+    ax.set_title(
+        "Discount-Reliant MRR Share — Monthly", fontsize=14, color=INK, fontweight="semibold", pad=14, loc="left"
+    )
     ax.set_xlabel("")
     ax.set_ylabel("Share of total MRR", fontsize=10, color=NEUTRAL)
     fig.tight_layout()
@@ -446,8 +475,12 @@ def chart_at_risk_concentration(base: Path, out: Path, dpi: int) -> None:
     log.info("7/10  At-risk MRR concentration curve")
     sc = pd.read_csv(base / "data/processed/account_scoring_model_output.csv")
 
+    # Ranked by current_mrr, not governance_priority_score: the report's "top twenty
+    # accounts hold 81.3% of at-risk MRR" is a statement about revenue concentration
+    # within the at-risk cohort, so the curve must rank accounts by the MRR it is
+    # cumulating, not by a risk-severity score that is only weakly related to size.
     at_risk = sc[sc["governance_priority_tier"].isin(["High", "Critical"])].copy()
-    at_risk = at_risk.sort_values("governance_priority_score", ascending=False).reset_index(drop=True)
+    at_risk = at_risk.sort_values("current_mrr", ascending=False).reset_index(drop=True)
     at_risk["cumulative_mrr"] = at_risk["current_mrr"].cumsum()
     total_at_risk = at_risk["current_mrr"].sum()
     at_risk["cumulative_pct_mrr"] = at_risk["cumulative_mrr"] / total_at_risk
@@ -471,15 +504,17 @@ def chart_at_risk_concentration(base: Path, out: Path, dpi: int) -> None:
     # 45-degree equal distribution line
     ax.plot([0, 100], [0, 100], color=NEUTRAL, linewidth=1.0, linestyle="--", alpha=0.5, label="Equal distribution")
 
-    # Annotate: top 20% accounts → X% of at-risk MRR
-    idx_20 = int(len(at_risk) * 0.20) - 1
-    share_at_20 = at_risk.iloc[idx_20]["cumulative_pct_mrr"] * 100
-    ax.axvline(20, color=NEUTRAL, linewidth=0.8, linestyle=":", alpha=0.5, zorder=2)
-    ax.axhline(share_at_20, color=NEUTRAL, linewidth=0.8, linestyle=":", alpha=0.5, zorder=2)
-    ax.scatter([20], [share_at_20], color=NEG, s=55, zorder=4)
+    # Annotate: top 20 accounts (a fixed count, matching "the top twenty" language
+    # used throughout the report) -> X% of at-risk MRR.
+    top_n = 20
+    pct_at_top_n = (top_n / len(at_risk)) * 100
+    share_at_top_n = at_risk.iloc[top_n - 1]["cumulative_pct_mrr"] * 100
+    ax.axvline(pct_at_top_n, color=NEUTRAL, linewidth=0.8, linestyle=":", alpha=0.5, zorder=2)
+    ax.axhline(share_at_top_n, color=NEUTRAL, linewidth=0.8, linestyle=":", alpha=0.5, zorder=2)
+    ax.scatter([pct_at_top_n], [share_at_top_n], color=NEG, s=55, zorder=4)
     ax.annotate(
-        f"Top 20% accounts\n= {share_at_20:.0f}% of at-risk MRR",
-        xy=(20, share_at_20),
+        f"Top {top_n} accounts\n= {share_at_top_n:.0f}% of at-risk MRR",
+        xy=(pct_at_top_n, share_at_top_n),
         xytext=(10, -30),
         textcoords="offset points",
         fontsize=10,
@@ -495,12 +530,13 @@ def chart_at_risk_concentration(base: Path, out: Path, dpi: int) -> None:
     ax.legend(frameon=False, fontsize=10, labelcolor=NEUTRAL)
     ax.set_title(
         f"At-Risk MRR Concentration  ·  {len(at_risk):,} accounts  ·  ${total_at_risk / 1e6:.1f}M at risk",
-        fontsize=13,
-        color="#0c0d0e",
+        fontsize=14,
+        color=INK,
         fontweight="semibold",
         pad=14,
+        loc="left",
     )
-    ax.set_xlabel("Accounts ranked by governance priority (% of at-risk pool)", fontsize=10, color=NEUTRAL)
+    ax.set_xlabel("Accounts ranked by current MRR (% of at-risk pool)", fontsize=10, color=NEUTRAL)
     ax.set_ylabel("Cumulative % of at-risk MRR", fontsize=10, color=NEUTRAL)
     fig.tight_layout()
     save(fig, out / "at_risk_mrr_concentration.png", dpi)
@@ -529,8 +565,16 @@ def chart_scenario_trajectories(base: Path, out: Path, dpi: int) -> None:
     last_actual_date = historical["month"].iloc[-1]
     last_actual_mrr = historical["mrr"].iloc[-1]
 
-    # Scenario forecasts
-    displayed = ["base_case", "downside_case", "improvement_case", "discount_discipline_improvement_case"]
+    # Scenario forecasts. risk_adjusted_case is the scenario the narrative calls
+    # "the one to plan against" (Section 5.8), so it must be visible here, not just
+    # in the appendix table.
+    displayed = [
+        "base_case",
+        "downside_case",
+        "improvement_case",
+        "discount_discipline_improvement_case",
+        "risk_adjusted_case",
+    ]
     end_labels: list[tuple[float, str, str]] = []
 
     for scenario in displayed:
@@ -615,9 +659,10 @@ def chart_scenario_trajectories(base: Path, out: Path, dpi: int) -> None:
     ax.set_title(
         "MRR Scenario Trajectories — Actuals + 6-Month Forecast",
         fontsize=14,
-        color="#0c0d0e",
+        color=INK,
         fontweight="semibold",
         pad=14,
+        loc="left",
     )
     ax.set_xlabel("")
     ax.set_ylabel("Monthly Recurring Revenue", fontsize=10, color=NEUTRAL)
@@ -681,7 +726,12 @@ def chart_cohort_heatmap(base: Path, out: Path, dpi: int) -> None:
     )
 
     ax.set_title(
-        "Cohort Net Revenue Retention — Month 0 to 12", fontsize=14, color="#0c0d0e", fontweight="semibold", pad=14
+        "Cohort Net Revenue Retention — Month 0 to 12",
+        fontsize=14,
+        color=INK,
+        fontweight="semibold",
+        pad=14,
+        loc="left",
     )
     ax.set_xlabel("Months since acquisition", fontsize=10, color=NEUTRAL)
     ax.set_ylabel("Cohort (acquisition month)", fontsize=10, color=NEUTRAL)
@@ -769,10 +819,11 @@ def chart_governance_priority_accounts(base: Path, out: Path, dpi: int) -> None:
     ax.xaxis.set_major_formatter(mticker.FuncFormatter(fmt_currency))
     ax.set_title(
         "Top 20 Accounts by Governance Priority — Current MRR & Risk Score",
-        fontsize=13,
-        color="#0c0d0e",
+        fontsize=14,
+        color=INK,
         fontweight="semibold",
         pad=14,
+        loc="left",
     )
     ax.set_xlabel("Current MRR", fontsize=10, color=NEUTRAL)
     ax.set_ylabel("")
@@ -796,7 +847,7 @@ def main(argv: list[str] | None = None) -> int:
     mpl.rcParams.update(
         {
             "font.family": "sans-serif",
-            "font.sans-serif": ["Inter", "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
+            "font.sans-serif": ["Inter"],
             "axes.spines.top": False,
             "axes.spines.right": False,
             "figure.facecolor": BG,

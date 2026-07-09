@@ -29,13 +29,22 @@ import numpy as np
 import pandas as pd
 
 mpl.use("Agg")
+import matplotlib.font_manager as fm  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
+# Register the same bundled Inter used by the PDF report chrome and the
+# executive chart pack, so every chart in the project shares one typographic
+# system regardless of what fonts happen to be installed on the machine.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+for _weight_file in ("Inter-Regular.ttf", "Inter-SemiBold.ttf"):
+    fm.fontManager.addfont(str(_REPO_ROOT / "assets" / "fonts" / _weight_file))
+
 # Shared style ---------------------------------------------------------------
 BG = "#fafaf7"
+INK = "#1d1d1b"  # matches the PDF report's body-text INK and build_executive_graphs.py exactly
 ACCENT = "#1f3b2d"
 ACCENT_LIGHT = "#2d5a42"
 NEG = "#9c2b1b"
@@ -46,7 +55,7 @@ AMBER = "#b07d2b"
 BLUE = "#3a7abf"
 
 mpl.rcParams["font.family"] = "sans-serif"
-mpl.rcParams["font.sans-serif"] = ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"]
+mpl.rcParams["font.sans-serif"] = ["Inter"]
 
 
 def apply_style(ax: plt.Axes) -> None:
@@ -66,7 +75,7 @@ def apply_style(ax: plt.Axes) -> None:
 
 
 def title_block(ax: plt.Axes, title: str, subtitle: str | None = None) -> None:
-    ax.set_title(title, fontsize=15, color="#222", pad=22 if subtitle else 12, loc="left", fontweight="medium")
+    ax.set_title(title, fontsize=14, color=INK, pad=22 if subtitle else 12, loc="left", fontweight="semibold")
     if subtitle:
         ax.text(0.0, 1.02, subtitle, transform=ax.transAxes, fontsize=10.5, color=NEUTRAL, ha="left", va="bottom")
 
@@ -105,7 +114,7 @@ def chart_discount_band_churn(metrics: dict, out: Path, dpi: int) -> None:
             ha="center",
             va="bottom",
             fontsize=11,
-            color="#222",
+            color=INK,
             fontweight="medium",
         )
         ax.text(b.get_x() + b.get_width() / 2, r * 0.5, f"n={n:,}", ha="center", va="center", fontsize=9, color="white")
@@ -142,7 +151,7 @@ def chart_churn_segment_channel(metrics: dict, out: Path, dpi: int) -> None:
     ax.axvline(overall, color=NEUTRAL, linestyle="--", linewidth=1, zorder=2)
     ax.text(overall, 2.5, f" overall {overall * 100:.2f}%", color=NEUTRAL, fontsize=8.5, va="top")
     for b, v in zip(bars, s_val[::-1], strict=True):
-        ax.text(v + 0.0003, b.get_y() + b.get_height() / 2, f"{v * 100:.2f}%", va="center", fontsize=10, color="#222")
+        ax.text(v + 0.0003, b.get_y() + b.get_height() / 2, f"{v * 100:.2f}%", va="center", fontsize=10, color=INK)
     ax.set_xlim(0, max(s_val) * 1.25)
     title_block(ax, "By segment", None)
 
@@ -160,12 +169,18 @@ def chart_churn_segment_channel(metrics: dict, out: Path, dpi: int) -> None:
     ax.xaxis.set_major_formatter(mticker.FuncFormatter(fmt_pct))
     ax.axvline(overall, color=NEUTRAL, linestyle="--", linewidth=1, zorder=2)
     for b, v in zip(bars, c_val, strict=True):
-        ax.text(v + 0.0002, b.get_y() + b.get_height() / 2, f"{v * 100:.2f}%", va="center", fontsize=9.5, color="#222")
+        ax.text(v + 0.0002, b.get_y() + b.get_height() / 2, f"{v * 100:.2f}%", va="center", fontsize=9.5, color=INK)
     ax.set_xlim(0, max(c_val) * 1.2)
     title_block(ax, "By acquisition channel", None)
 
     fig.suptitle(
-        "Churn concentrates in SMB and self-serve cohorts", fontsize=15, x=0.09, ha="left", y=1.02, color="#222"
+        "Churn concentrates in SMB and self-serve cohorts",
+        fontsize=14,
+        x=0.09,
+        ha="left",
+        y=1.02,
+        color=INK,
+        fontweight="semibold",
     )
     fig.tight_layout(rect=(0, 0, 1, 0.97))
     save(fig, out / "logo_churn_by_segment_channel.png", dpi)
@@ -188,7 +203,16 @@ def chart_decile_calibration(base: Path, out: Path, dpi: int) -> None:
     apply_style(ax)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(fmt_pct))
     ax.axhline(overall, color=ACCENT, linestyle="--", linewidth=1.2, zorder=2)
-    ax.text(0.0, overall, f" overall {overall * 100:.2f}%", color=ACCENT, fontsize=9, va="bottom")
+    ax.text(
+        0.0,
+        overall,
+        f" overall {overall * 100:.2f}% ",
+        color=ACCENT,
+        fontsize=9,
+        va="center",
+        zorder=4,
+        bbox={"boxstyle": "square,pad=0.25", "facecolor": BG, "edgecolor": "none"},
+    )
     top = df["forward_churn_rate"].iloc[-1]
     ax.text(
         len(df) - 1,
@@ -246,7 +270,7 @@ def chart_scenario_variance(base: Path, out: Path, dpi: int) -> None:
             va="center",
             ha="left" if v >= 0 else "right",
             fontsize=10.5,
-            color="#222",
+            color=INK,
             fontweight="medium",
         )
     ax.set_xlim(min(vals) * 1.35, max(vals) * 1.45)
@@ -282,15 +306,27 @@ def chart_am_discount_churn(base: Path, out: Path, dpi: int) -> None:
     ax.grid(axis="y", color=GRID, linewidth=0.6)
     ax.xaxis.set_major_formatter(mticker.FuncFormatter(fmt_pct))
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(fmt_pct))
-    # label the named review-priority managers from the analysis memo
-    flagged = {"AM0008", "AM0040", "AM0029", "AM0014"}
+    # Label the named review-priority managers from the analysis memo. AM0029 and
+    # AM0040 sit almost on top of each other (adjacent discount/churn values, and
+    # AM0040's bubble is the largest on the chart), so a single fixed offset makes
+    # the two labels collide. Each flagged label gets a hand-placed offset instead,
+    # chosen to clear both the neighbouring bubble and the neighbouring label.
+    flagged_offsets = {
+        "AM0040": ((16, -10), "left"),
+        "AM0029": ((-10, 14), "right"),
+        "AM0014": ((10, -4), "left"),
+        "AM0008": ((-10, 8), "right"),
+    }
     for _, row in df.iterrows():
-        if row["account_manager_id"] in flagged:
+        mgr_id = row["account_manager_id"]
+        if mgr_id in flagged_offsets:
+            offset, ha = flagged_offsets[mgr_id]
             ax.annotate(
-                row["account_manager_id"],
+                mgr_id,
                 (row["avg_discount"], row["churn_rate"]),
                 textcoords="offset points",
-                xytext=(9, 4),
+                xytext=offset,
+                ha=ha,
                 fontsize=8.5,
                 color=NEG,
             )
@@ -350,7 +386,16 @@ def chart_expansion_quality_mix(metrics: dict, out: Path, dpi: int) -> None:
     ax.axis("off")
     ax.figure.set_facecolor(BG)
     ax.set_facecolor(BG)
-    ax.text(0, 1.42, "Fragile growth is 28% of expansion MRR", fontsize=15, color="#222", ha="left", va="center")
+    ax.text(
+        0,
+        1.42,
+        "Fragile growth is 28% of expansion MRR",
+        fontsize=14,
+        color=INK,
+        ha="left",
+        va="center",
+        fontweight="semibold",
+    )
     ax.text(
         0,
         1.05,
