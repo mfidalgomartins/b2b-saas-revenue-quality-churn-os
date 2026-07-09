@@ -24,6 +24,7 @@ dev = [
   "bandit>=1.7,<2.0",
   "pip-audit>=2.7,<3.0",
   "mypy>=1.11,<3.0",
+  "duckdb>=1.0,<2.0",
   # Pin a patched transitive of the pip-audit toolchain so the audit gate stays
   # green: msgpack 1.2.1 fixes GHSA-6v7p-g79w-8964.
   "msgpack>=1.2.1",
