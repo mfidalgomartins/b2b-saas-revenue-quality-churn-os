@@ -31,6 +31,9 @@ jobs:
       - name: Check formatting
         run: python -m ruff format --check src tests scripts
 
+      - name: Static type check (mypy)
+        run: python -m mypy
+
       - name: Static security scan (bandit)
         run: python -m bandit -c pyproject.toml -r src scripts -q
 

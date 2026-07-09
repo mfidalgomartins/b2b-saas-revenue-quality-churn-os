@@ -7,7 +7,7 @@ FEATURE_DICT := $(BASE_DIR)/docs/core/feature_dictionary.md
 ANALYTICAL_NOTES := $(BASE_DIR)/docs/core/analytical_layer_notes.md
 VALIDATION_SUMMARY := $(BASE_DIR)/reports/formal_validation_summary.json
 
-.PHONY: all data profile features scoring backtest sensitivity analysis forecast graphs supplementary-graphs dashboard dashboard-refresh report validate gate format-check lint test coverage security audit benchmark qa release-ready release-refresh clean
+.PHONY: all data profile features scoring backtest sensitivity analysis forecast graphs supplementary-graphs dashboard dashboard-refresh report validate gate format-check lint typecheck test coverage security audit benchmark qa release-ready release-refresh clean
 
 all: data profile features scoring backtest sensitivity analysis forecast graphs supplementary-graphs dashboard validate dashboard-refresh report
 
@@ -62,6 +62,9 @@ format-check:
 lint:
 	$(PYTHON) -m ruff check src tests scripts
 
+typecheck:
+	$(PYTHON) -m mypy
+
 test:
 	$(PYTHON) -m unittest discover -s tests -p 'test_*.py'
 
@@ -78,7 +81,7 @@ audit:
 benchmark:
 	$(PYTHON) scripts/benchmark_backtest.py --base-dir $(BASE_DIR)
 
-qa: format-check lint coverage security validate gate
+qa: format-check lint typecheck coverage security validate gate
 
 release-ready: format-check lint test all gate
 

@@ -20,8 +20,8 @@ Python 3.12+ is required.
 make qa
 ```
 
-`qa` runs, in order: format check → lint → tests with the coverage gate → static security scan → dependency
-posture (via the gate workflow) → validation gate. If `make qa` is green, CI will be green — the
+`qa` runs, in order: format check → lint → type check → tests with the coverage gate → static security scan →
+dependency posture (via the gate workflow) → validation gate. If `make qa` is green, CI will be green — the
 [workflow](.github/workflows/qa.yml) runs the same checks.
 
 Individual gates:
@@ -30,6 +30,7 @@ Individual gates:
 |---|---|
 | `make lint` | Ruff rules `E,F,I,B,UP,SIM,C4` |
 | `make format-check` | Ruff formatter (run `make format` equivalent: `ruff format`) |
+| `make typecheck` | mypy (strict-ish) over the pure-logic core library, zero errors |
 | `make test` | Full `unittest` suite |
 | `make coverage` | Tests **plus** the 100% branch-coverage gate on the core library |
 | `make security` | Bandit static analysis |

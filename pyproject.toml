@@ -23,6 +23,7 @@ dev = [
   "coverage>=7.5,<8.0",
   "bandit>=1.7,<2.0",
   "pip-audit>=2.7,<3.0",
+  "mypy>=1.11,<3.0",
   # Pin a patched transitive of the pip-audit toolchain so the audit gate stays
   # green: msgpack 1.2.1 fixes GHSA-6v7p-g79w-8964.
   "msgpack>=1.2.1",
@@ -90,3 +91,25 @@ exclude_also = [
 # three are reviewed and accepted for this controlled, developer-run tooling.
 skips = ["B404", "B603", "B607"]
 exclude_dirs = [".venv", "build", "tests"]
+
+# Static type checking is enforced over the same pure-logic core library that the
+# coverage gate guards — the modules whose types carry the scoring/retention/gate
+# contracts. Third-party stubs (pandas/numpy/reportlab) are not installed, so
+# missing-import errors are ignored; everything we own is fully annotated.
+[tool.mypy]
+python_version = "3.12"
+files = [
+  "src/metrics.py",
+  "src/scoring/scoring_utils.py",
+  "src/io",
+  "src/validation/check_validation_gate.py",
+  "src/dashboard/dashboard_contract.py",
+]
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+strict_equality = true
