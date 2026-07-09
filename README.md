@@ -1,5 +1,8 @@
 # B2B SaaS Revenue Quality & Churn Early Warning
 
+[![QA Validation Gate](https://github.com/mfidalgomartins/b2b-saas-revenue-quality-churn-os/actions/workflows/qa.yml/badge.svg)](https://github.com/mfidalgomartins/b2b-saas-revenue-quality-churn-os/actions/workflows/qa.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
+
 A reproducible Python and SQL analytics system for testing whether B2B SaaS recurring-revenue growth is **durable or discount-financed**, then prioritising accounts with elevated churn risk.
 
 **[Open the live dashboard](https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/)** · **[Read the analytical report](outputs/reports/revenue_quality_os_analytical_report.pdf)**
