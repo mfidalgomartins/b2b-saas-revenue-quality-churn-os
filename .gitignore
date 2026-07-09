@@ -45,3 +45,8 @@ outputs/dashboard/_tmp_dashboard_script.js
 # Local working notes, not part of the published repo
 GOAL.md
 IMPROVEMENT_PLAN.md
+
+# Raw synthetic data is fully deterministic from `make data` (seed 42) — not
+# tracked to keep the repo lean. data/processed/ IS tracked, so outputs stay
+# inspectable without running anything. See data/README.md.
+data/raw/*.csv

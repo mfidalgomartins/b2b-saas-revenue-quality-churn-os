@@ -124,7 +124,7 @@ workflow and [`SECURITY.md`](SECURITY.md) for the security posture.
 ```
 src/        analysis/  dashboard/  data_generation/  features/  forecasting/
             io/  pipeline/  profiling/  scoring/  validation/  visualization/
-data/       raw/  processed/
+data/       raw/  processed/     (raw/ is generated, not tracked — see data/README.md)
 docs/core/  feature_dictionary.md  methodology.md  scoring_model_design.md  …
 outputs/    graphs/  dashboard/  reports/
 reports/    profiling, business analysis, validation, backtest, sensitivity
