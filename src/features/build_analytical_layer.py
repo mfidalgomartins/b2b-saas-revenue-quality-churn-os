@@ -11,6 +11,9 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.io.contracts import REQUIRED_RAW_SCHEMAS, validate_schema  # noqa: E402
+from src.io.logging_setup import get_logger  # noqa: E402
+
+log = get_logger(__name__)
 
 RAW_FILES = {
     "customers": ("customers.csv", ["signup_date"]),
@@ -715,9 +718,9 @@ def main() -> None:
     write_feature_dictionary(Path(args.feature_dictionary_path))
     write_table_purpose_note(Path(args.notes_path))
 
-    print("Analytical layer build complete.")
+    log.info("Analytical layer build complete.")
     for name, df in out_tables.items():
-        print(f"{name}: {len(df):,} rows x {len(df.columns)} cols")
+        log.info("%s: %s rows x %s cols", name, f"{len(df):,}", len(df.columns))
 
 
 if __name__ == "__main__":

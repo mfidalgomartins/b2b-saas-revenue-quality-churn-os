@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.io.logging_setup import get_logger  # noqa: E402
+
+log = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -759,13 +766,13 @@ def main() -> None:
         invoices=invoices,
     )
 
-    print("Synthetic data generation complete.")
-    print(f"Output directory: {output_dir.resolve()}")
-    print(f"customers: {len(customers):,}")
-    print(f"plans: {len(plans):,}")
-    print(f"subscriptions: {len(subscriptions):,}")
-    print(f"monthly_account_metrics: {len(monthly_metrics):,}")
-    print(f"invoices: {len(invoices):,}")
+    log.info("Synthetic data generation complete.")
+    log.info("Output directory: %s", output_dir.resolve())
+    log.info("customers: %s", f"{len(customers):,}")
+    log.info("plans: %s", f"{len(plans):,}")
+    log.info("subscriptions: %s", f"{len(subscriptions):,}")
+    log.info("monthly_account_metrics: %s", f"{len(monthly_metrics):,}")
+    log.info("invoices: %s", f"{len(invoices):,}")
 
 
 if __name__ == "__main__":

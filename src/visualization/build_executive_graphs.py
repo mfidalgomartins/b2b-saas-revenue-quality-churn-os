@@ -16,7 +16,6 @@ Run:
 from __future__ import annotations
 
 import argparse
-import logging
 import os
 import sys
 import tempfile
@@ -38,6 +37,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.io.logging_setup import get_logger  # noqa: E402
 from src.metrics import build_monthly_retention  # noqa: E402
 
 # Register the same bundled Inter used by the PDF report chrome, so chart text
@@ -47,8 +47,7 @@ from src.metrics import build_monthly_retention  # noqa: E402
 for _weight_file in ("Inter-Regular.ttf", "Inter-SemiBold.ttf"):
     fm.fontManager.addfont(str(REPO_ROOT / "assets" / "fonts" / _weight_file))
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Style constants

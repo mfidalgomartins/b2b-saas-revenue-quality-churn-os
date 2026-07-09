@@ -9,7 +9,10 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from src.io.logging_setup import get_logger  # noqa: E402
 from src.metrics import build_monthly_retention  # noqa: E402
+
+log = get_logger(__name__)
 
 
 def load_inputs(base_dir: Path) -> dict[str, pd.DataFrame]:
@@ -554,12 +557,18 @@ def main() -> None:
         horizon_months=args.horizon_months,
     )
 
-    print("Forecasting/scenario layer build complete.")
-    print(f"baseline_mrr_forecast: {len(trajectories[trajectories['scenario'] == 'base_case']):,} rows")
-    print(f"risk_adjusted_mrr_forecast: {len(trajectories[trajectories['scenario'] == 'risk_adjusted_case']):,} rows")
-    print(f"scenario_mrr_trajectories: {len(trajectories):,} rows")
-    print(f"mrr_scenario_table: {len(scenario_summary):,} rows")
-    print(f"commercial_risk_impact_estimates: {len(impacts):,} rows")
+    log.info("Forecasting/scenario layer build complete.")
+    log.info(
+        "baseline_mrr_forecast: %s rows",
+        f"{len(trajectories[trajectories['scenario'] == 'base_case']):,}",
+    )
+    log.info(
+        "risk_adjusted_mrr_forecast: %s rows",
+        f"{len(trajectories[trajectories['scenario'] == 'risk_adjusted_case']):,}",
+    )
+    log.info("scenario_mrr_trajectories: %s rows", f"{len(trajectories):,}")
+    log.info("mrr_scenario_table: %s rows", f"{len(scenario_summary):,}")
+    log.info("commercial_risk_impact_estimates: %s rows", f"{len(impacts):,}")
 
 
 if __name__ == "__main__":

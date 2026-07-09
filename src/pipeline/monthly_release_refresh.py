@@ -5,6 +5,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.io.logging_setup import get_logger  # noqa: E402
+
+log = get_logger(__name__)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the monthly revenue-quality refresh pipeline.")
@@ -97,9 +103,9 @@ def main() -> None:
     tag_result = try_create_release_tag(base_dir, args.release_tag)
     artifacts = collect_artifacts(base_dir)
 
-    print("Monthly release refresh complete.")
-    print(f"Artifacts refreshed: {len(artifacts)}")
-    print(f"Release tag status: {tag_result['status']} ({tag_result['message']})")
+    log.info("Monthly release refresh complete.")
+    log.info("Artifacts refreshed: %s", len(artifacts))
+    log.info("Release tag status: %s (%s)", tag_result["status"], tag_result["message"])
 
 
 if __name__ == "__main__":

@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
 import os
 import sys
 import tempfile
@@ -32,13 +31,16 @@ mpl.use("Agg")
 import matplotlib.font_manager as fm  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-log = logging.getLogger(__name__)
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_REPO_ROOT))
+
+from src.io.logging_setup import get_logger  # noqa: E402
+
+log = get_logger(__name__)
 
 # Register the same bundled Inter used by the PDF report chrome and the
 # executive chart pack, so every chart in the project shares one typographic
 # system regardless of what fonts happen to be installed on the machine.
-_REPO_ROOT = Path(__file__).resolve().parents[2]
 for _weight_file in ("Inter-Regular.ttf", "Inter-SemiBold.ttf"):
     fm.fontManager.addfont(str(_REPO_ROOT / "assets" / "fonts" / _weight_file))
 

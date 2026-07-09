@@ -11,7 +11,10 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from src.io.logging_setup import get_logger  # noqa: E402
 from src.metrics import build_monthly_retention, build_retention_panel  # noqa: E402
+
+log = get_logger(__name__)
 
 
 def load_tables(base_dir: Path) -> dict[str, pd.DataFrame]:
@@ -408,9 +411,9 @@ def main() -> None:
 
     build_memo(metrics, (base_dir / args.memo_output_path).resolve())
 
-    print("Main business analysis build complete.")
-    print(f"Metrics: {metrics_path}")
-    print(f"Memo: {(base_dir / args.memo_output_path).resolve()}")
+    log.info("Main business analysis build complete.")
+    log.info("Metrics: %s", metrics_path)
+    log.info("Memo: %s", (base_dir / args.memo_output_path).resolve())
 
 
 if __name__ == "__main__":

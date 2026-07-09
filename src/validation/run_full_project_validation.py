@@ -14,12 +14,15 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from src.io.logging_setup import get_logger  # noqa: E402
 from src.metrics import build_monthly_retention  # noqa: E402
 from src.scoring.scoring_utils import (  # noqa: E402
     CHURN_WEIGHTS,
     quality_to_risk_tier,
     risk_tier,
 )
+
+log = get_logger(__name__)
 
 
 @dataclass
@@ -1360,11 +1363,11 @@ def main() -> None:
     findings, summary = run_validation(base_dir)
     write_validation_outputs(base_dir, findings, summary)
 
-    print("Project validation complete")
-    print(f"checks_run: {summary['total_findings']}")
-    print(f"pass: {summary['status_counts']['PASS']}")
-    print(f"warn: {summary['status_counts']['WARN']}")
-    print(f"fail: {summary['status_counts']['FAIL']}")
+    log.info("Project validation complete")
+    log.info("checks_run: %s", summary["total_findings"])
+    log.info("pass: %s", summary["status_counts"]["PASS"])
+    log.info("warn: %s", summary["status_counts"]["WARN"])
+    log.info("fail: %s", summary["status_counts"]["FAIL"])
 
 
 if __name__ == "__main__":

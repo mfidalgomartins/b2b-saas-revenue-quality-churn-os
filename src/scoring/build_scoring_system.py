@@ -10,6 +10,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from src.io.logging_setup import get_logger  # noqa: E402
 from src.scoring.scoring_utils import (  # noqa: E402
     CHURN_WEIGHTS,
     DISCOUNT_DEPENDENCY_WEIGHTS,
@@ -27,6 +28,8 @@ from src.scoring.scoring_utils import (  # noqa: E402
     risk_tier,
     score_from_components,
 )
+
+log = get_logger(__name__)
 
 
 def load_inputs(base_dir: Path) -> dict[str, pd.DataFrame]:
@@ -644,10 +647,10 @@ def main() -> None:
     shortlist.to_csv(output_dir / "scoring_priority_shortlist.csv", index=False)
     write_scoring_docs(base_dir)
 
-    print("Scoring system build complete.")
-    print(f"account_scoring_model_output: {len(score_output):,} rows")
-    print(f"account_scoring_components: {len(components_table):,} rows")
-    print(f"scoring_priority_shortlist: {len(shortlist):,} rows")
+    log.info("Scoring system build complete.")
+    log.info("account_scoring_model_output: %s rows", f"{len(score_output):,}")
+    log.info("account_scoring_components: %s rows", f"{len(components_table):,}")
+    log.info("scoring_priority_shortlist: %s rows", f"{len(shortlist):,}")
 
 
 if __name__ == "__main__":

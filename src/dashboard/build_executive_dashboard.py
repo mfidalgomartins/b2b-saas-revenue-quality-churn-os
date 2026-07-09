@@ -10,7 +10,10 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from src.io.logging_setup import get_logger  # noqa: E402
 from src.metrics import build_monthly_retention  # noqa: E402
+
+log = get_logger(__name__)
 
 try:
     from dashboard_contract import (
@@ -464,8 +467,8 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(html, encoding="utf-8")
 
-    print("Executive dashboard generated")
-    print(f"output: {output_path}")
+    log.info("Executive dashboard generated")
+    log.info("output: %s", output_path)
 
 
 if __name__ == "__main__":

@@ -2,12 +2,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.io.logging_setup import get_logger  # noqa: E402
+
+log = get_logger(__name__)
 
 RAW_FILE_CONFIG = {
     "customers": {
@@ -389,10 +396,10 @@ def main() -> None:
         profile_summary=profile_summary, checks=checks, issues=issues, output_path=(base_dir / args.memo_path).resolve()
     )
 
-    print("Data profiling complete.")
+    log.info("Data profiling complete.")
     if stats_path:
-        print(f"Stats: {stats_path}")
-    print(f"Memo: {(base_dir / args.memo_path).resolve()}")
+        log.info("Stats: %s", stats_path)
+    log.info("Memo: %s", (base_dir / args.memo_path).resolve())
 
 
 if __name__ == "__main__":

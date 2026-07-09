@@ -2,10 +2,7 @@ from __future__ import annotations
 
 CANONICAL_DASHBOARD_PATH = "outputs/dashboard/revenue-quality-command-center.html"
 
-REDIRECT_ENTRYPOINTS = (
-    "index.html",
-    "docs/index.html",
-)
+REDIRECT_ENTRYPOINTS = ("index.html",)
 
 DASHBOARD_CANDIDATE_PATTERNS = (
     "*.html",
