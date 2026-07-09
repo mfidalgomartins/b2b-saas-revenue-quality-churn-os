@@ -41,3 +41,7 @@ build/
 
 # Dashboard temp artifacts
 outputs/dashboard/_tmp_dashboard_script.js
+
+# Local working notes, not part of the published repo
+GOAL.md
+IMPROVEMENT_PLAN.md
