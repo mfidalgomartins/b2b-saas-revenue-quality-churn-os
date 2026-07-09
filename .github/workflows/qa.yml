@@ -43,6 +43,17 @@ jobs:
       - name: Build end-to-end pipeline
         run: python src/pipeline/run_project_pipeline.py --base-dir . --seed 42
 
+      - name: Verify PDF report artifact
+        run: |
+          f=outputs/reports/revenue_quality_os_analytical_report.pdf
+          test -s "$f"
+          size=$(stat -c%s "$f")
+          echo "Report size: ${size} bytes"
+          if [ "$size" -lt 500000 ]; then
+            echo "PDF report is suspiciously small (<500KB) — possible silent truncation" >&2
+            exit 1
+          fi
+
       - name: Run tests with coverage gate
         run: |
           python -m coverage run -m unittest discover -s tests -p 'test_*.py'
