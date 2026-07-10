@@ -5,9 +5,7 @@ It embeds its data and visual assets, so it can be opened without a server.
 
 Primary file: `revenue-quality-command-center.html`
 
-Redirect entrypoints:
-- `../../index.html`
-- `../../docs/index.html`
+Redirect entrypoint: the repository-root `index.html` (what GitHub Pages serves) redirects here.
 
 Primary access (GitHub Pages):
 https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/

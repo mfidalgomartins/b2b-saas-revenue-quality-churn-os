@@ -1,6 +1,10 @@
 """Dev-only: screenshot the dashboard in both themes at desktop + mobile.
 
-Not part of the build. Run from repo root:
+Not part of the build, and playwright is deliberately not a declared
+dependency — install it ad hoc when needed:
+    pip install playwright && playwright install chromium
+
+Run from repo root:
     python scripts/shoot_dashboard.py
 Writes PNGs to a fresh temp directory (override with DASH_SHOT_DIR).
 """
