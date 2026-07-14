@@ -15,13 +15,18 @@ from types import ModuleType
 from PIL import Image as PILImage
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
-from reportlab.platypus import HRFlowable, Image, KeepTogether, Spacer, Table, TableStyle
+from reportlab.platypus import HRFlowable, Image, KeepTogether, Paragraph, Spacer, Table, TableStyle
 
 BASE = Path(__file__).resolve().parents[1]
 EXISTING_REPORT = BASE / "outputs" / "reports" / "revenue_quality_os_analytical_report.pdf"
 DEFAULT_OUTPUT = BASE / "outputs" / "reports" / "revenue_quality_os_consulting_report.pdf"
+CONSULTING_TITLE = "Revenue Quality Operating System: Executive Report"
+CONSULTING_SUBJECT = (
+    "A consulting-grade diagnostic of growth, retention, risk concentration and operating priorities."
+)
 REQUIRED_INPUTS = (
     Path("scripts/build_pdf_report.py"),
     Path("assets/fonts/Inter-Regular.ttf"),
@@ -49,6 +54,33 @@ EXPECTED_CHARTS = (
     "score_decile_calibration.png",
     "scenario_mrr_trajectories.png",
     "scenario_arr_variance_vs_base.png",
+)
+CHART_CAPTION_OVERRIDES = {
+    "cohort_retention_heatmap.png": (
+        "Light and coral cells mark retention near or above 100%; deep-red cells mark shortfalls. "
+        "Weakness is concentrated in particular cohorts, which points to acquisition-quality "
+        "differences rather than a uniform decline."
+    )
+}
+CONSULTING_TOC_ENTRIES = (
+    ("1", "Executive summary", "3"),
+    ("2", "Context and objectives", "4"),
+    ("3", "Data and methodology", "5"),
+    ("4", "Analytical framework", "7"),
+    ("5", "Findings", "8"),
+    ("5.1", "Revenue scale and the quality of growth", "8"),
+    ("5.2", "Retention: gross, net and the cohort view", "10"),
+    ("5.3", "Where churn concentrates", "12"),
+    ("5.4", "Discount intensity and realized pricing", "13"),
+    ("5.5", "Expansion quality", "16"),
+    ("5.6", "Account-level concentration and at-risk MRR", "17"),
+    ("5.7", "The churn-risk scoring system", "20"),
+    ("5.8", "Forecast and scenario analysis", "22"),
+    ("5.9", "Probabilistic forecast calibration", "25"),
+    ("5.10", "Intervention effectiveness and ROI", "25"),
+    ("6", "Risks, limitations and caveats", "26"),
+    ("7", "Recommendations and action priorities", "27"),
+    ("8", "Appendix", "29"),
 )
 
 CHARCOAL = colors.HexColor("#252323")
@@ -115,10 +147,13 @@ def configure_report_theme(report: ModuleType) -> None:
     report.styles["lead"].fontSize = 10.6
     report.styles["lead"].leading = 15.4
     report.styles["lead"].textColor = CHARCOAL
+    for name in ("body", "body_first", "lead"):
+        report.styles[name].allowWidows = 0
 
     for name in ("h1", "h2", "h3"):
         report.styles[name].fontName = "SourceSerif4"
         report.styles[name].textColor = ORANGE
+        report.styles[name].keepWithNext = True
     report.styles["h1"].fontSize = 25
     report.styles["h1"].leading = 29
     report.styles["h2"].fontSize = 16.5
@@ -127,6 +162,7 @@ def configure_report_theme(report: ModuleType) -> None:
     report.styles["h3"].leading = 15.5
     report.styles["h1num"].fontName = "Inter"
     report.styles["h1num"].textColor = ORANGE
+    report.styles["h1num"].keepWithNext = True
     report.styles["caption"].fontName = "Inter"
     report.styles["caption"].fontSize = 7.7
     report.styles["caption"].leading = 10.1
@@ -167,6 +203,7 @@ def configure_report_theme(report: ModuleType) -> None:
     report.styles["cover_sub"].fontName = "Inter-SemiBold"
     report.styles["cover_sub"].fontSize = 11.1
     report.styles["cover_sub"].leading = 15.2
+    report.styles["cover_sub"].rightIndent = 3.5 * cm
     report.styles["cover_sub"].textColor = CHARCOAL
     report.styles["cover_meta"].fontName = "Inter"
     report.styles["cover_meta"].textColor = CHARCOAL
@@ -271,6 +308,54 @@ def consulting_cover_story(report: ModuleType) -> list:
     return story
 
 
+def consulting_toc_story(report: ModuleType) -> list:
+    """Build a table of contents aligned to the consulting edition's pagination."""
+    story = [report.P("Contents", "h1"), Spacer(1, 0.3 * cm)]
+    rows = []
+    for index, (number, label, page) in enumerate(CONSULTING_TOC_ENTRIES):
+        is_subsection = "." in number
+        label_style = ParagraphStyle(
+            f"consulting_toc_{index}",
+            parent=report.styles["toc_l"],
+            leftIndent=14 if is_subsection else 0,
+            fontName="Inter" if is_subsection else "Inter-SemiBold",
+            textColor=CHARCOAL if is_subsection else ORANGE,
+        )
+        rows.append(
+            [
+                Paragraph(f"{number}&nbsp;&nbsp;&nbsp;{label}", label_style),
+                report.P(page, "toc_n"),
+            ]
+        )
+    table = Table(rows, colWidths=[report.CONTENT_W - 1.4 * cm, 1.4 * cm])
+    table.setStyle(
+        TableStyle(
+            [
+                ("LINEBELOW", (0, 0), (-1, -1), 0.3, PAPER),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
+    )
+    story.extend(
+        [
+            table,
+            Spacer(1, 0.8 * cm),
+            report.P("A note on the figures throughout this report", "h3"),
+            report.P(
+                "Every chart in this document is generated directly from the project's processed "
+                "data layer. The numbers in the narrative, the tables and the figures share a "
+                "single source, so a reader can trace any quoted statistic back to the same "
+                "underlying tables that feed the live dashboard. Where a figure is associative "
+                "rather than causal, the text says so plainly.",
+                "body",
+            ),
+        ]
+    )
+    return story
+
+
 def consulting_kpi_band(report: ModuleType, items: list[tuple[str, str]]) -> Table:
     """Render headline metrics as editorial statements instead of dashboard cards."""
     column_width = report.CONTENT_W / len(items)
@@ -349,6 +434,7 @@ def consulting_figure(
     max_h: float = 11.5 * cm,
 ) -> list:
     """Render an exhibit with a restrained orange rule and source-ready caption."""
+    caption = CHART_CAPTION_OVERRIDES.get(name, caption)
     path = report.GRAPHS / name
     with PILImage.open(path) as source_image:
         image_width, image_height = source_image.size
@@ -380,6 +466,7 @@ def install_report_primitives(report: ModuleType) -> None:
     report.body_page = lambda canvas, doc: consulting_footer(canvas, doc, header=True)
     report.plain_page = lambda canvas, doc: consulting_footer(canvas, doc, header=False)
     report.build_cover = lambda: consulting_cover_story(report)
+    report.build_toc = lambda: consulting_toc_story(report)
     report.kpi_band = lambda items: consulting_kpi_band(report, items)
     report.data_table = lambda header, rows, widths, align_right_from=1: consulting_data_table(
         report,
@@ -396,6 +483,35 @@ def install_report_primitives(report: ModuleType) -> None:
         max_w,
         max_h,
     )
+
+
+def install_copy_overrides(report: ModuleType) -> None:
+    """Correct edition-specific copy without modifying the preserved source report."""
+    original_paragraph = getattr(report, "_consulting_original_paragraph", report.P)
+    report._consulting_original_paragraph = original_paragraph
+
+    def consulting_paragraph(text, style):
+        if isinstance(text, str):
+            text = text.replace(
+                "scripts/build_pdf_report.py",
+                "scripts/build_consulting_pdf_report.py",
+            )
+        return original_paragraph(text, style)
+
+    report.P = consulting_paragraph
+
+
+def install_document_metadata(report: ModuleType) -> None:
+    """Give the additional deliverable its own PDF title and subject metadata."""
+    original_template = getattr(report, "_consulting_base_doc_template", report.BaseDocTemplate)
+    report._consulting_base_doc_template = original_template
+
+    def consulting_doc_template(*args, **kwargs):
+        kwargs["title"] = CONSULTING_TITLE
+        kwargs["subject"] = CONSULTING_SUBJECT
+        return original_template(*args, **kwargs)
+
+    report.BaseDocTemplate = consulting_doc_template
 
 
 def configure_chart_theme(core: ModuleType, supplementary: ModuleType) -> None:
@@ -511,7 +627,9 @@ def build_consulting_report(base_dir: Path = BASE, output_path: Path = DEFAULT_O
 
         report = load_report_module()
         configure_report_theme(report)
+        install_copy_overrides(report)
         install_report_primitives(report)
+        install_document_metadata(report)
         report.GRAPHS = charts_dir
         report.OUT = temporary_pdf
         report.EXHIBITS.clear()

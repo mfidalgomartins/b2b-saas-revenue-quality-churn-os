@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from PIL import Image
@@ -24,6 +25,41 @@ def test_output_path_is_distinct_from_existing_report() -> None:
     assert module.DEFAULT_OUTPUT != module.EXISTING_REPORT
 
 
+def test_consulting_toc_matches_final_editorial_pagination() -> None:
+    module = load_builder()
+    assert module.CONSULTING_TOC_ENTRIES == (
+        ("1", "Executive summary", "3"),
+        ("2", "Context and objectives", "4"),
+        ("3", "Data and methodology", "5"),
+        ("4", "Analytical framework", "7"),
+        ("5", "Findings", "8"),
+        ("5.1", "Revenue scale and the quality of growth", "8"),
+        ("5.2", "Retention: gross, net and the cohort view", "10"),
+        ("5.3", "Where churn concentrates", "12"),
+        ("5.4", "Discount intensity and realized pricing", "13"),
+        ("5.5", "Expansion quality", "16"),
+        ("5.6", "Account-level concentration and at-risk MRR", "17"),
+        ("5.7", "The churn-risk scoring system", "20"),
+        ("5.8", "Forecast and scenario analysis", "22"),
+        ("5.9", "Probabilistic forecast calibration", "25"),
+        ("5.10", "Intervention effectiveness and ROI", "25"),
+        ("6", "Risks, limitations and caveats", "26"),
+        ("7", "Recommendations and action priorities", "27"),
+        ("8", "Appendix", "29"),
+    )
+
+
+def test_install_copy_overrides_names_the_consulting_builder() -> None:
+    module = load_builder()
+    captured: list[str] = []
+    report = SimpleNamespace(P=lambda text, _style: captured.append(text) or text)
+
+    module.install_copy_overrides(report)
+    report.P("Built by scripts/build_pdf_report.py.", "body")
+
+    assert captured == ["Built by scripts/build_consulting_pdf_report.py."]
+
+
 def test_validate_inputs_rejects_missing_project_assets(tmp_path: Path) -> None:
     module = load_builder()
     with pytest.raises(FileNotFoundError, match="Required report input"):
@@ -38,6 +74,9 @@ def test_configure_report_theme_applies_approved_typography() -> None:
     assert report.styles["h1"].fontName == "SourceSerif4"
     assert report.styles["h1"].textColor.hexval().lower() == "0xf04424"
     assert report.styles["caption"].fontName == "Inter"
+    assert report.styles["cover_sub"].rightIndent >= module.cm * 3
+    assert all(report.styles[name].keepWithNext for name in ("h1", "h2", "h3"))
+    assert all(not report.styles[name].allowWidows for name in ("body", "body_first", "lead"))
 
 
 def test_install_report_primitives_replaces_cover_kpis_and_tables() -> None:
@@ -73,6 +112,22 @@ def test_install_report_primitives_adds_editorial_exhibit_rule(tmp_path: Path) -
     assert report.EXHIBITS == [(1, "Sample chart")]
 
 
+def test_install_document_metadata_replaces_legacy_report_identity() -> None:
+    module = load_builder()
+    captured: dict[str, str] = {}
+
+    def fake_template(*_args, **kwargs):
+        captured.update(kwargs)
+        return object()
+
+    report = SimpleNamespace(BaseDocTemplate=fake_template)
+    module.install_document_metadata(report)
+    report.BaseDocTemplate("report.pdf", title="Legacy title", subject="Legacy subject")
+
+    assert captured["title"] == module.CONSULTING_TITLE
+    assert captured["subject"] == module.CONSULTING_SUBJECT
+
+
 def test_expected_chart_contract_matches_report_exhibits() -> None:
     module = load_builder()
     assert set(module.EXPECTED_CHARTS) == {
@@ -92,6 +147,13 @@ def test_expected_chart_contract_matches_report_exhibits() -> None:
         "scenario_mrr_trajectories.png",
         "scenario_arr_variance_vs_base.png",
     }
+
+
+def test_heatmap_caption_matches_consulting_palette() -> None:
+    module = load_builder()
+    caption = module.CHART_CAPTION_OVERRIDES["cohort_retention_heatmap.png"]
+    assert "Green cells" not in caption
+    assert "deep-red" in caption
 
 
 def test_generate_consulting_charts_writes_exact_chart_pack(tmp_path: Path) -> None:
