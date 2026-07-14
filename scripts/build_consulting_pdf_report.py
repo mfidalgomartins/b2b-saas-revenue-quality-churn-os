@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import sys
 from importlib import import_module
 from pathlib import Path
@@ -28,6 +29,23 @@ REQUIRED_INPUTS = (
     Path("reports/intervention_effectiveness_summary.json"),
     Path("reports/probabilistic_forecast_validation.json"),
     Path("data/processed/account_monthly_revenue_quality.csv"),
+)
+EXPECTED_CHARTS = (
+    "mrr_arr_growth_trend.png",
+    "grr_nrr_retention_trend.png",
+    "logo_churn_and_revenue_churn.png",
+    "cohort_retention_heatmap.png",
+    "logo_churn_by_segment_channel.png",
+    "discount_dependency_trend.png",
+    "discount_band_vs_forward_churn.png",
+    "expansion_quality_mix.png",
+    "at_risk_mrr_concentration.png",
+    "governance_priority_accounts.png",
+    "account_manager_discount_vs_churn.png",
+    "churn_risk_score_distribution.png",
+    "score_decile_calibration.png",
+    "scenario_mrr_trajectories.png",
+    "scenario_arr_variance_vs_base.png",
 )
 
 CHARCOAL = colors.HexColor("#252323")
@@ -334,6 +352,97 @@ def install_report_primitives(report: ModuleType) -> None:
         widths,
         align_right_from,
     )
+
+
+def configure_chart_theme(core: ModuleType, supplementary: ModuleType) -> None:
+    """Apply the approved single-root palette to both existing chart modules."""
+    chart_colors = {
+        "BG": "#FFFFFF",
+        "INK": "#252323",
+        "ACCENT": "#F04424",
+        "ACCENT_LIGHT": "#F49A80",
+        "NEG": "#AD2B1F",
+        "NEUTRAL": "#747574",
+        "GRID": "#E8E6E1",
+        "BORDER": "#D9D7D2",
+    }
+    for name, value in chart_colors.items():
+        setattr(core, name, value)
+        setattr(supplementary, name, value)
+    supplementary.AMBER = "#F49A80"
+    supplementary.BLUE = "#252323"
+    core.PALETTE = {
+        "Low": "#9DA3A6",
+        "Moderate": "#F49A80",
+        "High": "#F04424",
+        "Critical": "#AD2B1F",
+        "healthy": "#F49A80",
+        "watch": "#F04424",
+        "fragile": "#AD2B1F",
+    }
+    core.SCENARIO_COLORS = {
+        "base_case": "#252323",
+        "downside_case": "#AD2B1F",
+        "improvement_case": "#F49A80",
+        "discount_discipline_improvement_case": "#F04424",
+        "risk_adjusted_case": "#747574",
+    }
+    core.mpl.rcParams.update(
+        {
+            "font.family": "sans-serif",
+            "font.sans-serif": ["Inter"],
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+            "figure.facecolor": "#FFFFFF",
+            "axes.facecolor": "#FFFFFF",
+            "text.color": "#252323",
+            "font.size": 10.5,
+            "axes.titlesize": 13.5,
+            "axes.labelsize": 10,
+        }
+    )
+    supplementary.mpl.rcParams.update(core.mpl.rcParams)
+
+
+def generate_consulting_charts(base_dir: Path, output_dir: Path, dpi: int = 190) -> set[str]:
+    """Generate the exact chart pack used by the consulting report."""
+    if str(base_dir) not in sys.path:
+        sys.path.insert(0, str(base_dir))
+    core = import_module("src.visualization.build_executive_graphs")
+    supplementary = import_module("src.visualization.build_supplementary_graphs")
+    configure_chart_theme(core, supplementary)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    metrics = json.loads((base_dir / "reports" / "main_business_analysis_metrics.json").read_text(encoding="utf-8"))
+    core.chart_mrr_arr_growth(base_dir, output_dir, dpi)
+    core.chart_grr_nrr_trend(base_dir, output_dir, dpi)
+    core.chart_logo_revenue_churn(base_dir, output_dir, dpi)
+    core.chart_churn_risk_dist(base_dir, output_dir, dpi)
+    core.chart_discount_trend(base_dir, output_dir, dpi)
+    core.chart_at_risk_concentration(base_dir, output_dir, dpi)
+    core.chart_scenario_trajectories(base_dir, output_dir, dpi)
+    original_diverging_palette = core.sns.diverging_palette
+    core.sns.diverging_palette = lambda *_args, **_kwargs: core.mpl.colors.LinearSegmentedColormap.from_list(
+        "consulting_diverging",
+        ["#AD2B1F", "#F5F4F1", "#F49A80"],
+    )
+    try:
+        core.chart_cohort_heatmap(base_dir, output_dir, dpi)
+    finally:
+        core.sns.diverging_palette = original_diverging_palette
+    core.chart_governance_priority_accounts(base_dir, output_dir, dpi)
+    supplementary.chart_discount_band_churn(metrics, output_dir, dpi)
+    supplementary.chart_churn_segment_channel(metrics, output_dir, dpi)
+    supplementary.chart_decile_calibration(base_dir, output_dir, dpi)
+    supplementary.chart_scenario_variance(base_dir, output_dir, dpi)
+    supplementary.chart_am_discount_churn(base_dir, output_dir, dpi)
+    supplementary.chart_expansion_quality_mix(metrics, output_dir, dpi)
+
+    generated = {path.name for path in output_dir.glob("*.png")}
+    missing = set(EXPECTED_CHARTS) - generated
+    if missing:
+        raise RuntimeError(f"Consulting chart generation missed: {sorted(missing)}")
+    return generated
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

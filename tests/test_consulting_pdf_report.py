@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "build_consulting_pdf_report.py"
@@ -56,3 +57,40 @@ def test_install_report_primitives_replaces_cover_kpis_and_tables() -> None:
     table = report.data_table(["Metric", "Value"], [["NRR", "99.82%"]], [200, 100])
     assert table._nrows == 2
     assert table._ncols == 2
+
+
+def test_expected_chart_contract_matches_report_exhibits() -> None:
+    module = load_builder()
+    assert set(module.EXPECTED_CHARTS) == {
+        "mrr_arr_growth_trend.png",
+        "grr_nrr_retention_trend.png",
+        "logo_churn_and_revenue_churn.png",
+        "cohort_retention_heatmap.png",
+        "logo_churn_by_segment_channel.png",
+        "discount_dependency_trend.png",
+        "discount_band_vs_forward_churn.png",
+        "expansion_quality_mix.png",
+        "at_risk_mrr_concentration.png",
+        "governance_priority_accounts.png",
+        "account_manager_discount_vs_churn.png",
+        "churn_risk_score_distribution.png",
+        "score_decile_calibration.png",
+        "scenario_mrr_trajectories.png",
+        "scenario_arr_variance_vs_base.png",
+    }
+
+
+def test_generate_consulting_charts_writes_exact_chart_pack(tmp_path: Path) -> None:
+    module = load_builder()
+    generated = module.generate_consulting_charts(ROOT, tmp_path, dpi=72)
+    assert generated == set(module.EXPECTED_CHARTS)
+    assert all((tmp_path / name).stat().st_size > 1_000 for name in generated)
+
+
+def test_heatmap_does_not_reintroduce_green_brand_colors(tmp_path: Path) -> None:
+    module = load_builder()
+    module.generate_consulting_charts(ROOT, tmp_path, dpi=72)
+    with Image.open(tmp_path / "cohort_retention_heatmap.png") as image:
+        pixels = list(image.convert("RGB").get_flattened_data())
+    green_dominant = sum(g > r * 1.12 and g > b * 1.06 and g > 90 for r, g, b in pixels)
+    assert green_dominant / len(pixels) < 0.001
