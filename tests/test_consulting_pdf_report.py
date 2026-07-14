@@ -59,6 +59,20 @@ def test_install_report_primitives_replaces_cover_kpis_and_tables() -> None:
     assert table._ncols == 2
 
 
+def test_install_report_primitives_adds_editorial_exhibit_rule(tmp_path: Path) -> None:
+    module = load_builder()
+    report = module.load_report_module()
+    module.configure_report_theme(report)
+    module.install_report_primitives(report)
+    report.GRAPHS = tmp_path
+    report.EXHIBITS.clear()
+    Image.new("RGB", (120, 60), "white").save(tmp_path / "sample.png")
+
+    exhibit = report.figure("sample.png", "Sample chart", "Sample caption")
+    assert exhibit[0]._content[0].__class__.__name__ == "HRFlowable"
+    assert report.EXHIBITS == [(1, "Sample chart")]
+
+
 def test_expected_chart_contract_matches_report_exhibits() -> None:
     module = load_builder()
     assert set(module.EXPECTED_CHARTS) == {
@@ -94,3 +108,22 @@ def test_heatmap_does_not_reintroduce_green_brand_colors(tmp_path: Path) -> None
         pixels = list(image.convert("RGB").get_flattened_data())
     green_dominant = sum(g > r * 1.12 and g > b * 1.06 and g > 90 for r, g, b in pixels)
     assert green_dominant / len(pixels) < 0.001
+
+
+def test_build_creates_second_pdf_without_touching_existing(tmp_path: Path) -> None:
+    module = load_builder()
+    before = module.sha256(module.EXISTING_REPORT)
+    output = tmp_path / "consulting.pdf"
+    result = module.build_consulting_report(ROOT, output)
+    assert result == output
+    assert output.read_bytes().startswith(b"%PDF-")
+    assert output.stat().st_size > 500_000
+    assert module.sha256(module.EXISTING_REPORT) == before
+
+
+def test_main_writes_requested_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    module = load_builder()
+    output = tmp_path / "requested.pdf"
+    assert module.main(["--output", str(output)]) == 0
+    assert output.is_file()
+    assert "Consulting report written" in capsys.readouterr().out

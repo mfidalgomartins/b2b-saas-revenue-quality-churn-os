@@ -5,16 +5,19 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
+import tempfile
 from importlib import import_module
 from pathlib import Path
 from types import ModuleType
 
+from PIL import Image as PILImage
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
-from reportlab.platypus import Spacer, Table, TableStyle
+from reportlab.platypus import HRFlowable, Image, KeepTogether, Spacer, Table, TableStyle
 
 BASE = Path(__file__).resolve().parents[1]
 EXISTING_REPORT = BASE / "outputs" / "reports" / "revenue_quality_os_analytical_report.pdf"
@@ -337,6 +340,39 @@ def consulting_data_table(
     return table
 
 
+def consulting_figure(
+    report: ModuleType,
+    name: str,
+    title: str,
+    caption: str,
+    max_w: float | None = None,
+    max_h: float = 11.5 * cm,
+) -> list:
+    """Render an exhibit with a restrained orange rule and source-ready caption."""
+    path = report.GRAPHS / name
+    with PILImage.open(path) as source_image:
+        image_width, image_height = source_image.size
+    aspect_ratio = image_height / image_width
+    width = max_w or report.CONTENT_W
+    height = width * aspect_ratio
+    if height > max_h:
+        height = max_h
+        width = height / aspect_ratio
+    chart = Image(str(path), width=width, height=height)
+    chart.hAlign = "CENTER"
+
+    number = len(report.EXHIBITS) + 1
+    report.EXHIBITS.append((number, title))
+    content = [
+        HRFlowable(width="100%", thickness=0.8, color=ORANGE, spaceBefore=5, spaceAfter=6),
+        report.P(f"Exhibit {number} - {title}", "figtitle"),
+        chart,
+    ]
+    if caption:
+        content.append(report.P(caption, "caption"))
+    return [KeepTogether(content)]
+
+
 def install_report_primitives(report: ModuleType) -> None:
     """Bind editorial page, KPI and table helpers to the existing content builder."""
     report.cover_page = consulting_cover_page
@@ -351,6 +387,14 @@ def install_report_primitives(report: ModuleType) -> None:
         rows,
         widths,
         align_right_from,
+    )
+    report.figure = lambda name, title, caption, max_w=None, max_h=11.5 * cm: consulting_figure(
+        report,
+        name,
+        title,
+        caption,
+        max_w,
+        max_h,
     )
 
 
@@ -445,8 +489,64 @@ def generate_consulting_charts(base_dir: Path, output_dir: Path, dpi: int = 190)
     return generated
 
 
+def build_consulting_report(base_dir: Path = BASE, output_path: Path = DEFAULT_OUTPUT) -> Path:
+    """Build the second PDF atomically while proving the original is unchanged."""
+    base_dir = base_dir.resolve()
+    output_path = output_path.resolve()
+    existing_report = (base_dir / "outputs" / "reports" / "revenue_quality_os_analytical_report.pdf").resolve()
+    if output_path == existing_report:
+        raise ValueError("The consulting report output must not replace the existing analytical report")
+    validate_inputs(base_dir)
+    if not existing_report.is_file():
+        raise FileNotFoundError(f"Required existing report is missing: {existing_report}")
+    original_digest = sha256(existing_report)
+
+    temporary_root = base_dir / "tmp" / "pdfs"
+    temporary_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="consulting-report-", dir=temporary_root) as temporary_dir:
+        work_dir = Path(temporary_dir)
+        charts_dir = work_dir / "charts"
+        temporary_pdf = work_dir / "revenue_quality_os_consulting_report.pdf"
+        generate_consulting_charts(base_dir, charts_dir)
+
+        report = load_report_module()
+        configure_report_theme(report)
+        install_report_primitives(report)
+        report.GRAPHS = charts_dir
+        report.OUT = temporary_pdf
+        report.EXHIBITS.clear()
+        report.build()
+
+        with temporary_pdf.open("rb") as handle:
+            signature = handle.read(5)
+        if signature != b"%PDF-" or temporary_pdf.stat().st_size < 100_000:
+            raise RuntimeError("The consulting report build did not produce a valid PDF")
+        if sha256(existing_report) != original_digest:
+            raise RuntimeError("The existing analytical report changed during the consulting build")
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(temporary_pdf, output_path)
+    return output_path
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse the report output path."""
     parser = argparse.ArgumentParser(description="Build the consulting-grade revenue quality PDF.")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Build the consulting report requested by the command line."""
+    args = parse_args(argv)
+    output = build_consulting_report(BASE, args.output)
+    try:
+        display_path = output.relative_to(BASE)
+    except ValueError:
+        display_path = output
+    print(f"Consulting report written -> {display_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
