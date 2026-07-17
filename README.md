@@ -10,7 +10,7 @@
 
 A reproducible Python and SQL analytics system for testing whether B2B SaaS recurring-revenue growth is **durable or discount-financed**, then prioritising accounts with elevated churn risk.
 
-**[Open the live dashboard](https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/)** · **[Read the analytical report](outputs/reports/revenue_quality_os_analytical_report.pdf)** · **[Read the consulting report](outputs/reports/revenue_quality_os_consulting_report.pdf)**
+**[Open the live dashboard](https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/)** · **[Read the report](outputs/reports/revenue_quality_os_consulting_report.pdf)**
 
 ![MRR and ARR growth trend](outputs/graphs/mrr_arr_growth_trend.png)
 
@@ -65,7 +65,7 @@ Topline MRR can grow while discount creep, usage decay, payment slippage, and fr
 | `src/interventions/` | Builds a leakage-safe blocked experiment ledger, attaches forward retention outcomes, checks covariate balance, estimates ITT uplift with bootstrap intervals, and translates it into commercial ROI. |
 | `src/forecasting/` | MRR scenario trajectories plus a local-trend residual block bootstrap with P05–P95 intervals and leakage-safe rolling-origin calibration. |
 | `src/visualization/` + `src/dashboard/` | 16 presentation-ready graphs and a self-contained HTML dashboard. |
-| `scripts/build_pdf_report.py` | Builds the 32-page analytical report from the same processed tables and graph pack. |
+| `scripts/build_pdf_report.py` + `scripts/build_consulting_pdf_report.py` | Build the consulting-grade report from the same processed tables and graph pack — the first script produces the analytical base PDF, which the second reads from disk, verifies is byte-unchanged, and re-typesets into the published consulting report. |
 | `src/validation/` | 24 governance checks spanning data integrity, metric reconciliation, leakage, calibration, intervention evidence, forecast uncertainty, provenance, and publication authorization. |
 | `sql/marts/` | SQL mirror of the Python semantic layer for warehouse consumers. |
 

@@ -7,17 +7,20 @@ folders, each self-contained.
 outputs/
 ├── graphs/      16 decision-relevant chart PNGs (one analytical question each)
 ├── dashboard/   self-contained interactive HTML command center
-└── reports/     the analytical PDF report (charts inline)
+└── reports/     the consulting-grade PDF report (charts inline)
 ```
 
 ## reports/
-`revenue_quality_os_analytical_report.pdf` is the primary deliverable: a
-multi-page analytical report with charts and tables inline, covering
-revenue quality, retention, churn concentration, discounting, expansion quality,
-account-level risk, the churn-risk scoring system and a six-month scenario
-forecast. The root-level `reports/` directory adds machine-readable validation,
-intervention-effectiveness and probabilistic-forecast evidence. Regenerate the
-PDF with `python scripts/build_pdf_report.py`.
+`revenue_quality_os_consulting_report.pdf` is the primary deliverable: a
+multi-page report with charts and tables inline, covering revenue quality,
+retention, churn concentration, discounting, expansion quality, account-level
+risk, the churn-risk scoring system and a six-month scenario forecast. The
+root-level `reports/` directory adds machine-readable validation,
+intervention-effectiveness and probabilistic-forecast evidence. Regenerate it
+with `python scripts/build_pdf_report.py && python scripts/build_consulting_pdf_report.py` —
+the first script writes the analytical base PDF that the second reads from
+disk, verifies is byte-unchanged, and re-typesets into the published report.
+The intermediate analytical PDF is a build input, not a tracked deliverable.
 
 Typeset in Source Serif 4 (body) and Inter (headings, labels, table text) —
 bundled as static font instances under `assets/fonts/` so the PDF renders

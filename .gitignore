@@ -48,3 +48,9 @@ outputs/dashboard/_tmp_dashboard_script.js
 # inspectable without running anything. See data/README.md.
 data/raw/*.csv
 data/raw/*.json
+
+# The analytical PDF is a deterministic intermediate build input for the
+# published consulting report (scripts/build_consulting_pdf_report.py reads
+# it from disk and verifies it byte-unchanged) — not a tracked deliverable
+# itself. `make report` regenerates it in seconds. See outputs/README.md.
+outputs/reports/revenue_quality_os_analytical_report.pdf

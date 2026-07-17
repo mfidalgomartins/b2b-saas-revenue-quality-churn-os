@@ -98,10 +98,10 @@ lint:
 typecheck:
 	$(PYTHON) -m mypy
 
-test: data
+test: data report
 	$(PYTHON) -m unittest discover -s tests -p 'test_*.py'
 
-coverage: data
+coverage: data report
 	$(PYTHON) -m coverage run -m unittest discover -s tests -p 'test_*.py'
 	$(PYTHON) -m coverage report
 
