@@ -20,6 +20,7 @@ class TestArtifactContracts(unittest.TestCase):
             SQL / "staging" / "stg_invoices.sql",
             SQL / "marts" / "mart_account_monthly_revenue_quality.sql",
             SQL / "marts" / "mart_retention_monthly.sql",
+            SQL / "marts" / "mart_account_scoring.sql",
         ]
         missing = [str(p) for p in required if not p.exists()]
         self.assertEqual(missing, [], f"Missing SQL semantic-layer files: {missing}")
@@ -40,6 +41,17 @@ class TestArtifactContracts(unittest.TestCase):
         self.assertIn("latest_nrr", analysis_payload["section2"])
         self.assertIn("latest_logo_churn_rate", analysis_payload["section2"])
         self.assertIn("latest_revenue_churn_rate", analysis_payload["section2"])
+
+    def test_strategic_expansion_reports_have_decision_contracts(self) -> None:
+        intervention = json.loads((REPORTS / "intervention_effectiveness_summary.json").read_text(encoding="utf-8"))
+        forecast = json.loads((REPORTS / "probabilistic_forecast_validation.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(intervention["design"], "blocked_randomized_intent_to_treat")
+        self.assertGreaterEqual(intervention["bootstrap_samples"], 1000)
+        self.assertIn(intervention["overall"]["recommendation"], {"scale_candidate", "continue_test", "do_not_scale"})
+        self.assertEqual(forecast["method"], "local_trend_residual_block_bootstrap")
+        self.assertGreaterEqual(forecast["simulations"], 2000)
+        self.assertGreater(forecast["backtest_observations"], 0)
 
     def test_dashboard_payload_contract(self) -> None:
         html_path = OUTPUTS / "dashboard" / "revenue-quality-command-center.html"

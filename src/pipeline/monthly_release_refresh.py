@@ -5,9 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from src.io.logging_setup import get_logger  # noqa: E402
+from src.io.logging_setup import get_logger
 
 log = get_logger(__name__)
 
@@ -88,7 +86,8 @@ def main() -> None:
 
     pipeline_cmd = [
         py,
-        "src/pipeline/run_project_pipeline.py",
+        "-m",
+        "src.pipeline.run_project_pipeline",
         "--base-dir",
         ".",
         "--seed",

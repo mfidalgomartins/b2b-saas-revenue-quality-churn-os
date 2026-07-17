@@ -2,33 +2,21 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from src.io.logging_setup import get_logger  # noqa: E402
-from src.metrics import build_monthly_retention  # noqa: E402
+from src.dashboard.dashboard_contract import (
+    CANONICAL_DASHBOARD_PATH,
+    DASHBOARD_SECTIONS,
+    OFFICIAL_KPI_SPECS,
+    REDIRECT_ENTRYPOINTS,
+)
+from src.io.logging_setup import get_logger
+from src.metrics import build_monthly_retention
 
 log = get_logger(__name__)
-
-try:
-    from dashboard_contract import (
-        CANONICAL_DASHBOARD_PATH,
-        DASHBOARD_SECTIONS,
-        OFFICIAL_KPI_SPECS,
-        REDIRECT_ENTRYPOINTS,
-    )
-except ImportError:  # pragma: no cover - supports package-style imports in tests.
-    from src.dashboard.dashboard_contract import (
-        CANONICAL_DASHBOARD_PATH,
-        DASHBOARD_SECTIONS,
-        OFFICIAL_KPI_SPECS,
-        REDIRECT_ENTRYPOINTS,
-    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -453,7 +441,11 @@ def build_html(payload: dict[str, Any]) -> str:
     payload_json = json.dumps(payload, separators=(",", ":")).replace("</", "<\\/")
     template_path = Path(__file__).parent / "_template.html"
     template = template_path.read_text(encoding="utf-8")
-    return template.replace("__PAYLOAD_JSON__", payload_json)
+    sentinel = "__PAYLOAD_JSON__"
+    sentinel_count = template.count(sentinel)
+    if sentinel_count != 1:
+        raise ValueError(f"Dashboard template must contain exactly one {sentinel} sentinel; found {sentinel_count}")
+    return template.replace(sentinel, payload_json)
 
 
 def main() -> None:

@@ -11,10 +11,13 @@ Run:
 
 from __future__ import annotations
 
+import csv
+import json
 import sys
 from pathlib import Path
 
 from PIL import Image as PILImage
+from reportlab import rl_config
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -37,13 +40,31 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+# Remove wall-clock timestamps and random document IDs so identical inputs
+# produce a byte-identical report. This affects PDF metadata only, not rendering.
+rl_config.invariant = 1
+
 BASE = Path(__file__).resolve().parents[1]
 GRAPHS = BASE / "outputs" / "graphs"
 FONTS = BASE / "assets" / "fonts"
 OUT = BASE / "outputs" / "reports" / "revenue_quality_os_analytical_report.pdf"
 
+
+def load_strategic_evidence() -> tuple[dict, dict, dict[str, str]]:
+    """Load the governed intervention and uncertainty evidence used in the report."""
+    intervention = json.loads(
+        (BASE / "reports" / "intervention_effectiveness_summary.json").read_text(encoding="utf-8")
+    )
+    forecast = json.loads((BASE / "reports" / "probabilistic_forecast_validation.json").read_text(encoding="utf-8"))
+    with (BASE / "data" / "processed" / "probabilistic_mrr_forecast.csv").open(newline="", encoding="utf-8") as handle:
+        forecast_rows = list(csv.DictReader(handle))
+    if not forecast_rows:
+        raise ValueError("probabilistic_mrr_forecast.csv is empty")
+    return intervention, forecast, forecast_rows[-1]
+
+
 # ---------------------------------------------------------------------------
-# Fonts — bundled static instances of Source Serif 4 (body) and Inter
+# Fonts - bundled static instances of Source Serif 4 (body) and Inter
 # (headings/labels), so the report renders identically on every machine
 # instead of falling back to the PDF base-14 fonts. See assets/fonts/README.md.
 # ---------------------------------------------------------------------------
@@ -145,7 +166,7 @@ def P(text: str, style: str = "body") -> Paragraph:
     return Paragraph(text, styles[style])
 
 
-# Exhibit registry — figures auto-number in document order so captions and
+# Exhibit registry - figures auto-number in document order so captions and
 # in-text references can never drift apart, and the front matter can list them.
 EXHIBITS: list[tuple[int, str]] = []
 
@@ -356,7 +377,7 @@ def build() -> None:
     # page break after a slightly-overflowing section used to leave the next page
     # ~90% empty (an orphan page). Instead, `section_gap()` puts a separating
     # space between sections and a CondPageBreak that only breaks to a new page
-    # when the section head + lead paragraph would not fit in the space left —
+    # when the section head + lead paragraph would not fit in the space left -
     # so a following section fills that whitespace, and no section ever starts
     # orphaned at the foot of a page. Fonts, palette, headings and figures are
     # unchanged; only pagination flows.
@@ -434,20 +455,22 @@ def build_toc() -> list:
     entries = [
         ("1", "Executive summary", "3"),
         ("2", "Context and objectives", "4"),
-        ("3", "Data and methodology", "5"),
+        ("3", "Data and methodology", "6"),
         ("4", "Analytical framework", "7"),
         ("5", "Findings", "9"),
         ("5.1", "Revenue scale and the quality of growth", "9"),
         ("5.2", "Retention: gross, net and the cohort view", "10"),
-        ("5.3", "Where churn concentrates", "12"),
+        ("5.3", "Where churn concentrates", "13"),
         ("5.4", "Discount intensity and realized pricing", "14"),
-        ("5.5", "Expansion quality", "16"),
-        ("5.6", "Account-level concentration and at-risk MRR", "17"),
+        ("5.5", "Expansion quality", "17"),
+        ("5.6", "Account-level concentration and at-risk MRR", "18"),
         ("5.7", "The churn-risk scoring system", "21"),
         ("5.8", "Forecast and scenario analysis", "23"),
-        ("6", "Risks, limitations and caveats", "26"),
-        ("7", "Recommendations and action priorities", "28"),
-        ("8", "Appendix", "30"),
+        ("5.9", "Probabilistic forecast calibration", "26"),
+        ("5.10", "Intervention effectiveness and ROI", "26"),
+        ("6", "Risks, limitations and caveats", "27"),
+        ("7", "Recommendations and action priorities", "29"),
+        ("8", "Appendix", "31"),
     ]
     rows = []
     for num, label, page in entries:
@@ -489,6 +512,9 @@ def build_toc() -> list:
 
 
 def build_exec_summary() -> list:
+    intervention, forecast, _ = load_strategic_evidence()
+    intervention_result = intervention["overall"]
+    forecast_result = forecast["overall"]
     s = [P("1", "h1num"), P("Executive summary", "h1"), rule()]
     s.append(
         P(
@@ -559,7 +585,7 @@ def build_exec_summary() -> list:
             "ten accounts represent only 4.0% of MRR and the top fifty only 14.3%, so "
             "the revenue base itself is well diversified. But within the at-risk "
             "cohort the picture inverts: 80 accounts carry a High or Critical "
-            "governance priority — 79 High and one Critical — and together they "
+            "governance priority - 79 High and one Critical - and together they "
             "hold $376K of MRR, with the top twenty of them accounting for 81.3% "
             "of that at-risk MRR. The annualized ARR associated "
             "with High and Critical accounts is $4.51M. A stress test in which the "
@@ -598,13 +624,31 @@ def build_exec_summary() -> list:
     )
     s.append(
         P(
+            f"Two evidence controls discipline that action plan. The probabilistic "
+            f"forecast records {forecast['backtest_observations']:,} rolling-origin "
+            f"predictions with {forecast_result['mape']:.1%} mean absolute percentage "
+            f"error and {forecast_result['p90_coverage']:.1%} coverage for the nominal "
+            f"90% interval. Separately, the blocked synthetic trial of success-plan "
+            f"outreach estimates gross MRR retention uplift of "
+            f"{intervention_result['gross_mrr_retention_uplift']:.2%} (95% CI "
+            f"{intervention_result['mrr_uplift_ci_lower']:.2%} to "
+            f"{intervention_result['mrr_uplift_ci_upper']:.2%}). Its decision is "
+            f"<b>{str(intervention_result['recommendation']).replace('_', ' ')}</b>: "
+            f"the current treatment should not be presented as proven or scaled on "
+            f"this evidence.",
+            "body",
+        )
+    )
+    s.append(
+        P(
             "The recommendations that follow are deliberately concrete. They begin "
             "with standing up account-level governance for the 80 High and Critical "
             "accounts and the 30-name priority shortlist, move to a discount-approval "
             "and repricing-at-renewal policy aimed at the deep-discount tail, and "
             "extend to an expansion-quality gate that separates durable growth from "
-            "growth that will reverse. None of these depend on new data collection. "
-            "Each maps to a flag the scoring layer already produces.",
+            "growth that will reverse. The queues and policy tests map to fields the "
+            "system already produces; treatment effectiveness still has to be logged "
+            "prospectively as outcomes arrive.",
             "body",
         )
     )
@@ -920,6 +964,9 @@ def build_framework() -> list:
 
 
 def build_findings() -> list:
+    intervention, probabilistic, forecast_endpoint = load_strategic_evidence()
+    intervention_result = intervention["overall"]
+    forecast_result = probabilistic["overall"]
     s = [P("5", "h1num"), P("Findings", "h1"), rule()]
     s.append(
         P(
@@ -1760,12 +1807,126 @@ def build_findings() -> list:
     )
     s.append(
         P(
-            "These are operating forecasts, not statistical confidence intervals. The "
-            "net-new rate is a residual that can absorb unobserved commercial "
-            "drivers, and the scenario outputs are sensitive to their assumptions, "
-            "which is why the appendix documents every rate and why the model is "
-            "designed to be re-run monthly as new data arrives.",
+            "These scenarios are operating cases, not statistical confidence "
+            "intervals. The net-new rate is a residual that can absorb unobserved "
+            "commercial drivers, and the outputs are sensitive to their assumptions. "
+            "The companion rolling-origin bootstrap below provides the empirical "
+            "uncertainty view; both models are designed to be re-run monthly.",
             "note",
+        )
+    )
+    s.append(P("5.9  Probabilistic forecast calibration", "h2"))
+    s.append(
+        P(
+            "The scenario model answers what happens under explicit operating "
+            "assumptions. A separate local-trend residual block bootstrap answers a "
+            "different question: how wide should the operating range be, given the "
+            "growth variation actually observed? Each simulated path resamples "
+            "three-month residual blocks, refits the local trend, and preserves the "
+            "chronology of every rolling-origin back-test.",
+            "body",
+        )
+    )
+    s.append(
+        data_table(
+            ["Uncertainty control", "Result", "Interpretation"],
+            [
+                [
+                    "Rolling-origin observations",
+                    f"{probabilistic['backtest_observations']:,}",
+                    "Horizons 1-6 months",
+                ],
+                ["Back-test MAPE", f"{forecast_result['mape']:.2%}", "Average absolute percentage error"],
+                ["P80 interval coverage", f"{forecast_result['p80_coverage']:.1%}", "Target: 80%"],
+                ["P90 interval coverage", f"{forecast_result['p90_coverage']:.1%}", "Target: 90%"],
+                [
+                    "12-month median MRR",
+                    f"${float(forecast_endpoint['p50']) / 1_000_000:.2f}M",
+                    "P50 operating path",
+                ],
+                [
+                    "12-month P05-P95 MRR",
+                    f"${float(forecast_endpoint['p05']) / 1_000_000:.2f}M-"
+                    f"${float(forecast_endpoint['p95']) / 1_000_000:.2f}M",
+                    f"{probabilistic['simulations']:,} simulations",
+                ],
+            ],
+            widths=[5.0 * cm, 4.0 * cm, CONTENT_W - 9.0 * cm],
+            align_right_from=1,
+        )
+    )
+    s.append(Spacer(1, 0.25 * cm))
+    s.append(
+        P(
+            "Coverage is close to nominal and aggregate bias is small, so the "
+            "intervals are fit for operating-range communication on this simulated "
+            "history. They are not evidence about structural breaks: only 36 monthly "
+            "observations are available, and the tails should be recalibrated as live "
+            "history accumulates.",
+            "note",
+        )
+    )
+
+    s.append(P("5.10  Intervention effectiveness and ROI", "h2"))
+    s.append(
+        P(
+            "The intervention ledger turns the account queue into a measurable "
+            "decision. Eligible active high-risk accounts are randomized 50/50 "
+            "within segment and pre-treatment risk band; outcomes are evaluated "
+            "three months later under an intent-to-treat estimand. This preserves a "
+            "credible counterfactual and avoids selecting treatment after outcomes "
+            "are known.",
+            "body",
+        )
+    )
+    s.append(
+        data_table(
+            ["Trial evidence", "Result"],
+            [
+                [
+                    "Assigned accounts",
+                    f"{intervention_result['n_total']:,} "
+                    f"({intervention_result['n_treatment']:,} treatment / "
+                    f"{intervention_result['n_control']:,} control)",
+                ],
+                [
+                    "Maximum absolute covariate SMD",
+                    f"{intervention['max_absolute_smd']:.3f} (threshold 0.10)",
+                ],
+                [
+                    "Gross MRR retention uplift",
+                    f"{intervention_result['gross_mrr_retention_uplift']:.2%} "
+                    f"(95% CI {intervention_result['mrr_uplift_ci_lower']:.2%} to "
+                    f"{intervention_result['mrr_uplift_ci_upper']:.2%})",
+                ],
+                [
+                    "Annualized commercial ROI",
+                    f"{intervention_result['commercial_roi']:.1%} "
+                    f"(95% CI {intervention_result['roi_ci_lower']:.1%} to "
+                    f"{intervention_result['roi_ci_upper']:.1%})",
+                ],
+                ["Decision", str(intervention_result["recommendation"]).replace("_", " ").upper()],
+            ],
+            widths=[6.4 * cm, CONTENT_W - 6.4 * cm],
+            align_right_from=1,
+        )
+    )
+    s.append(Spacer(1, 0.25 * cm))
+    s.append(
+        KeepTogether(
+            [
+                P(
+                    "The interval crosses zero and estimated commercial ROI is negative. The "
+                    "correct result is therefore not a polished success claim but a stop "
+                    "decision: do not scale this broad success-plan outreach treatment. Use "
+                    "the same ledger and randomization contract to test a narrower renewal-"
+                    "timed treatment, and require a positive lower confidence bound and "
+                    "positive ROI before expansion. Because the outcomes are synthetic, this "
+                    "demonstrates the measurement system rather than real-world treatment "
+                    "effectiveness.",
+                    "body",
+                )
+            ]
         )
     )
     return s
@@ -1790,22 +1951,24 @@ def build_risks() -> list:
             "well-behaved retention dynamics. The operating system, the score "
             "construction, the back-test design, the scenario model and the "
             "governance logic are directly transferable to a production environment. "
-            "Running the same pipeline against live data would change the numbers; "
-            "it would not change the structure of the analysis or the validity of "
-            "the method.",
+            "Running the same pipeline against live data would preserve the analysis "
+            "structure, but every threshold, calibration result and commercial "
+            "conclusion would still require validation on that portfolio.",
             "body",
         )
     )
-    s.append(P("Findings are associative, not causal", "h3"))
+    s.append(P("Observational findings are associative", "h3"))
     s.append(
         P(
-            "Every relationship in Section 5 is a correlation in the panel. Deep "
+            "The relationships in Sections 5.1-5.8 are correlations in the panel. Deep "
             "discounting is associated with higher forward churn, fragile expansion "
             "with later contraction, certain manager portfolios with worse outcomes. "
             "None of these establish cause. Discounting may be a symptom of an "
             "account already at risk rather than the cause of its departure. The "
-            "recommendations are therefore framed as prioritization and policy "
-            "experiments with measurable outcomes, not as proven levers.",
+            "randomized trial in Section 5.10 estimates an assignment effect inside "
+            "the simulation; it does not establish real-world treatment effectiveness. "
+            "Recommendations remain prioritization and measurable policy tests, not "
+            "proven levers.",
             "body",
         )
     )
@@ -1828,9 +1991,10 @@ def build_risks() -> list:
             "frozen before the back-test, which protects the validation, but they "
             "were not optimized against a held-out outcome, so the lift figures "
             "should be read as evidence that the construction is sound rather than as "
-            "a tuned-to-the-limit model. The forecast rates are recency-weighted and "
-            "will shift month to month; the model is meant to be refreshed, not set "
-            "once.",
+            "a tuned-to-the-limit model. The scenario rates are recency-weighted and "
+            "will shift month to month. The probabilistic companion is rolling-origin "
+            "calibrated but still has only 36 monthly observations, so neither model "
+            "should be set once.",
             "body",
         )
     )
@@ -1856,8 +2020,8 @@ def build_risks() -> list:
                     "The caveats should change the control design, not dilute the urgency. "
                     "Because the discount and expansion findings are associative, the first "
                     "implementation should be run with measurement discipline: define the "
-                    "treated account group, record the intervention, compare outcomes to a "
-                    "matched control group, and review the effect at the next renewal cycle. "
+                    "eligible account group, randomize treatment where feasible, preserve the "
+                    "intent-to-treat control, and review the effect at the next renewal cycle. "
                     "Because the forecast is assumption-driven, the model should be refreshed "
                     "monthly and judged on whether it keeps the downside conversation timely, "
                     "not on whether every dollar of end-MRR lands exactly. And because the "
@@ -1899,9 +2063,10 @@ def build_recommendations() -> list:
     s.append(
         P(
             "The recommendations are ordered by the ratio of impact to effort. Each "
-            "ties to a finding, names the accounts or policy it touches, and can be "
-            "run with data the operating system already produces. None requires new "
-            "collection or new tooling to begin.",
+            "ties to a finding, names the accounts or policy it touches, and starts "
+            "from data the operating system already produces. The intervention ledger "
+            "adds prospective assignment, cost and outcome tracking where evidence is "
+            "required before scale.",
             "lead",
         )
     )
@@ -1961,16 +2126,16 @@ def build_recommendations() -> list:
         )
     )
 
-    s.append(P("Priority 5. Make the renewal window the primary intervention point", "h3"))
+    s.append(P("Priority 5. Test a narrower renewal intervention; do not scale the current treatment", "h3"))
     s.append(
         P(
             "Accounts inside a renewal window churn at 1.29% against 0.70% outside "
-            "one, so the renewal is the most predictable moment of risk in the "
-            "lifecycle. Trigger a structured renewal play whenever an account "
-            "approaches renewal carrying a Moderate or High risk tier, combining the "
-            "discount, expansion-quality and risk-driver signals into a single "
-            "preparation brief. The 21 accounts already flagged for prepared renewal "
-            "intervention are the pilot set.",
+            "one, so the renewal remains the most predictable moment of risk. But the "
+            "blocked synthetic trial of broad success-plan outreach produced no "
+            "credible gross-retention uplift and negative estimated ROI. Do not scale "
+            "that treatment. Use the 21 accounts already flagged for prepared renewal "
+            "intervention to define a narrower prospectively randomized pilot, retain "
+            "the no-action control, and pre-commit the success and ROI thresholds.",
             "body",
         )
     )
@@ -2165,6 +2330,8 @@ def build_appendix() -> list:
                 ["Governance priority", "Composite tier combining the four account scores."],
                 ["Forward churn", "Churn realized over the three months after a snapshot."],
                 ["Lift", "A group's churn rate relative to the overall rate."],
+                ["ITT", "Effect of assignment to treatment, regardless of execution compliance."],
+                ["Interval coverage", "Share of realized outcomes contained by a forecast interval."],
             ],
             widths=[4.4 * cm, CONTENT_W - 4.4 * cm],
             align_right_from=99,
@@ -2177,8 +2344,9 @@ def build_appendix() -> list:
             "Every figure and statistic in this report is generated from the "
             "processed data layer under data/processed and the chart pack under "
             "outputs/graphs. The charts are produced by the visualization scripts in "
-            "src/visualization, the scores by the scoring layer in src/scoring, and "
-            "the forecast by src/forecasting. This document is assembled by "
+            "src/visualization, the scores by src/scoring, intervention evidence by "
+            "src/interventions, and both forecast layers by src/forecasting. This "
+            "document is assembled by "
             "scripts/build_pdf_report.py, which reads the same processed tables, so "
             "the report, the dashboard and the underlying analysis cannot drift apart. "
             "A reader can reproduce any quoted statistic by running the pipeline "

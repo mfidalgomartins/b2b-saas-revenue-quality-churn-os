@@ -6,29 +6,30 @@ on the real seeded panel, so the speedup is reproducible and regressions are
 visible. Run from the repo root after the pipeline has produced the processed
 layer:
 
-    make benchmark        # or: python scripts/benchmark_backtest.py
+    make benchmark        # or: python -m scripts.benchmark_backtest
 """
 
 from __future__ import annotations
 
 import argparse
-import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from src.scoring.backtest_scoring_calibration import (  # noqa: E402
+from src.scoring.backtest_scoring_calibration import (
     attach_forward_churn,
     build_trailing_panel,
 )
 
 
-def _time(fn, repeats: int) -> tuple[float, object]:
-    best = float("inf")
-    result = None
-    for _ in range(repeats):
+def _time[T](fn: Callable[[], T], repeats: int) -> tuple[float, T]:
+    if repeats < 1:
+        raise ValueError("repeats must be at least 1")
+
+    start = time.perf_counter()
+    result = fn()
+    best = time.perf_counter() - start
+    for _ in range(repeats - 1):
         start = time.perf_counter()
         result = fn()
         best = min(best, time.perf_counter() - start)
@@ -45,7 +46,6 @@ def main() -> None:
     base_dir = Path(args.base_dir).resolve()
 
     panel_time, panel = _time(lambda: build_trailing_panel(base_dir), args.repeats)
-    panel["backtest_churn_risk_score"] = 0.0  # placeholder; scoring not benchmarked here
     fwd_time, _ = _time(lambda: attach_forward_churn(panel, args.horizon_months), args.repeats)
 
     rows = len(panel)

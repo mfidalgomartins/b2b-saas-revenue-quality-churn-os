@@ -14,10 +14,11 @@ This folder provides SQL equivalents for key staging and mart transformations us
 ## Notes
 - SQL models are reference implementations and should be adapted to your target warehouse SQL dialect.
 - The project's authoritative artifact build remains Python-based for reproducibility in this repository.
-- `tests/test_sql_python_parity.py` executes `stg_monthly_account_metrics`, `stg_subscriptions`,
-  `stg_invoices`, `mart_account_monthly_revenue_quality`, and `mart_retention_monthly` against the raw CSVs
-  via DuckDB and asserts the retention mart (starting MRR, GRR, NRR, logo/revenue churn) matches
-  `src/metrics.build_monthly_retention` to 1e-6 — proof the SQL mirror is correct, not just present.
-  Scope note: this covers the retention mart; `mart_account_monthly_revenue_quality`'s own
-  `revenue_quality_flag`/`discount_dependency_flag` columns are exercised as a dependency but not yet
-  independently asserted against the Python `revenue_quality_flag` logic — a natural next parity target.
+- `tests/test_sql_python_parity.py` executes every staging and mart model in DuckDB and compares the complete
+  outputs with their Python counterparts. Account-month revenue-quality and retention metrics use a 1e-6
+  numeric tolerance and exact categorical equality. Account scoring covers all five scores and tiers; score
+  tolerance is one 0.001 output-precision unit because component CSV serialization occurs before DuckDB
+  recomposition, while tiers must match exactly.
+- `mart_account_scoring` starts from the persisted weighted contribution table. That table includes only the
+  minimal policy-state fields required to reproduce inactive-account, no-expansion and escalation overrides;
+  raw feature derivation remains upstream in the shared Python scoring component library.

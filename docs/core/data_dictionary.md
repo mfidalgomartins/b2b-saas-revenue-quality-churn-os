@@ -184,7 +184,11 @@ Contains scoring outputs and action fields:
 ### 7) `account_scoring_components` (grain: customer snapshot)
 Key: `customer_id`
 
-Contains weighted component contributions for score explainability.
+Contains weighted component contributions for score explainability plus
+`current_mrr`, `trailing_3m_usage_avg`, `contraction_frequency`, and
+`expansion_events_12`. Those four policy-state fields allow the SQL scoring
+mart to reproduce inactive-account, no-expansion, and escalation overrides
+without reading the final Python score output.
 
 ### 8) Forecast outputs
 - `baseline_mrr_forecast` (grain: forecast month)
@@ -192,6 +196,15 @@ Contains weighted component contributions for score explainability.
 - `scenario_mrr_trajectories` (grain: scenario-month)
 - `mrr_scenario_table` (grain: scenario summary)
 - `commercial_risk_impact_estimates` (grain: impact metric)
+- `probabilistic_mrr_forecast` (grain: forecast month and horizon)
+- `probabilistic_forecast_backtest` (grain: origin-target horizon)
+- `probabilistic_forecast_backtest_summary` (grain: horizon, plus overall row)
+
+### 9) Intervention outputs
+- `intervention_assignment_log` (grain: experiment-account assignment)
+- `intervention_outcomes` (grain: experiment-account outcome)
+- `intervention_effectiveness_by_segment` (grain: overall/segment estimate)
+- `intervention_covariate_balance` (grain: pre-treatment covariate)
 
 ## Key Metric Definitions
 - `MRR`: sum of active monthly recurring revenue.

@@ -1,9 +1,8 @@
 """End-to-end orchestrator for the revenue-quality analytics pipeline.
 
-Runs eleven build stages (generate → profile → features → score → backtest →
-sensitivity → analyze → forecast → graphs → dashboard → report), validates the
-resulting artifacts, refreshes the dashboard with validation status, and
-enforces the release gate.
+Builds source data, analytical and decision artifacts, validates the complete
+release, refreshes the dashboard with the governed readiness status, and
+enforces the publication gate.
 Each stage is invoked as a subprocess so module-level state cannot leak between
 steps; timings are logged for monthly performance tracking.
 """
@@ -36,10 +35,33 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-dir", type=str, default=".")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--skip-data-generation", action="store_true")
+    parser.add_argument(
+        "--intervention-ledger",
+        help="Prospectively captured assignment ledger. Required when using a governed real-data snapshot.",
+    )
     parser.add_argument("--skip-validation", action="store_true")
     parser.add_argument("--skip-gate", action="store_true")
     parser.add_argument("--log-level", type=str, default="INFO")
     return parser.parse_args()
+
+
+def resolve_intervention_ledger(
+    base_dir: Path,
+    skip_data_generation: bool,
+    ledger_value: str | None,
+) -> str | None:
+    """Resolve the ledger and block retrospective assignment on governed real data."""
+    if ledger_value:
+        ledger_path = Path(ledger_value).expanduser().resolve()
+        if not ledger_path.is_file():
+            raise FileNotFoundError(f"Intervention ledger not found: {ledger_path}")
+        return str(ledger_path)
+    real_manifest = base_dir / "data" / "raw" / "ingestion_manifest.json"
+    if skip_data_generation and real_manifest.exists():
+        raise ValueError(
+            "A governed real-data run requires --intervention-ledger; retrospective random assignment is not valid."
+        )
+    return None
 
 
 def build_steps(args: argparse.Namespace, py: str) -> list[tuple[str, list[str]]]:
@@ -51,7 +73,8 @@ def build_steps(args: argparse.Namespace, py: str) -> list[tuple[str, list[str]]
                 "generate",
                 [
                     py,
-                    "src/data_generation/generate_synthetic_data.py",
+                    "-m",
+                    "src.data_generation.generate_synthetic_data",
                     "--output-dir",
                     "data/raw",
                     "--note-path",
@@ -62,14 +85,27 @@ def build_steps(args: argparse.Namespace, py: str) -> list[tuple[str, list[str]]
             )
         )
 
+    intervention_cmd = [
+        py,
+        "-m",
+        "src.interventions.build_intervention_effectiveness",
+        "--base-dir",
+        ".",
+        "--seed",
+        str(args.seed),
+    ]
+    if args.intervention_ledger:
+        intervention_cmd.extend(["--ledger-path", args.intervention_ledger])
+
     steps.extend(
         [
-            ("profile", [py, "src/profiling/build_data_profile.py", "--base-dir", "."]),
+            ("profile", [py, "-m", "src.profiling.build_data_profile", "--base-dir", "."]),
             (
                 "features",
                 [
                     py,
-                    "src/features/build_analytical_layer.py",
+                    "-m",
+                    "src.features.build_analytical_layer",
                     "--raw-dir",
                     "data/raw",
                     "--processed-dir",
@@ -80,18 +116,35 @@ def build_steps(args: argparse.Namespace, py: str) -> list[tuple[str, list[str]]
                     "docs/core/analytical_layer_notes.md",
                 ],
             ),
-            ("scoring", [py, "src/scoring/build_scoring_system.py", "--base-dir", "."]),
-            ("backtest", [py, "src/scoring/backtest_scoring_calibration.py", "--base-dir", "."]),
-            ("sensitivity", [py, "src/scoring/run_weight_sensitivity.py", "--base-dir", "."]),
-            ("analysis", [py, "src/analysis/build_main_business_analysis.py", "--base-dir", "."]),
-            ("forecast", [py, "src/forecasting/build_forecasting_scenarios.py", "--base-dir", "."]),
-            ("graphs", [py, "src/visualization/build_executive_graphs.py", "--base-dir", "."]),
-            ("supplementary_graphs", [py, "src/visualization/build_supplementary_graphs.py", "--base-dir", "."]),
+            ("scoring", [py, "-m", "src.scoring.build_scoring_system", "--base-dir", "."]),
+            ("backtest", [py, "-m", "src.scoring.backtest_scoring_calibration", "--base-dir", "."]),
+            ("sensitivity", [py, "-m", "src.scoring.run_weight_sensitivity", "--base-dir", "."]),
+            ("interventions", intervention_cmd),
+            ("analysis", [py, "-m", "src.analysis.build_main_business_analysis", "--base-dir", "."]),
+            ("forecast", [py, "-m", "src.forecasting.build_forecasting_scenarios", "--base-dir", "."]),
+            (
+                "probabilistic_forecast",
+                [
+                    py,
+                    "-m",
+                    "src.forecasting.build_probabilistic_forecast",
+                    "--base-dir",
+                    ".",
+                    "--seed",
+                    str(args.seed),
+                ],
+            ),
+            ("graphs", [py, "-m", "src.visualization.build_executive_graphs", "--base-dir", "."]),
+            (
+                "supplementary_graphs",
+                [py, "-m", "src.visualization.build_supplementary_graphs", "--base-dir", "."],
+            ),
             (
                 "dashboard",
                 [
                     py,
-                    "src/dashboard/build_executive_dashboard.py",
+                    "-m",
+                    "src.dashboard.build_executive_dashboard",
                     "--base-dir",
                     ".",
                     "--output",
@@ -102,13 +155,14 @@ def build_steps(args: argparse.Namespace, py: str) -> list[tuple[str, list[str]]
     )
 
     if not args.skip_validation:
-        steps.append(("validate", [py, "src/validation/run_full_project_validation.py", "--base-dir", "."]))
+        steps.append(("validate", [py, "-m", "src.validation.run_full_project_validation", "--base-dir", "."]))
         steps.append(
             (
                 "dashboard_refresh",
                 [
                     py,
-                    "src/dashboard/build_executive_dashboard.py",
+                    "-m",
+                    "src.dashboard.build_executive_dashboard",
                     "--base-dir",
                     ".",
                     "--output",
@@ -122,7 +176,8 @@ def build_steps(args: argparse.Namespace, py: str) -> list[tuple[str, list[str]]
                     "gate",
                     [
                         py,
-                        "src/validation/check_validation_gate.py",
+                        "-m",
+                        "src.validation.check_validation_gate",
                         "--summary-path",
                         "reports/formal_validation_summary.json",
                         "--max-warn",
@@ -151,6 +206,11 @@ def main() -> None:
     )
 
     base_dir = Path(args.base_dir).resolve()
+    args.intervention_ledger = resolve_intervention_ledger(
+        base_dir,
+        args.skip_data_generation,
+        args.intervention_ledger,
+    )
     steps = build_steps(args, py=sys.executable)
 
     timings: list[tuple[str, float]] = []

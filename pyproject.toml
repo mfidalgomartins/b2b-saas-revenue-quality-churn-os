@@ -8,14 +8,20 @@ version = "0.1.0"
 description = "B2B SaaS revenue quality, churn early-warning, and scenario forecasting pipeline"
 readme = "README.md"
 requires-python = ">=3.12"
+authors = [{ name = "Miguel Fidalgo Martins" }]
+keywords = ["analytics", "b2b-saas", "revenue-operations", "churn", "forecasting"]
 dependencies = [
   "matplotlib>=3.8,<4.0",
   "numpy>=1.26,<3.0",
   "pandas>=2.2,<3.0",
-  "pillow>=12.2,<13.0",  # 12.2 patches PYSEC-2026-165 / CVE-2026-40192 et al.
+  "pillow>=12.3,<13.0",  # Security floor enforced by pip-audit.
   "reportlab>=4.0,<5.0",
   "seaborn>=0.13,<1.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/mfidalgomartins/b2b-saas-revenue-quality-churn-os"
+Dashboard = "https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/"
 
 [project.optional-dependencies]
 dev = [
@@ -25,6 +31,7 @@ dev = [
   "pip-audit>=2.7,<3.0",
   "mypy>=1.11,<3.0",
   "duckdb>=1.0,<2.0",
+  "pip-tools>=7.4,<8.0",
   # Pin a patched transitive of the pip-audit toolchain so the audit gate stays
   # green: msgpack 1.2.1 fixes GHSA-6v7p-g79w-8964.
   "msgpack>=1.2.1",
@@ -93,19 +100,12 @@ exclude_also = [
 skips = ["B404", "B603", "B607"]
 exclude_dirs = [".venv", "build", "tests"]
 
-# Static type checking is enforced over the same pure-logic core library that the
-# coverage gate guards — the modules whose types carry the scoring/retention/gate
-# contracts. Third-party stubs (pandas/numpy/reportlab) are not installed, so
-# missing-import errors are ignored; everything we own is fully annotated.
+# Static type checking is enforced across every production module under src/.
+# Third-party imports without complete stubs are tolerated; all project-owned
+# functions remain subject to the annotation and consistency checks below.
 [tool.mypy]
 python_version = "3.12"
-files = [
-  "src/metrics.py",
-  "src/scoring/scoring_utils.py",
-  "src/io",
-  "src/validation/check_validation_gate.py",
-  "src/dashboard/dashboard_contract.py",
-]
+files = ["src"]
 ignore_missing_imports = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true

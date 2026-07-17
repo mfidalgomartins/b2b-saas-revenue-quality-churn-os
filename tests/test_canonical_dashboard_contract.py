@@ -30,6 +30,10 @@ def _embedded_payload(html_path: Path) -> dict | None:
 
 
 class TestCanonicalDashboardContract(unittest.TestCase):
+    def test_source_template_has_one_payload_sentinel(self) -> None:
+        template = (ROOT / "src/dashboard/_template.html").read_text(encoding="utf-8")
+        self.assertEqual(template.count("__PAYLOAD_JSON__"), 1)
+
     def test_only_one_html_dashboard_embeds_payload(self) -> None:
         html_files = [path for path in ROOT.rglob("*.html") if ".git" not in path.parts and ".venv" not in path.parts]
         dashboard_payload_files = [path for path in html_files if _embedded_payload(path) is not None]

@@ -2,17 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from src.io.logging_setup import get_logger  # noqa: E402
-from src.metrics import build_monthly_retention, build_retention_panel  # noqa: E402
+from src.io.logging_setup import get_logger
+from src.metrics import build_monthly_retention, build_retention_panel
 
 log = get_logger(__name__)
 

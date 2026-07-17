@@ -15,7 +15,9 @@ outputs/
 multi-page analytical report with charts and tables inline, covering
 revenue quality, retention, churn concentration, discounting, expansion quality,
 account-level risk, the churn-risk scoring system and a six-month scenario
-forecast. Regenerate with `python scripts/build_pdf_report.py`.
+forecast. The root-level `reports/` directory adds machine-readable validation,
+intervention-effectiveness and probabilistic-forecast evidence. Regenerate the
+PDF with `python scripts/build_pdf_report.py`.
 
 Typeset in Source Serif 4 (body) and Inter (headings, labels, table text) —
 bundled as static font instances under `assets/fonts/` so the PDF renders
@@ -25,8 +27,8 @@ identically on any machine rather than falling back to a generic system font.
 A consistent chart pack drawn directly from `data/processed`. Trend,
 composition, ranking, distribution, variance, correlation, cohort,
 concentration and before-vs-after views. Regenerate with
-`python src/visualization/build_executive_graphs.py` and
-`python src/visualization/build_supplementary_graphs.py`.
+`python -m src.visualization.build_executive_graphs` and
+`python -m src.visualization.build_supplementary_graphs`.
 
 Chart text is set in the same bundled Inter as the PDF report, so the chart
 pack and the report chrome share one typographic system.

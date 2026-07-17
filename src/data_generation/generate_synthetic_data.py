@@ -1,16 +1,24 @@
 from __future__ import annotations
 
 import argparse
-import sys
+import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from src.io.logging_setup import get_logger  # noqa: E402
+from src.data_generation.simulation import (
+    CommercialState,
+    build_billing,
+    inactive_month_row,
+    lifecycle_stage,
+    simulate_churn,
+    simulate_engagement,
+    simulate_revenue_movement,
+)
+from src.io.logging_setup import get_logger
 
 log = get_logger(__name__)
 
@@ -209,11 +217,6 @@ def _pick_initial_plan(rng: np.random.Generator, segment: str) -> str:
     return str(rng.choice(ids, p=probs))
 
 
-def _tier_rank(tier: str) -> int:
-    order = {"Basic": 0, "Growth": 1, "Pro": 2, "Enterprise": 3}
-    return order[tier]
-
-
 def _initial_seats(
     rng: np.random.Generator,
     segment: str,
@@ -271,11 +274,6 @@ def _monthly_term_length(billing_cycle: str) -> int:
     return 12 if billing_cycle == "annual" else 3
 
 
-def _plan_id_for_tier_cycle(plans: pd.DataFrame, target_tier: str, cycle: str) -> str:
-    row = plans[(plans["plan_tier"] == target_tier) & (plans["billing_cycle"] == cycle)].iloc[0]
-    return str(row["plan_id"])
-
-
 def simulate_subscription_and_metrics(
     rng: np.random.Generator,
     customers: pd.DataFrame,
@@ -318,226 +316,75 @@ def simulate_subscription_and_metrics(
         seats = _initial_seats(rng, segment, int(plan_info["included_seats"]), concentration)
         current_contracted = _contracted_mrr(float(plan_info["list_mrr"]), int(plan_info["included_seats"]), seats)
         current_discount = _base_discount(rng, channel, segment, billing_cycle, quality)
-
-        contract_anchor = activation_month
-        churned = False
-        fragile_expansion_month: pd.Timestamp | None = None
+        state = CommercialState(
+            plan_id=plan_id,
+            billing_cycle=billing_cycle,
+            current_tier=current_tier,
+            seats=seats,
+            current_contracted=current_contracted,
+            current_discount=current_discount,
+            contract_anchor=activation_month,
+        )
 
         for month in months:
             if month < activation_month:
                 continue
 
-            if churned:
-                monthly_rows.append(
-                    {
-                        "customer_id": cid,
-                        "month": month,
-                        "active_flag": 0,
-                        "seats_active": 0,
-                        "product_usage_score": np.nan,
-                        "support_tickets": 0,
-                        "nps_score": np.nan,
-                        "payment_delay_days": np.nan,
-                        "expansion_mrr": 0.0,
-                        "contraction_mrr": 0.0,
-                        "churn_flag": 0,
-                        "downgrade_flag": 0,
-                        "renewal_due_flag": 0,
-                    }
-                )
+            if state.churned:
+                monthly_rows.append(inactive_month_row(str(cid), month))
                 continue
 
             month_index = int((month.year - activation_month.year) * 12 + (month.month - activation_month.month))
-            contract_month_index = int((month.year - contract_anchor.year) * 12 + (month.month - contract_anchor.month))
+            contract_month_index = int(
+                (month.year - state.contract_anchor.year) * 12 + (month.month - state.contract_anchor.month)
+            )
             renewal_due_flag = int(((contract_month_index + 1) % term_len) == 0)
 
-            seasonality = 4.0 * np.sin((month.month / 12.0) * 2 * np.pi)
-            usage = 35 + 32 * quality + 21 * growth + 5 * np.log1p(month_index + 1) + seasonality
-            usage += float(rng.normal(0, 7.5))
-
-            if hidden_risk and month_index > 10:
-                usage -= 1.1 * (month_index - 10)
-            if fragile_expansion_month is not None:
-                since_fragile = int(
-                    (month.year - fragile_expansion_month.year) * 12 + (month.month - fragile_expansion_month.month)
-                )
-                if since_fragile >= 2:
-                    usage -= 2.3 * since_fragile
-
-            usage = float(np.clip(usage, 5, 100))
-
-            seats_active = int(np.clip(np.round(seats * (0.56 + usage / 125 + rng.normal(0, 0.05))), 1, seats))
-            support_lambda = max(0.35, 0.35 + seats_active / 55 + (72 - usage) / 24 + 1.7 * (1 - quality))
-            support_tickets = int(min(35, rng.poisson(support_lambda)))
-
-            delay_mean = 3.5 + 11 * (1 - quality) + 9 * max(0.0, current_discount - 0.18)
-            delay_mean += 0.8 * max(0, support_tickets - 5)
-            delay_mean += {"SMB": 5.0, "Mid-Market": 2.5, "Enterprise": 1.0}[segment]
-
-            if hidden_risk and month_index > 12:
-                delay_mean += 4.5
-            payment_delay = int(np.clip(np.round(rng.normal(delay_mean, 5.8)), 0, 95))
-
-            nps = 1.9 * (usage - 50) - 1.8 * max(0, support_tickets - 6) - 0.45 * payment_delay
-            nps += float(rng.normal(0, 11.5))
-            nps = float(np.clip(nps, -100, 100))
-
-            healthy_signal = (usage / 100) + max(0.0, nps) / 120 - (payment_delay / 95) - support_tickets / 40
-
-            base_expand_prob = {"SMB": 0.014, "Mid-Market": 0.024, "Enterprise": 0.031}[segment]
-            expansion_prob = base_expand_prob
-            if usage > 70 and nps > 20 and payment_delay < 14:
-                expansion_prob += 0.03
-            if renewal_due_flag:
-                expansion_prob += 0.018
-            if month_index < 3:
-                expansion_prob *= 0.6
-
-            base_contr_prob = {"SMB": 0.011, "Mid-Market": 0.009, "Enterprise": 0.007}[segment]
-            contraction_prob = base_contr_prob
-            if usage < 48:
-                contraction_prob += 0.026
-            if payment_delay > 20:
-                contraction_prob += 0.02
-            if support_tickets > 8:
-                contraction_prob += 0.011
-            if renewal_due_flag:
-                contraction_prob += 0.012
-
-            force_fragile_expansion = (
-                bool(fragile) and fragile_expansion_month is None and 4 <= month_index <= 16 and rng.random() < 0.065
+            signals = simulate_engagement(
+                rng,
+                month,
+                activation_month,
+                state,
+                str(segment),
+                quality,
+                growth,
+                hidden_risk,
             )
 
-            expansion_mrr = 0.0
-            contraction_mrr = 0.0
-            downgrade_flag = 0
-
-            do_expansion = force_fragile_expansion or (rng.random() < np.clip(expansion_prob, 0, 0.55))
-            do_contraction = (rng.random() < np.clip(contraction_prob, 0, 0.55)) and not do_expansion
-
-            if do_expansion:
-                if force_fragile_expansion:
-                    expansion_pct = float(rng.uniform(0.16, 0.4))
-                    current_discount = float(max(current_discount, rng.uniform(0.28, 0.47)))
-                    fragile_expansion_month = month
-                else:
-                    expansion_pct = float(rng.uniform(0.05, 0.24))
-                    current_discount = float(np.clip(current_discount + rng.normal(-0.005, 0.012), 0.0, 0.5))
-
-                expansion_mrr = current_contracted * expansion_pct
-                current_contracted += expansion_mrr
-
-                added_seats = int(max(1, np.round(seats * expansion_pct * rng.uniform(0.4, 0.85))))
-                seats += added_seats
-
-                if expansion_pct > 0.22 and _tier_rank(current_tier) < 3 and rng.random() < 0.34:
-                    new_tier = ["Basic", "Growth", "Pro", "Enterprise"][_tier_rank(current_tier) + 1]
-                    plan_id = _plan_id_for_tier_cycle(plans, new_tier, billing_cycle)
-                    plan_info = plan_lookup[plan_id]
-                    current_tier = new_tier
-
-            elif do_contraction:
-                contraction_pct = float(rng.uniform(0.06, 0.28))
-                contraction_mrr = current_contracted * contraction_pct
-                current_contracted = max(85.0, current_contracted - contraction_mrr)
-                seats = max(2, int(np.round(seats * (1 - contraction_pct * rng.uniform(0.55, 0.95)))))
-                downgrade_flag = 1
-
-                if contraction_pct > 0.2 and _tier_rank(current_tier) > 0 and rng.random() < 0.37:
-                    new_tier = ["Basic", "Growth", "Pro", "Enterprise"][_tier_rank(current_tier) - 1]
-                    plan_id = _plan_id_for_tier_cycle(plans, new_tier, billing_cycle)
-                    plan_info = plan_lookup[plan_id]
-                    current_tier = new_tier
-
-            if renewal_due_flag and not do_expansion:
-                if healthy_signal > 0.55:
-                    current_discount = float(np.clip(current_discount - rng.uniform(0.0, 0.02), 0.0, 0.5))
-                elif healthy_signal < 0.1:
-                    current_discount = float(np.clip(current_discount + rng.uniform(0.0, 0.03), 0.0, 0.55))
-
-            base_churn = {"SMB": 0.0105, "Mid-Market": 0.0068, "Enterprise": 0.0038}[segment]
-            churn_prob = base_churn
-
-            if usage < 35:
-                churn_prob += 0.026
-            elif usage < 48:
-                churn_prob += 0.013
-
-            if nps < -15:
-                churn_prob += 0.018
-            elif nps < 5:
-                churn_prob += 0.009
-
-            if payment_delay > 45:
-                churn_prob += 0.032
-            elif payment_delay > 20:
-                churn_prob += 0.016
-
-            if support_tickets > 10:
-                churn_prob += 0.012
-            if current_discount > 0.32:
-                churn_prob += 0.009
-            if hidden_risk and month_index > 12:
-                churn_prob += 0.011
-
-            if fragile_expansion_month is not None:
-                since_fragile = int(
-                    (month.year - fragile_expansion_month.year) * 12 + (month.month - fragile_expansion_month.month)
-                )
-                if 3 <= since_fragile <= 9:
-                    churn_prob += 0.03
-
-            if usage > 75 and nps > 30 and payment_delay < 10:
-                churn_prob -= 0.007
-
-            if billing_cycle == "annual" and renewal_due_flag == 0:
-                churn_prob *= 0.22
-
-            if renewal_due_flag == 1 and month.month in (1, 7):
-                churn_prob += 0.004
-
-            churn_prob = float(np.clip(churn_prob, 0.0005, 0.45))
-            churn_flag = int(rng.random() < churn_prob)
-
-            billed_mrr = float(current_contracted)
-            commercial_discount_amount = float(billed_mrr * current_discount)
-
-            if payment_delay <= 8:
-                payment_status = "paid_on_time"
-            elif payment_delay <= 30:
-                payment_status = "paid_late"
-            elif payment_delay <= 60:
-                payment_status = "overdue"
-            else:
-                payment_status = "defaulted"
-
-            collection_loss_amount = 0.0
-            if payment_status == "overdue":
-                collection_loss_amount = 0.08 * billed_mrr
-            elif payment_status == "defaulted":
-                collection_loss_amount = 0.45 * billed_mrr
-
-            # Keep invoice semantics explicit:
-            # - discount_amount = commercial discount only
-            # - collection_loss_amount = collections/default haircut
-            # - effective_revenue_adjustment_amount = commercial + collection components
-            effective_revenue_adjustment_amount = float(
-                min(billed_mrr, commercial_discount_amount + collection_loss_amount)
+            movement = simulate_revenue_movement(
+                rng,
+                month,
+                state,
+                plans,
+                str(segment),
+                fragile,
+                signals,
+                renewal_due_flag,
             )
-            realized_mrr = float(max(0.0, billed_mrr - effective_revenue_adjustment_amount))
+
+            churn_flag = simulate_churn(
+                rng,
+                month,
+                state,
+                str(segment),
+                hidden_risk,
+                signals,
+                renewal_due_flag,
+            )
+            billing = build_billing(state, signals.payment_delay)
 
             subscriptions_rows.append(
                 {
                     "subscription_id": f"SUB-{cid}-{month.strftime('%Y%m')}",
                     "customer_id": cid,
-                    "plan_id": plan_id,
+                    "plan_id": state.plan_id,
                     "subscription_start_date": month,
                     "subscription_end_date": month + pd.offsets.MonthEnd(1),
                     "status": "churned" if churn_flag else "active",
-                    "seats_purchased": seats,
-                    "contracted_mrr": round(billed_mrr, 2),
-                    "realized_mrr": round(realized_mrr, 2),
-                    "discount_pct": round(current_discount, 4),
+                    "seats_purchased": state.seats,
+                    "contracted_mrr": round(billing.billed_mrr, 2),
+                    "realized_mrr": round(billing.realized_mrr, 2),
+                    "discount_pct": round(state.current_discount, 4),
                     "renewal_flag": renewal_due_flag,
                 }
             )
@@ -547,13 +394,13 @@ def simulate_subscription_and_metrics(
                     "invoice_id": f"INV-{cid}-{month.strftime('%Y%m')}",
                     "customer_id": cid,
                     "invoice_month": month,
-                    "billed_mrr": round(billed_mrr, 2),
-                    "realized_mrr": round(realized_mrr, 2),
-                    "discount_amount": round(commercial_discount_amount, 2),
-                    "collection_loss_amount": round(collection_loss_amount, 2),
-                    "effective_revenue_adjustment_amount": round(effective_revenue_adjustment_amount, 2),
-                    "payment_status": payment_status,
-                    "days_to_pay": payment_delay,
+                    "billed_mrr": round(billing.billed_mrr, 2),
+                    "realized_mrr": round(billing.realized_mrr, 2),
+                    "discount_amount": round(billing.commercial_discount_amount, 2),
+                    "collection_loss_amount": round(billing.collection_loss_amount, 2),
+                    "effective_revenue_adjustment_amount": round(billing.effective_revenue_adjustment_amount, 2),
+                    "payment_status": billing.payment_status,
+                    "days_to_pay": signals.payment_delay,
                 }
             )
 
@@ -562,39 +409,31 @@ def simulate_subscription_and_metrics(
                     "customer_id": cid,
                     "month": month,
                     "active_flag": 1,
-                    "seats_active": seats_active,
-                    "product_usage_score": round(usage, 2),
-                    "support_tickets": support_tickets,
-                    "nps_score": round(nps, 2),
-                    "payment_delay_days": payment_delay,
-                    "expansion_mrr": round(expansion_mrr, 2),
-                    "contraction_mrr": round(contraction_mrr, 2),
+                    "seats_active": signals.seats_active,
+                    "product_usage_score": round(signals.usage, 2),
+                    "support_tickets": signals.support_tickets,
+                    "nps_score": round(signals.nps, 2),
+                    "payment_delay_days": signals.payment_delay,
+                    "expansion_mrr": round(movement.expansion_mrr, 2),
+                    "contraction_mrr": round(movement.contraction_mrr, 2),
                     "churn_flag": churn_flag,
-                    "downgrade_flag": downgrade_flag,
+                    "downgrade_flag": movement.downgrade_flag,
                     "renewal_due_flag": renewal_due_flag,
                 }
             )
 
             if churn_flag:
-                churned = True
-            else:
-                if renewal_due_flag == 1:
-                    contract_anchor = month + pd.DateOffset(months=1)
+                state.churned = True
+            elif renewal_due_flag == 1:
+                state.contract_anchor = month + pd.DateOffset(months=1)
 
             if month == month_end or churn_flag:
-                if churned:
-                    lifecycle_updates[cid] = "Churned"
-                else:
-                    age = month_index
-                    risk_signal = (1 - usage / 100) + max(0, -nps) / 120 + payment_delay / 95 + support_tickets / 35
-                    if age <= 3:
-                        lifecycle_updates[cid] = "Onboarding"
-                    elif renewal_due_flag == 1:
-                        lifecycle_updates[cid] = "Renewing Soon"
-                    elif risk_signal > 1.45:
-                        lifecycle_updates[cid] = "At Risk"
-                    else:
-                        lifecycle_updates[cid] = "Active"
+                lifecycle_updates[cid] = lifecycle_stage(
+                    state.churned,
+                    month_index,
+                    renewal_due_flag,
+                    signals,
+                )
 
     subscriptions = pd.DataFrame(subscriptions_rows)
     monthly_metrics = pd.DataFrame(monthly_rows)
@@ -614,6 +453,7 @@ def save_tables(
     account_managers: pd.DataFrame,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "ingestion_manifest.json").unlink(missing_ok=True)
 
     tables = {
         "customers.csv": customers,
@@ -626,6 +466,45 @@ def save_tables(
 
     for filename, df in tables.items():
         df.to_csv(output_dir / filename, index=False)
+
+
+def write_synthetic_manifest(output_dir: Path, config: GenerationConfig) -> None:
+    """Write deterministic provenance for the generated canonical snapshot."""
+    table_names = (
+        "account_managers.csv",
+        "customers.csv",
+        "invoices.csv",
+        "monthly_account_metrics.csv",
+        "plans.csv",
+        "subscriptions.csv",
+    )
+    tables: dict[str, dict[str, int | str]] = {}
+    for filename in table_names:
+        path = output_dir / filename
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        with path.open(encoding="utf-8") as handle:
+            rows = sum(1 for _ in handle) - 1
+        tables[filename.removesuffix(".csv")] = {
+            "output_file": filename,
+            "output_sha256": digest,
+            "rows": rows,
+        }
+
+    manifest = {
+        "manifest_version": 1,
+        "source_type": "synthetic",
+        "generator": "src.data_generation.generate_synthetic_data",
+        "seed": config.seed,
+        "n_customers": config.n_customers,
+        "months_history": config.months_history,
+        "end_month": config.end_month,
+        "status": "PASS",
+        "tables": tables,
+    }
+    (output_dir / "synthetic_data_manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def build_generation_note(
@@ -681,16 +560,16 @@ def build_generation_note(
 """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if output_path.exists():
-        existing = output_path.read_text()
+        existing = output_path.read_text(encoding="utf-8")
         marker = "## Latest Generation Snapshot"
         if marker in existing:
             prefix = existing.split(marker)[0].rstrip()
             updated = f"{prefix}\n\n{note.strip()}\n"
         else:
             updated = f"{existing.rstrip()}\n\n{note.strip()}\n"
-        output_path.write_text(updated)
+        output_path.write_text(updated, encoding="utf-8")
     else:
-        output_path.write_text(note)
+        output_path.write_text(note, encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:
@@ -756,6 +635,7 @@ def main() -> None:
         invoices=invoices,
         account_managers=account_managers,
     )
+    write_synthetic_manifest(output_dir, config)
 
     build_generation_note(
         output_path=Path(args.note_path),

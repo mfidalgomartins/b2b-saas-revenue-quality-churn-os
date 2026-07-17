@@ -21,6 +21,11 @@ The project uses synthetic data designed to emulate B2B SaaS commercial behavior
   - `effective_revenue_adjustment_amount = discount_amount + collection_loss_amount`,
   - `billed_mrr - effective_revenue_adjustment_amount = realized_mrr` at row level.
 
+Synthetic snapshots carry a deterministic SHA-256 provenance manifest. Real
+source extracts enter through the governed CSV adapter, which validates schema,
+keys, freshness, referential integrity, PII removal and keyed pseudonymization
+before publishing a checksummed manifest as the snapshot commit marker.
+
 ## 2) Metric Definitions
 Primary operating metrics:
 - `MRR_t = sum(active_mrr_t)`
@@ -166,8 +171,23 @@ Outputs include:
 - scenario summary table,
 - commercial impact estimates (ARR at risk, downside exposure, stress tests).
 
+### Probabilistic uncertainty
+- Fits a local trend to actual month-over-month portfolio MRR growth.
+- Resamples contiguous residual blocks, refits the trend within each simulation,
+  and publishes P05/P10/P50/P90/P95 paths.
+- Uses 2,000 simulations over 12 months in the governed release.
+- Evaluates horizons one through six with leakage-safe rolling origins and
+  reports error, bias, interval width and empirical coverage.
+
+### Intervention effectiveness
+- Creates a 50/50 assignment ledger blocked by segment and pre-treatment risk band.
+- Uses an intent-to-treat estimand with three-month logo and gross-MRR retention outcomes.
+- Reports a 95% stratified bootstrap interval, covariate balance, incremental retained MRR and commercial ROI.
+- Scales only when the lower uplift bound and point-estimate ROI are positive;
+  otherwise the evidence contract returns `continue_test` or `do_not_scale`.
+
 ## 6) Validation Approach
-A formal 21-check QA gate is implemented in:
+A formal 24-check QA gate is implemented in:
 - `src/validation/run_full_project_validation.py`
 
 ### Checks covered
@@ -192,6 +212,9 @@ A formal 21-check QA gate is implemented in:
 19. release artifact readiness for the executive dashboard
 20. test suite integrity (unittest discovery/execution)
 21. forward-outcome scoring calibration and production-weight parity
+22. intervention assignment, chronology, balance, uncertainty and ROI integrity
+23. probabilistic forecast chronology, quantile order, reconciliation and calibration
+24. checksummed source provenance and explicit publication authorization
 
 Validation outputs:
 - `reports/formal_validation_findings.csv`
@@ -212,8 +235,11 @@ To avoid static/stale narrative artifacts, profiling and business-analysis outpu
 
 ## 7) Interpretation Guardrails
 - Findings are descriptive and diagnostic, not causal claims.
-- Scenario outputs are decision-support ranges, not point-accurate forecasts.
+- Scenario outputs are assumption-driven cases; probabilistic intervals are
+  empirical operating ranges, not structural-break guarantees.
 - Scores are governance tools and should be periodically recalibrated.
+- Synthetic intervention outcomes validate the measurement system, not the
+  real-world effectiveness of the treatment.
 
 ## 8) Release Governance
 Monthly refresh process is automated via:

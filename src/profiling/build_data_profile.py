@@ -2,21 +2,26 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from src.io.logging_setup import get_logger  # noqa: E402
+from src.io.logging_setup import get_logger
 
 log = get_logger(__name__)
 
-RAW_FILE_CONFIG = {
+
+class RawFileConfig(TypedDict):
+    file: str
+    parse_dates: list[str]
+    grain: str
+    pk: list[str]
+
+
+RAW_FILE_CONFIG: dict[str, RawFileConfig] = {
     "customers": {
         "file": "customers.csv",
         "parse_dates": ["signup_date"],

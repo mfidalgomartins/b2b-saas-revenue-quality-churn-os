@@ -20,3 +20,6 @@ check_id,check_name,component,status,severity,details,recommended_fix,fix_applie
 19,Release Artifact Readiness,Dashboard,PASS,None,"dashboard_exists=True, dashboard_size_bytes=4113409, dashboard_size_ok=True, payload_files=['outputs/dashboard/revenue-quality-command-center.html'], contract_ok=True",None,No
 20,Test Suite Integrity,Release Governance,PASS,None,Unit test discovery/execution completed successfully.,None,No
 21,Backtest Calibration,Release Governance,PASS,None,"Eligible tiers (≥30 obs): Low=2.31%, Moderate=6.14%, High=18.90%; weights match production: True",None,No
+22,Intervention Measurement Integrity,Interventions,PASS,None,"assignments=1825, max_absolute_smd=0.0248, bootstrap_samples=1000, recommendation=do_not_scale; identity=True, chronology=True, baseline=True, finance=True, intervals=True",None,No
+23,Probabilistic Forecast Integrity,Forecasting,PASS,None,"simulations=2000, forecast_horizon=12, backtest_observations=123, mape=1.072%, p80_coverage=84.55%, p90_coverage=91.06%; quantile_order=True, chronology=True, reconciliation=True",None,No
+24,Source Provenance & Publication Authorization,Source Provenance,PASS,None,"source_type=synthetic; status=PASS, declared_tables=6, expected_tables=6, file_hashes_and_rows=True, seed=42",None,No

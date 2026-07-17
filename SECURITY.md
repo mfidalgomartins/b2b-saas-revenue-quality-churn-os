@@ -6,7 +6,9 @@ security surface is therefore small — but it is scanned, not assumed.
 
 ## Enforced in CI
 
-Every push and pull request runs (see [`.github/workflows/qa.yml`](.github/workflows/qa.yml)):
+Every push and pull request runs the controls below; the same workflow also runs weekly so newly disclosed
+dependency issues surface even when the repository is idle (see
+[`.github/workflows/qa.yml`](.github/workflows/qa.yml)):
 
 - **Static analysis — Bandit** (`make security`): scans `src/` and `scripts/` for common insecure patterns.
 - **Dependency audit — pip-audit** (`make audit`): checks declared dependencies against the PyPI advisory
@@ -29,9 +31,9 @@ There are **no blanket `# nosec` suppressions** and no disabled high-severity ch
 
 ## Dependencies
 
-Runtime dependencies are pinned to compatible ranges in [`pyproject.toml`](pyproject.toml) and kept ahead of
-known advisories (e.g. `pillow>=12.2` patches PYSEC-2026-165 and related CVEs). `pip-audit` will fail CI if a
-newly disclosed CVE affects a declared dependency, prompting a bump.
+Runtime dependencies are pinned to compatible ranges in [`pyproject.toml`](pyproject.toml); security-sensitive
+lower bounds are raised when a patched release becomes available (currently `pillow>=12.3`). `pip-audit` fails
+CI if a newly disclosed CVE affects the resolved environment, prompting a dependency-floor update.
 
 ## Reporting a vulnerability
 

@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
+from typing import TypedDict
 
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from src.io.logging_setup import get_logger  # noqa: E402
-from src.metrics import build_monthly_retention  # noqa: E402
+from src.io.logging_setup import get_logger
+from src.metrics import build_monthly_retention
 
 log = get_logger(__name__)
+
+
+class ScenarioConfig(TypedDict):
+    name: str
+    type: str
+    rates: dict[str, float]
+    realized_price_index: float
 
 
 def load_inputs(base_dir: Path) -> dict[str, pd.DataFrame]:
@@ -182,7 +187,7 @@ def build_scenarios(
     latest_realized_price_index: float,
     horizon_months: int,
 ) -> pd.DataFrame:
-    scenario_config = [
+    scenario_config: list[ScenarioConfig] = [
         {
             "name": "base_case",
             "type": "base",
@@ -480,7 +485,7 @@ Interpretation:
 """
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(text)
+    output_path.write_text(text, encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:

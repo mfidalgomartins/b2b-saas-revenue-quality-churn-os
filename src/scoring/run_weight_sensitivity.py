@@ -18,15 +18,12 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from src.scoring.scoring_utils import (  # noqa: E402
+from src.scoring.scoring_utils import (
     GOVERNANCE_WEIGHTS,
     clip01,
     risk_tier,

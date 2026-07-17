@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from src.io.logging_setup import get_logger  # noqa: E402
-from src.scoring.scoring_utils import (  # noqa: E402
+from src.io.logging_setup import get_logger
+from src.scoring.scoring_utils import (
     CHURN_WEIGHTS,
     DISCOUNT_DEPENDENCY_WEIGHTS,
     EXPANSION_QUALITY_WEIGHTS,
@@ -509,7 +506,19 @@ def build_scores(base_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         or c.startswith("governance_contrib_")
     ]
 
-    components_table = score_df[["customer_id"] + component_cols].copy()
+    # Include the minimal policy-state fields needed to reproduce score-level
+    # overrides in warehouse SQL, while keeping component contributions as the
+    # authoritative score decomposition.
+    components_table = score_df[
+        [
+            "customer_id",
+            "current_mrr",
+            "trailing_3m_usage_avg",
+            "contraction_frequency",
+            "expansion_events_12",
+        ]
+        + component_cols
+    ].copy()
 
     # Primary score table.
     score_columns = [
@@ -624,7 +633,7 @@ def write_scoring_docs(base_dir: Path) -> None:
 - Calibration on synthetic data demonstrates internal ranking behavior, not external predictive validity.
 
 """
-    methodology_path.write_text(methodology)
+    methodology_path.write_text(methodology, encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:

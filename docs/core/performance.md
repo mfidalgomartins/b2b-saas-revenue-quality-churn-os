@@ -7,7 +7,7 @@ hotspot that was profiled and optimised, the measured result, and the parity gua
 
 Per-stage wall-clock is logged by the orchestrator itself (`run_project_pipeline.py` prints a timing table at
 the end of every run). The backtest hot functions are benchmarked in isolation by `make benchmark`
-(`scripts/benchmark_backtest.py`), best-of-3 on the seeded panel (112,038 customer-months, seed 42).
+(`python -m scripts.benchmark_backtest`), best-of-3 on the seeded panel (112,038 customer-months, seed 42).
 
 Figures below were taken on Apple Silicon, Python 3.12, single machine — treat them as ratios, not absolutes.
 
@@ -37,7 +37,7 @@ Profiling the full run pointed at `src/scoring/backtest_scoring_calibration.py`.
 | Measurement | Before | After |
 |---|---|---|
 | `backtest` stage (subprocess wall-clock) | ~5.8 s | ~0.9 s |
-| Full pipeline (12 stages + validate + gate) | ~33 s | ~25 s |
+| Full governed release pipeline | ~33 s | ~25 s |
 | `build_trailing_panel` (best-of-3, in-process) | — | ~455 ms |
 | `attach_forward_churn` (best-of-3, in-process) | — | ~37 ms |
 

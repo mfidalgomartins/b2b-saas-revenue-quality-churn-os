@@ -1,0 +1,22 @@
+{
+  "backtest_horizon_months": 6,
+  "backtest_observations": 123,
+  "backtest_origins": 23,
+  "block_length": 3,
+  "forecast_horizon_months": 12,
+  "lookback_months": 18,
+  "method": "local_trend_residual_block_bootstrap",
+  "min_train_months": 12,
+  "overall": {
+    "bias": -2003.11322305247,
+    "mae": 85990.39926321994,
+    "mape": 0.010720881066961596,
+    "mean_p80_relative_width": 0.03747894999399759,
+    "mean_p80_width": 295960.37465650716,
+    "n_forecasts": 123,
+    "p80_coverage": 0.8455284552845529,
+    "p90_coverage": 0.9105691056910569
+  },
+  "seed": 42,
+  "simulations": 2000
+}

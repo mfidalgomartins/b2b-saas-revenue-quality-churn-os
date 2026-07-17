@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import unittest
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +29,13 @@ class TestProcessedContracts(unittest.TestCase):
             "risk_adjusted_mrr_forecast.csv",
             "mrr_scenario_table.csv",
             "scenario_mrr_trajectories.csv",
+            "intervention_assignment_log.csv",
+            "intervention_outcomes.csv",
+            "intervention_effectiveness_by_segment.csv",
+            "intervention_covariate_balance.csv",
+            "probabilistic_mrr_forecast.csv",
+            "probabilistic_forecast_backtest.csv",
+            "probabilistic_forecast_backtest_summary.csv",
         ]
         missing = [name for name in required if not (PROCESSED / name).exists()]
         self.assertEqual(missing, [], f"Missing processed files: {missing}")
@@ -107,6 +115,43 @@ class TestProcessedContracts(unittest.TestCase):
 
         trajectory_scenarios = {r["scenario"] for r in trajectories}
         self.assertEqual(trajectory_scenarios, scenarios, "Scenario set mismatch between summary and trajectory tables")
+
+    def test_intervention_evidence_contract(self) -> None:
+        ledger = read_rows(PROCESSED / "intervention_assignment_log.csv")
+        outcomes = read_rows(PROCESSED / "intervention_outcomes.csv")
+        effectiveness = read_rows(PROCESSED / "intervention_effectiveness_by_segment.csv")
+        balance = read_rows(PROCESSED / "intervention_covariate_balance.csv")
+
+        assignment_ids = [row["assignment_id"] for row in ledger]
+        self.assertEqual(len(assignment_ids), len(set(assignment_ids)))
+        self.assertEqual({row["assignment_group"] for row in ledger}, {"control", "treatment"})
+        self.assertEqual(set(assignment_ids), {row["assignment_id"] for row in outcomes})
+        self.assertTrue(
+            all(
+                date.fromisoformat(row["outcome_month"][:10]) > date.fromisoformat(row["assignment_month"][:10])
+                for row in outcomes
+            )
+        )
+        self.assertEqual(sum(row["scope"] == "All" for row in effectiveness), 1)
+        self.assertTrue(all(float(row["absolute_smd"]) <= 0.10 for row in balance))
+
+    def test_probabilistic_forecast_contract(self) -> None:
+        forecast = read_rows(PROCESSED / "probabilistic_mrr_forecast.csv")
+        backtest = read_rows(PROCESSED / "probabilistic_forecast_backtest.csv")
+        summary = read_rows(PROCESSED / "probabilistic_forecast_backtest_summary.csv")
+
+        horizons = [int(row["horizon_month"]) for row in forecast]
+        self.assertEqual(horizons, list(range(1, 13)))
+        for row in [*forecast, *backtest]:
+            quantiles = [float(row[key]) for key in ("p05", "p10", "p50", "p90", "p95")]
+            self.assertEqual(quantiles, sorted(quantiles))
+        self.assertTrue(
+            all(
+                date.fromisoformat(row["target_month"][:10]) > date.fromisoformat(row["origin_month"][:10])
+                for row in backtest
+            )
+        )
+        self.assertEqual(sum(row["scope"] == "All" for row in summary), 1)
 
 
 if __name__ == "__main__":

@@ -21,15 +21,17 @@ Topline MRR can grow while discount creep, usage decay, payment slippage, and fr
 
 | Layer | What it does |
 |---|---|
+| `src/ingestion/` | Converts governed CSV extracts into the canonical raw schema with strict contracts, keyed pseudonymization, PII removal, source SLAs, key integrity, and checksummed manifests. |
 | `src/data_generation/` | Generates 6 raw CSVs with seeded RNG. Deterministic for `--seed 42`. |
 | `src/features/` | Builds the analytical layer: account-month revenue quality, customer health features, cohort retention summaries, account risk base. Schema-validated at the boundary. |
 | `src/scoring/` | Four interpretable 0–100 scores — churn risk, revenue quality, discount dependency, expansion quality — composed into a governance priority. Single source of truth for weights **and component formulas** in `scoring_utils.py`. |
 | `src/scoring/backtest_scoring_calibration.py` | Reconstructs every historical month's score with the production formulas and measures forward-3M churn by tier. A parity test detects drift against the latest production score. |
 | `src/scoring/run_weight_sensitivity.py` | ±20% weight perturbation report. Quantifies how stable tier assignments are. |
-| `src/forecasting/` | MRR scenario trajectories — base, downside, upside, discount-discipline, risk-adjusted. |
+| `src/interventions/` | Builds a leakage-safe blocked experiment ledger, attaches forward retention outcomes, checks covariate balance, estimates ITT uplift with bootstrap intervals, and translates it into commercial ROI. |
+| `src/forecasting/` | MRR scenario trajectories plus a local-trend residual block bootstrap with P05–P95 intervals and leakage-safe rolling-origin calibration. |
 | `src/visualization/` + `src/dashboard/` | 16 presentation-ready graphs and a self-contained HTML dashboard. |
 | `scripts/build_pdf_report.py` | Builds the 32-page analytical report from the same processed tables and graph pack. |
-| `src/validation/` | 21 governance checks (row counts, nulls, duplicates, leakage, calibration monotonicity, …) feeding a publication-readiness gate. |
+| `src/validation/` | 24 governance checks spanning data integrity, metric reconciliation, leakage, calibration, intervention evidence, forecast uncertainty, provenance, and publication authorization. |
 | `sql/marts/` | SQL mirror of the Python semantic layer for warehouse consumers. |
 
 ## Headline results (seed 42)
@@ -44,7 +46,10 @@ Topline MRR can grow while discount creep, usage decay, payment slippage, and fr
 | Discount-reliant MRR | 15.9% |
 | Backtest forward-3M churn — Low / Moderate / High | 2.3% / 6.1% / 18.9% |
 | Weight sensitivity — max tier flips under ±20% perturbation | 5.3% |
-| Governance gate | 21 / 21 PASS · readiness `technically valid` |
+| Probabilistic forecast — rolling-origin MAPE / P90 coverage | 1.07% / 91.1% |
+| Synthetic intervention — gross MRR retention uplift (95% CI) | -0.11% (-1.84% to 1.66%) |
+| Synthetic intervention decision | `do_not_scale` · estimated ROI -103.5% |
+| Governance gate | 24 / 24 PASS · readiness `technically valid` |
 
 The roughly 8× lift between Low- and High-tier forward churn is the main calibration result for the rule-based score.
 
@@ -53,16 +58,28 @@ The roughly 8× lift between Low- and High-tier forward churn is the main calibr
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -e ".[dev]"
-python src/pipeline/run_project_pipeline.py --base-dir . --seed 42
+python -m pip install --require-hashes -r requirements-dev.lock
+python -m pip install --no-deps --no-build-isolation -e .
+python -m src.pipeline.run_project_pipeline --base-dir . --seed 42
 ```
 
-Stages: `generate → profile → features → score → backtest → sensitivity → analyze → forecast → graphs → dashboard → validate → gate → report`.
+Stages: `generate → profile → features → score → backtest → sensitivity → interventions → analyze → scenario forecast → probabilistic forecast → graphs → dashboard → validate → gate → report`.
+
+For confidential source extracts, define a source-owned ingestion contract, run `make ingest INGESTION_CONFIG=/path/to/contract.json`, then start the pipeline with `--skip-data-generation --intervention-ledger /path/to/prospective_assignment.csv --skip-gate`. The adapter is fail-closed; validation blocks public release unless the contract explicitly sets `publication_allowed=true`, and the pipeline refuses retrospective random assignment on real outcomes. See [`docs/core/real_data_ingestion.md`](docs/core/real_data_ingestion.md).
+
+The same governed release can run in a pinned, non-root container:
+
+```bash
+docker build --tag revenue-quality-os:local .
+docker run --rm revenue-quality-os:local
+```
+
+See [`docs/core/container_deployment.md`](docs/core/container_deployment.md) for artifact persistence and supply-chain controls.
 
 Strict release gate (used in CI):
 
 ```bash
-python src/validation/check_validation_gate.py \
+python -m src.validation.check_validation_gate \
   --summary-path reports/formal_validation_summary.json \
   --max-warn 0 --max-fail 0 \
   --max-high-severity 0 --max-critical-severity 0 \
@@ -71,51 +88,56 @@ python src/validation/check_validation_gate.py \
 
 ## Quality gates
 
-Everything below is enforced by `make qa` and by CI on every push and pull request — none of it is "run it by hand if you remember".
+Everything below is enforced by `make qa` and by CI on every push and pull request; CI also reruns weekly so
+new dependency advisories surface even when the repository is idle.
 
 | Gate | Command | Bar |
 |---|---|---|
 | Lint | `make lint` | Ruff `E,F,I,B,UP,SIM,C4`, clean |
 | Format | `make format-check` | Ruff formatter, no diff |
-| Types | `make typecheck` | mypy (strict-ish) over the pure-logic core library, zero errors |
+| Types | `make typecheck` | mypy (strict-ish) across every production module under `src/`, zero errors |
 | Coverage | `make coverage` | **100% branch coverage** of the pure-logic core library (`fail_under = 100`) |
 | Static security | `make security` | Bandit, no findings (subprocess/`git` patterns reviewed and documented) |
 | Dependency audit | `make audit` | `pip-audit`, no known CVEs in declared dependencies |
 | Governance gate | `make gate` | 0 WARN / 0 FAIL / 0 high / 0 critical, `technically valid` |
 
-CI additionally rebuilds the full pipeline from seed on every push, as an end-to-end smoke test beyond
-what the gate table above covers on its own.
+CI additionally installs the SHA-256-locked dependency closure, rebuilds the full pipeline from seed,
+rebuilds the PDF a second time to enforce byte-reproducible publication output, and builds/smoke-tests the
+pinned non-root container.
 
 One check is manual, not gated — `make benchmark` runs the backtest hotspot benchmark
 (see [`docs/core/performance.md`](docs/core/performance.md)) but isn't wired into `qa` or CI, since it
 reports a number to track over time rather than a pass/fail bar.
 
-Coverage is measured over the modules unit tests import directly (`metrics`, `scoring_utils`, `io/*`,
-the validation gate, `dashboard_contract`); the end-to-end pipeline scripts are exercised by the integration
-build (`make all`) and the artifact-contract suite. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full
-workflow and [`SECURITY.md`](SECURITY.md) for the security posture.
+Coverage is measured over the pure-logic modules unit tests import directly (`metrics`, `scoring_utils`,
+`io/*`, the validation gate, `dashboard_contract`); mypy covers all of `src/`, and the end-to-end pipeline
+scripts are exercised by the integration build (`make all`) and the artifact-contract suite. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the full workflow and [`SECURITY.md`](SECURITY.md) for the security posture.
 
 ## Decisions this supports
 
 - **Renewal triage** — which accounts need intervention now, ranked by governance priority.
+- **Intervention governance** — whether an outreach programme has retention evidence and positive commercial ROI strong enough to scale.
 - **Discount discipline** — how much ARR is bought with sub-economic pricing, and where it concentrates.
 - **Expansion quality** — separates genuine seat / usage expansion from price-led churn-in-disguise.
 - **Forecast realism** — bridges current-state metrics to forward MRR scenarios with explicit assumptions.
+- **Forecast uncertainty** — distinguishes the median path from empirically calibrated operating ranges and exposes horizon-specific error and coverage.
 
 ## Design choices
 
 - **Rule-based, not ML.** Every score is a weighted sum of normalised components defined in `scoring_utils.py`.
 - **One source of truth for scoring math.** All four score families compose from `compute_*_components` functions and weight dicts in `scoring_utils.py`; the production scorer and calibration backtest import the same definitions, so they cannot drift. Unit tests assert weights sum to 1 and pin each component family.
-- **Schema contracts at load boundaries.** `src/io/contracts.py` rejects malformed inputs before they propagate.
+- **Schema contracts at load boundaries.** `src/io/contracts.py` rejects malformed inputs before they propagate; the optional real-data adapter adds source SLAs, referential integrity, PII removal, keyed pseudonymization, and checksummed ingestion manifests.
 - **Beginning-base retention.** GRR, NRR, revenue churn, and logo churn exclude new logos and use reconstructed beginning-of-month denominators.
-- **Validation gate.** 21 governance checks produce a readiness tier; the CLI gate fails CI on any regression in WARN / FAIL counts or severity counts.
+- **Validation gate.** 24 governance checks produce a readiness tier; the CLI gate fails CI on any regression in WARN / FAIL counts, severity, source provenance, or publication authorization.
 - **Self-contained dashboard.** Charts are drawn inline as SVG from the embedded JSON payload. The HTML works offline and on GitHub Pages without a build step.
 
 ## Limitations
 
 - Synthetic data by design. The pipeline shape is real; absolute numbers are illustrative.
 - Rule-based scores are interpretable but not causal. Calibration uses the same synthetic data-generating environment and is not external validation.
-- Scenario forecasts are assumption-driven operating ranges, not statistical forecasts.
+- The intervention module demonstrates randomized ITT measurement on synthetic outcomes; it does not establish real-world treatment effectiveness.
+- Scenario forecasts are assumption-driven operating cases. Probabilistic intervals use only 36 monthly observations, so tail and structural-break evidence remains limited.
 - Churn-event months remain part of monthly revenue exposure; retention metrics explicitly remove churned MRR from the retained base.
 - Single-tenant assumption: no multi-product overlap or cross-sell logic modelled.
 
@@ -123,7 +145,8 @@ workflow and [`SECURITY.md`](SECURITY.md) for the security posture.
 
 ```
 src/        analysis/  dashboard/  data_generation/  features/  forecasting/
-            io/  pipeline/  profiling/  scoring/  validation/  visualization/
+            ingestion/  interventions/  io/  pipeline/  profiling/  scoring/
+            validation/  visualization/
 data/       raw/  processed/     (raw/ is generated, not tracked — see data/README.md)
 docs/core/  feature_dictionary.md  methodology.md  scoring_model_design.md  …
 outputs/    graphs/  dashboard/  reports/
@@ -134,7 +157,7 @@ tests/      unit, metric-integrity, and artifact-contract tests
 
 ## Tech
 
-Python 3.12 · pandas · NumPy · Matplotlib · Seaborn · ReportLab · SQL · HTML / CSS / SVG / JS · Ruff · mypy · unittest · coverage.py · Bandit · pip-audit · GitHub Actions
+Python 3.12.13 · pandas · NumPy · Matplotlib · Seaborn · ReportLab · DuckDB · SQL · HTML / CSS / SVG / JS · Ruff · mypy · unittest · coverage.py · Bandit · pip-audit · Docker · GitHub Actions
 
 Released under the [MIT License](LICENSE).
 

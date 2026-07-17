@@ -7,7 +7,7 @@ and model-validation views). Visual language is shared with
 build_executive_graphs.py.
 
 Run:
-    python src/visualization/build_supplementary_graphs.py [--dpi 200]
+    python -m src.visualization.build_supplementary_graphs [--dpi 200]
 """
 
 from __future__ import annotations
@@ -32,7 +32,6 @@ import matplotlib.font_manager as fm  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_REPO_ROOT))
 
 from src.io.logging_setup import get_logger  # noqa: E402
 
@@ -420,7 +419,7 @@ def main() -> int:
     out = base / "outputs" / "graphs"
     out.mkdir(parents=True, exist_ok=True)
 
-    with open(base / "reports" / "main_business_analysis_metrics.json") as fh:
+    with (base / "reports" / "main_business_analysis_metrics.json").open(encoding="utf-8") as fh:
         metrics = json.load(fh)
 
     log.info("Generating supplementary charts -> %s", out)

@@ -10,7 +10,7 @@ PDF reports, and slide decks. All charts use a consistent visual style:
   - Grid:       #e8e8e3 (barely visible)
 
 Run:
-    python src/visualization/build_executive_graphs.py [--base-dir .] [--dpi 150]
+    python -m src.visualization.build_executive_graphs [--base-dir .] [--dpi 150]
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "matplot
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 import matplotlib as mpl
+import matplotlib.dates as mdates
 import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
@@ -35,7 +36,6 @@ import matplotlib.font_manager as fm  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT))
 
 from src.io.logging_setup import get_logger  # noqa: E402
 from src.metrics import build_monthly_retention  # noqa: E402
@@ -161,8 +161,8 @@ def chart_mrr_arr_growth(base: Path, out: Path, dpi: int) -> None:
     ax2.spines["right"].set_color(BORDER)
 
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(fmt_currency))
-    ax.xaxis.set_major_formatter(mpl.dates.DateFormatter("%b %Y"))
-    ax.xaxis.set_major_locator(mpl.dates.MonthLocator(interval=6))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=0, ha="center")
 
     # CAGR annotation
@@ -227,8 +227,8 @@ def chart_grr_nrr_trend(base: Path, out: Path, dpi: int) -> None:
     )
 
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{x * 100:.1f}%"))
-    ax.xaxis.set_major_formatter(mpl.dates.DateFormatter("%b %Y"))
-    ax.xaxis.set_major_locator(mpl.dates.MonthLocator(interval=6))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=0, ha="center")
 
     ax.legend(frameon=False, fontsize=10, labelcolor=NEUTRAL)
@@ -292,8 +292,8 @@ def chart_logo_revenue_churn(base: Path, out: Path, dpi: int) -> None:
     )
 
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(fmt_pct))
-    ax.xaxis.set_major_formatter(mpl.dates.DateFormatter("%b %Y"))
-    ax.xaxis.set_major_locator(mpl.dates.MonthLocator(interval=6))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=0, ha="center")
 
     ax.legend(frameon=False, fontsize=10, labelcolor=NEUTRAL, loc="upper left")
@@ -326,7 +326,7 @@ def chart_revenue_quality_dist(base: Path, out: Path, dpi: int) -> None:
     # Moderate (45, 70], Low >70. The zone labels and axis caption must read in
     # that direction (low score = fragile, high score = healthy) to match the
     # bar coloring, which is driven by the same tier assignment.
-    bins = np.arange(0, 105, 5)
+    bins = np.arange(0, 105, 5).tolist()
     for tier, color in zip(tier_order, tier_colors, strict=True):
         subset = sc[sc["revenue_quality_risk_tier"] == tier]["revenue_quality_score"]
         ax.hist(
@@ -375,7 +375,7 @@ def chart_churn_risk_dist(base: Path, out: Path, dpi: int) -> None:
     fig, ax = plt.subplots(figsize=(11, 5.5))
     apply_style(ax)
 
-    bins = np.arange(0, 105, 5)
+    bins = np.arange(0, 105, 5).tolist()
     for tier, color in zip(tier_order, tier_colors, strict=True):
         subset = sc[sc["churn_risk_tier"] == tier]["churn_risk_score"]
         ax.hist(
@@ -453,8 +453,8 @@ def chart_discount_trend(base: Path, out: Path, dpi: int) -> None:
     )
 
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(fmt_pct))
-    ax.xaxis.set_major_formatter(mpl.dates.DateFormatter("%b %Y"))
-    ax.xaxis.set_major_locator(mpl.dates.MonthLocator(interval=6))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=0, ha="center")
 
     ax.legend(frameon=False, fontsize=10, labelcolor=NEUTRAL)
@@ -650,8 +650,8 @@ def chart_scenario_trajectories(base: Path, out: Path, dpi: int) -> None:
     )
 
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(fmt_currency))
-    ax.xaxis.set_major_formatter(mpl.dates.DateFormatter("%b %Y"))
-    ax.xaxis.set_major_locator(mpl.dates.MonthLocator(interval=6))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=0, ha="center")
 
     ax.legend(frameon=False, fontsize=10, labelcolor=NEUTRAL, loc="upper left", ncol=2)
@@ -738,9 +738,10 @@ def chart_cohort_heatmap(base: Path, out: Path, dpi: int) -> None:
 
     # Style colorbar
     cbar = ax.collections[0].colorbar
-    cbar.ax.tick_params(labelsize=9, colors=NEUTRAL)
-    cbar.ax.yaxis.label.set_color(NEUTRAL)
-    cbar.ax.yaxis.label.set_fontsize(9)
+    if cbar is not None:
+        cbar.ax.tick_params(labelsize=9, colors=NEUTRAL)
+        cbar.ax.yaxis.label.set_color(NEUTRAL)
+        cbar.ax.yaxis.label.set_fontsize(9)
 
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=0)
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)

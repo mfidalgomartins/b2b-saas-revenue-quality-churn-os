@@ -41,7 +41,8 @@ class TestValidationGovernance(unittest.TestCase):
 
         cmd = [
             sys.executable,
-            "src/validation/check_validation_gate.py",
+            "-m",
+            "src.validation.check_validation_gate",
             "--summary-path",
             str(SUMMARY_PATH),
             "--max-warn",

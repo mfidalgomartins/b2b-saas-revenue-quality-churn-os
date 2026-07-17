@@ -23,10 +23,11 @@ env/
 /tmp/
 .Rhistory
 
-# Editor/IDE
+# Editor/IDE and agent tooling scratch
 .vscode/
 .idea/
 .claude/
+skill-observations/
 
 # Test and coverage artifacts
 .coverage
@@ -46,3 +47,4 @@ outputs/dashboard/_tmp_dashboard_script.js
 # tracked to keep the repo lean. data/processed/ IS tracked, so outputs stay
 # inspectable without running anything. See data/README.md.
 data/raw/*.csv
+data/raw/*.json

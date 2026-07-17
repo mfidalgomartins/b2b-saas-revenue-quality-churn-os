@@ -24,9 +24,7 @@ BASE = Path(__file__).resolve().parents[1]
 EXISTING_REPORT = BASE / "outputs" / "reports" / "revenue_quality_os_analytical_report.pdf"
 DEFAULT_OUTPUT = BASE / "outputs" / "reports" / "revenue_quality_os_consulting_report.pdf"
 CONSULTING_TITLE = "Revenue Quality Operating System: Executive Report"
-CONSULTING_SUBJECT = (
-    "A consulting-grade diagnostic of growth, retention, risk concentration and operating priorities."
-)
+CONSULTING_SUBJECT = "A consulting-grade diagnostic of growth, retention, risk concentration and operating priorities."
 REQUIRED_INPUTS = (
     Path("scripts/build_pdf_report.py"),
     Path("assets/fonts/Inter-Regular.ttf"),
@@ -402,10 +400,7 @@ def consulting_data_table(
     body = []
     for row in rows:
         body.append(
-            [
-                report.P(str(value), "tbl_r" if index >= align_right_from else "tbl")
-                for index, value in enumerate(row)
-            ]
+            [report.P(str(value), "tbl_r" if index >= align_right_from else "tbl") for index, value in enumerate(row)]
         )
     table = Table([head] + body, colWidths=widths, repeatRows=1)
     commands = [

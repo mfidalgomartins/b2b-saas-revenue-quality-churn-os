@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from src.io.contracts import REQUIRED_RAW_SCHEMAS, validate_schema  # noqa: E402
-from src.io.logging_setup import get_logger  # noqa: E402
+from src.io.contracts import REQUIRED_RAW_SCHEMAS, validate_schema
+from src.io.logging_setup import get_logger
 
 log = get_logger(__name__)
 
@@ -645,7 +642,7 @@ Assumptions/caveats:
 - Rate metrics depend on a 12M window anchored to latest month.
 """
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(dictionary_text)
+    output_path.write_text(dictionary_text, encoding="utf-8")
 
 
 def write_table_purpose_note(output_path: Path) -> None:
@@ -671,7 +668,7 @@ def write_table_purpose_note(output_path: Path) -> None:
 - Engineered fields are direct transforms from raw columns with documented formulas in the feature dictionary.
 """
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(note)
+    output_path.write_text(note, encoding="utf-8")
 
 
 def save_tables(processed_dir: Path, tables: dict[str, pd.DataFrame]) -> None:

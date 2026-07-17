@@ -9,7 +9,8 @@ an automated gate rather than asserted in prose.
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -e ".[dev]"
+python -m pip install --require-hashes -r requirements-dev.lock
+python -m pip install --no-deps --no-build-isolation -e .
 ```
 
 Python 3.12+ is required.
@@ -23,7 +24,7 @@ make qa
 `qa` runs, in order: format check → lint → type check → tests with the coverage gate → static security scan →
 dependency CVE audit → validation gate. If `make qa` is green, CI will be green — the
 [workflow](.github/workflows/qa.yml) runs the same checks, plus a full pipeline rebuild from seed as an
-end-to-end smoke test in between the security scan and the coverage run.
+end-to-end smoke test and a second PDF build that must produce the same SHA-256 hash.
 
 Individual gates:
 
@@ -31,13 +32,15 @@ Individual gates:
 |---|---|
 | `make lint` | Ruff rules `E,F,I,B,UP,SIM,C4` |
 | `make format-check` | Ruff formatter (run `make format` equivalent: `ruff format`) |
-| `make typecheck` | mypy (strict-ish) over the pure-logic core library, zero errors |
+| `make typecheck` | mypy (strict-ish) across every production module under `src/`, zero errors |
 | `make test` | Full `unittest` suite |
 | `make coverage` | Tests **plus** the 100% branch-coverage gate on the core library |
 | `make security` | Bandit static analysis |
 | `make audit` | `pip-audit` dependency CVE scan |
 | `make validate` / `make gate` | Governance validation and the publish-readiness gate |
 | `make all` | Full end-to-end pipeline rebuild from seed |
+| `make lock` | Refresh both hashed dependency locks after an intentional dependency change |
+| `make container-build` | Build the pinned, non-root release-verification image |
 
 ## Conventions
 
@@ -47,10 +50,12 @@ Individual gates:
 - **Schema contracts at load boundaries.** Reading a CSV? Route it through
   [`src/io/contracts.py`](src/io/contracts.py) so a renamed upstream column fails loudly instead of becoming
   silent `NaN`.
-- **Pure logic is unit-tested to 100%.** New logic in the core library
+- **Pure logic is unit-tested to 100%; all production code is type-checked.** New logic in the core library
   (`metrics`, `scoring_utils`, `io/*`, the validation gate, `dashboard_contract`) must keep
   `make coverage` at `fail_under = 100`. Pull the testable logic out of CLI `main()` wrappers so it can be
   exercised directly — see `evaluate_gate` in `check_validation_gate.py` as the pattern.
+- **Type coverage spans `src/`.** New production functions must be fully annotated and keep `make typecheck`
+  clean.
 - **CLI entrypoints** (`def main`, `parse_args`) are marked `# pragma: no cover` and covered by the integration
   build instead.
 - **Determinism.** The pipeline is seeded (`--seed 42`). A change that alters headline numbers should be
@@ -62,3 +67,4 @@ Individual gates:
 2. New behaviour has a test; new logic keeps coverage at 100%.
 3. If you touched scoring weights, the validation gate and backtest parity still pass.
 4. If you added a dependency, `make audit` is clean.
+5. If dependency constraints changed, refresh and commit both lockfiles; do not hand-edit them.

@@ -5,10 +5,17 @@ on:
     branches: ["main", "master"]
   pull_request:
     branches: ["*"]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   qa:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,14 +23,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12.13"
           cache: "pip"
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: requirements-dev.lock
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e .
 
       - name: Lint
         run: python -m ruff check src tests scripts
@@ -41,12 +48,19 @@ jobs:
         run: python -m pip_audit --skip-editable --progress-spinner off
 
       - name: Build end-to-end pipeline
-        run: python src/pipeline/run_project_pipeline.py --base-dir . --seed 42
+        run: python -m src.pipeline.run_project_pipeline --base-dir . --seed 42
 
       - name: Verify PDF report artifact
         run: |
           f=outputs/reports/revenue_quality_os_analytical_report.pdf
           test -s "$f"
+          first_hash=$(sha256sum "$f" | cut -d' ' -f1)
+          python scripts/build_pdf_report.py
+          second_hash=$(sha256sum "$f" | cut -d' ' -f1)
+          if [ "$first_hash" != "$second_hash" ]; then
+            echo "PDF report build is not byte-reproducible" >&2
+            exit 1
+          fi
           size=$(stat -c%s "$f")
           echo "Report size: ${size} bytes"
           if [ "$size" -lt 500000 ]; then
@@ -61,7 +75,7 @@ jobs:
 
       - name: Enforce validation gate
         run: |
-          python src/validation/check_validation_gate.py \
+          python -m src.validation.check_validation_gate \
             --summary-path reports/formal_validation_summary.json \
             --max-warn 0 \
             --max-fail 0 \
@@ -77,3 +91,20 @@ jobs:
           path: |
             reports/formal_validation_findings.csv
             reports/formal_validation_summary.json
+
+  container:
+    needs: qa
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build pinned release image
+        run: docker build --tag revenue-quality-os:ci .
+
+      - name: Smoke-test installed package as non-root user
+        run: |
+          uid=$(docker run --rm revenue-quality-os:ci id -u)
+          test "$uid" = "10001"
+          docker run --rm revenue-quality-os:ci python -c "import src; import pandas; import duckdb"

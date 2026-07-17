@@ -138,6 +138,65 @@ REQUIRED_PROCESSED_SCHEMAS: dict[str, frozenset[str]] = {
             "recommended_action",
         }
     ),
+    "intervention_assignment_log": frozenset(
+        {
+            "experiment_id",
+            "assignment_id",
+            "customer_id",
+            "assignment_month",
+            "assignment_group",
+            "segment",
+            "risk_band",
+            "pre_risk_score",
+            "baseline_mrr",
+            "intervention_cost",
+            "assignment_probability",
+        }
+    ),
+    "intervention_effectiveness_by_segment": frozenset(
+        {
+            "scope",
+            "n_total",
+            "gross_mrr_retention_uplift",
+            "mrr_uplift_ci_lower",
+            "mrr_uplift_ci_upper",
+            "incremental_retained_mrr",
+            "intervention_cost",
+            "commercial_roi",
+            "roi_ci_lower",
+            "roi_ci_upper",
+            "recommendation",
+        }
+    ),
+    "probabilistic_mrr_forecast": frozenset(
+        {
+            "forecast_month",
+            "horizon_month",
+            "p05",
+            "p10",
+            "p50",
+            "p90",
+            "p95",
+            "simulation_count",
+            "method",
+        }
+    ),
+    "probabilistic_forecast_backtest": frozenset(
+        {
+            "origin_month",
+            "target_month",
+            "horizon_month",
+            "actual_mrr",
+            "p05",
+            "p10",
+            "p50",
+            "p90",
+            "p95",
+            "absolute_percentage_error",
+            "covered_80",
+            "covered_90",
+        }
+    ),
 }
 
 

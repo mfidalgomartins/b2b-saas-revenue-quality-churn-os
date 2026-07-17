@@ -9,18 +9,33 @@ reproducible in seconds, so they aren't committed — regenerate with:
 ```bash
 make data
 # or, for the full pipeline:
-python src/pipeline/run_project_pipeline.py --base-dir . --seed 42
+python -m src.pipeline.run_project_pipeline --base-dir . --seed 42
 ```
 
 If you're exploring `data/raw/*.csv` directly or running
 `notebooks/01_operating_system_walkthrough.ipynb` fresh from a clone, run
 `make data` (or the full pipeline) first — those both read from `data/raw/`.
 
+Every synthetic build also writes `synthetic_data_manifest.json` with the seed,
+scope, row counts, and SHA-256 digest of each canonical raw table. A governed
+real-data ingestion replaces it with `ingestion_manifest.json`; both manifests
+can never be valid at the same time.
+
+For governed real extracts, `make ingest INGESTION_CONFIG=/path/to/contract.json`
+validates and pseudonymizes a complete canonical snapshot before writing here.
+Continue confidential analysis with `python -m src.pipeline.run_project_pipeline
+--base-dir . --skip-data-generation --intervention-ledger
+/secure/ledgers/retention_assignment.csv --skip-gate`; omit `--skip-gate` only when
+the contract explicitly authorizes publication. Production extracts and contracts containing
+infrastructure paths, and HMAC secrets must not be committed; see
+[`docs/core/real_data_ingestion.md`](../docs/core/real_data_ingestion.md).
+
 ## `processed/` — tracked in git
 
 The analytical layer built from `raw/` by `src/features/build_analytical_layer.py`
 and `src/scoring/*`: account-month revenue quality, customer health features,
-cohort retention summaries, scoring outputs, and backtest/forecast tables.
+cohort retention summaries, scoring outputs, intervention evidence, and
+backtest/scenario/probabilistic forecast tables.
 Committed so the outputs, dashboard, and report are inspectable without running
 the pipeline — and so a diff on this folder is a visible record of what a
 pipeline or scoring change actually did to the numbers.
