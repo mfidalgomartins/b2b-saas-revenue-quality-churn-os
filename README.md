@@ -2,14 +2,49 @@
 
 [![QA Validation Gate](https://github.com/mfidalgomartins/b2b-saas-revenue-quality-churn-os/actions/workflows/qa.yml/badge.svg)](https://github.com/mfidalgomartins/b2b-saas-revenue-quality-churn-os/actions/workflows/qa.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](pyproject.toml)
+[![Coverage: 100%25](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](Makefile)
+[![Types: mypy strict](https://img.shields.io/badge/types-mypy%20strict-blue.svg)](pyproject.toml)
+[![Docker](https://img.shields.io/badge/docker-non--root%20pinned-2496ED.svg)](Dockerfile)
+[![Governance Gate: 24%2F24](https://img.shields.io/badge/governance%20gate-24%2F24%20PASS-brightgreen.svg)](reports/formal_validation_summary.json)
 
 A reproducible Python and SQL analytics system for testing whether B2B SaaS recurring-revenue growth is **durable or discount-financed**, then prioritising accounts with elevated churn risk.
 
-**[Open the live dashboard](https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/)** · **[Read the analytical report](outputs/reports/revenue_quality_os_analytical_report.pdf)**
+**[Open the live dashboard](https://mfidalgomartins.github.io/b2b-saas-revenue-quality-churn-os/)** · **[Read the analytical report](outputs/reports/revenue_quality_os_analytical_report.pdf)** · **[Read the consulting report](outputs/reports/revenue_quality_os_consulting_report.pdf)**
 
 ![MRR and ARR growth trend](outputs/graphs/mrr_arr_growth_trend.png)
 
 ---
+
+## Executive summary
+
+Recurring-revenue growth can look healthy on the top line while being financed by discounting, propped up by a handful of accounts, or masking usage decay that precedes churn. This system turns that question into a governed, re-runnable pipeline: it scores every account on four interpretable 0–100 dimensions, backtests those scores against actual forward churn, measures whether a retention intervention is worth scaling, and forecasts MRR with calibrated uncertainty rather than a single point estimate — then blocks publication of any result that fails one of 24 governance checks.
+
+At seed 42, the book is growing at a **37.7% ARR CAGR** with **99.8% NRR**, but **15.9% of MRR is discount-reliant**, the rule-based score shows an **8× gap in forward churn between its Low and High tiers**, and the modeled retention intervention does **not** clear the bar to scale (`do_not_scale`, estimated ROI −103.5%). Every number above is traceable to a documented field or formula and is reproduced identically by CI on every push — see [Headline results](#headline-results-seed-42) for the full table and [Decisions this supports](#decisions-this-supports) for how each output maps to an operating decision.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Raw source data] -->|generate or ingest| B[src/data_generation\nsrc/ingestion]
+    B -->|schema contracts| C[src/features\nanalytical layer]
+    C --> D[src/scoring\n4 interpretable scores]
+    D --> E[src/scoring\nbacktest + sensitivity]
+    C --> F[src/interventions\nITT uplift + ROI]
+    C --> G[src/forecasting\nscenario + probabilistic]
+    D --> H[src/visualization\nsrc/dashboard]
+    E --> H
+    F --> H
+    G --> H
+    H --> I[outputs/\ngraphs, dashboard, PDF report]
+    D --> J[src/validation\n24 governance checks]
+    E --> J
+    F --> J
+    G --> J
+    J -->|gate| I
+```
+
+Every stage reads and writes through the schema contracts in `src/io/contracts.py`, so a malformed upstream table fails fast at the boundary rather than silently propagating into a score, forecast, or chart. The same DAG runs end-to-end via `src.pipeline.run_project_pipeline` and is re-verified by CI on every push.
 
 ## Analytical scope
 
@@ -140,6 +175,16 @@ scripts are exercised by the integration build (`make all`) and the artifact-con
 - Scenario forecasts are assumption-driven operating cases. Probabilistic intervals use only 36 monthly observations, so tail and structural-break evidence remains limited.
 - Churn-event months remain part of monthly revenue exposure; retention metrics explicitly remove churned MRR from the retained base.
 - Single-tenant assumption: no multi-product overlap or cross-sell logic modelled.
+
+## Roadmap
+
+Ordered by what would most change the system's real-world decision-grade, not by effort:
+
+1. **Causal uplift, not ITT-only.** The intervention module currently reports randomized intent-to-treat effects on synthetic outcomes; a real deployment would add CUPED variance reduction and heterogeneous treatment-effect segmentation once genuine assignment logs exist.
+2. **Multi-product and cross-sell modeling.** Scoring and forecasting currently assume single-tenant, single-product accounts; multi-product overlap would change how expansion quality and discount dependency are computed.
+3. **Additional real-data source adapters.** `src/ingestion/` ships a governed CSV adapter; a warehouse-native adapter (e.g., reading directly from a Snowflake/BigQuery mart via `sql/marts/`) would remove the CSV hand-off for teams already on a warehouse.
+4. **Longer probabilistic-forecast history.** The rolling-origin calibration is honest about its limits with 36 monthly observations; more history would let the P05–P95 band capture genuine tail and structural-break risk rather than in-sample variance.
+5. **BI-tool sink.** The dashboard and SQL marts are designed to be portable; a native Looker/Power BI/Metabase semantic-layer binding is the natural next integration point for teams that already standardize there.
 
 ## Repository layout
 
