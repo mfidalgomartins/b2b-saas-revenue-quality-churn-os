@@ -13,9 +13,9 @@ keywords = ["analytics", "b2b-saas", "revenue-operations", "churn", "forecasting
 dependencies = [
   "matplotlib>=3.8,<4.0",
   "numpy>=1.26,<3.0",
-  "pandas>=2.2,<3.0",
+  "pandas>=2.2,<4.0",
   "pillow>=12.3,<13.0",  # Security floor enforced by pip-audit.
-  "reportlab>=4.0,<5.0",
+  "reportlab>=4.0,<6.0",
   "seaborn>=0.13,<1.0",
 ]
 
